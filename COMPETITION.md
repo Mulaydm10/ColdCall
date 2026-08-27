@@ -27,8 +27,10 @@ stated once here.
   submission form are delivered through it.
 - **Help:** WeMakeDevs Discord https://discord.gg/wemakedevs · TrueForge issues
   https://github.com/truefoundry/trueforge/issues
-- **Mode:** Online from anywhere. An optional in-person day ran in San Francisco on
-  2026-08-29 (separate Luma registration; $50 OpenAI credits to attendees only).
+- **Mode:** Online from anywhere. An optional in-person day runs in San Francisco on
+  **Saturday 2026-08-29** — still upcoming as of this writing. It takes a **separate Luma
+  registration** (https://luma.com/agent-harness), space is limited, and everyone who attends
+  gets $50 in OpenAI credits. Online participants bring their own model key.
 
 ## Deadline
 
@@ -59,7 +61,7 @@ The organizers' own test: **if it would work just as well as a chat box, change 
 - Example agents to copy (ten in the cookbook):
   https://github.com/truefoundry/trueforge/tree/examples/agent-cookbook/examples
 - **Model key is BYO** — any provider (OpenAI, Anthropic, Gemini, DeepSeek, any
-  OpenAI-compatible endpoint). The $50 OpenAI credits were in-person SF only.
+  OpenAI-compatible endpoint). The $50 OpenAI credits are for SF attendees only.
 - **Sandbox provider: Daytona** (Settings → Sandbox providers, needs a Daytona API key).
   A local sandbox fallback also exists in standalone mode, but Daytona is the documented path.
 

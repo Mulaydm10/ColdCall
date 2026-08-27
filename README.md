@@ -69,12 +69,14 @@ under **`uv` in a project-local venv** — never a global install.
 > history showing the completed review, our decisions, and a follow-up review against the final
 > code. The public PR link is the required evidence — screenshots cannot replace it.
 
-- **Representative merged PR:** TODO(Mulaydm10) — fill once PR #1 is reviewed and merged.
-- **What Qodo surfaced, and what we did:** TODO(Mulaydm10).
-- **PR history:** https://github.com/Mulaydm10/ColdCall/pulls?q=is%3Apr
+**Policy:** every substantive change in this repo goes through a branch → pull request → Qodo
+review → follow-up review → human merge. Direct pushes to `main` do not count as reviewed work.
 
-Every substantive change in this repo goes through a branch → pull request → Qodo review →
-follow-up review → human merge. Direct pushes to `main` do not count as reviewed work.
+**Status:** Qodo is installed on this repository and reviewing pull requests as of 2026-08-27.
+
+- **Representative merged PR:** TODO(Mulaydm10) — fill once PR #1 merges.
+- **What Qodo surfaced, and what we did:** TODO(Mulaydm10) — fill from PR #1's review.
+- **PR history:** https://github.com/Mulaydm10/ColdCall/pulls?q=is%3Apr
 
 ## AI assistance disclosure
 
@@ -85,7 +87,8 @@ decisions behind the submission).
 - **Claude Code (Anthropic, Opus 5)** is used throughout as a pair-programmer and for repo
   research, documentation, and scaffolding. AI-authored commits carry a
   `Co-Authored-By: Claude` trailer, so the split is visible in `git log`.
-- **Qodo** reviews every pull request, as the event requires.
+- **Qodo** reviews the pull requests in this repository, as the event requires; see the
+  section above for its current status and the evidence trail.
 - Architecture and technical decisions are recorded by a human in `design/decisions/`
   (`ADR-####`) and are owned by the team, not by the assistant.
 

@@ -5,8 +5,8 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-27 06:35 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
-event facts landed, TrueForge running, public repo created, PR #1 open.
+Last updated: 2026-08-27 06:55 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
+Qodo installed and reviewing; PR #1's first review resolved.
 
 ## Deadline
 
@@ -32,8 +32,13 @@ Event window opened 2026-08-24 — we are entering **day 4 of 7**.
 - **PR #1 open** — https://github.com/Mulaydm10/ColdCall/pull/1 (branch `docs/event-facts`).
   This starts the Qodo review trail. Nothing has been pushed directly to `main` since the
   remote existed.
-- README now carries the two mandatory sections: `## Qodo Code Review Evidence` (link pending
-  PR #1 merging) and the AI assistance disclosure required by rule 12.
+- README now carries the two mandatory sections: `## Qodo Code Review Evidence` (merged-PR link
+  pending PR #1 merging) and the AI assistance disclosure required by rule 12.
+- **Qodo installed and connected** to `Mulaydm10/ColdCall` — installation Healthy, code-review
+  toggle on. It reviewed PR #1 and raised **4 findings, all Medium, no High**; all four were
+  valid staleness/accuracy bugs in the docs and **all four are fixed**, not dismissed.
+- Qodo Agent Skills installed (`qodo-pr-resolver`, `qodo-get-rules`); only `skills-lock.json`
+  is committed.
 
 ## In flight
 
@@ -45,11 +50,9 @@ Ordered by what unblocks the most:
 
 1. **The project idea / thesis** (`Q-0001`, `VISION.md`) — Mulaydm10 is supplying it. Blocks
    `DEMO.md`, `research/prior_art.md`, and the final shape of `ADR-0002`.
-2. **Qodo not installed** (`Q-0005`) — requires Mulaydm10 to sign in at https://app.qodo.ai/signin
-   and run Integrations → SaaS → GitHub → Add installation against `Mulaydm10/ColdCall`. An agent
-   cannot do this step. **Highest-risk item:** judges check that the Qodo trail runs through the
-   build, not just the final merge, and PR #1 will sit unreviewed until this is done. Once
-   installed, comment `/agentic_review` on PR #1 to kick the first review.
+2. **PR #1 not merged yet** — fixes for the first review are pushed; awaiting the follow-up
+   review, then a human merge. The README's `## Qodo Code Review Evidence` section cannot name a
+   merged PR until that lands.
 4. **No model provider API key configured in TrueForge** (`Q-0003`) — the harness runs but
    cannot think without one. BYO key; the SF OpenAI credits do not apply to us.
 5. **No Daytona sandbox key** (`Q-0004`) — sandboxed code execution is one of the three beats
@@ -59,12 +62,13 @@ Ordered by what unblocks the most:
 
 ## Next intended step
 
-1. **Mulaydm10: install Qodo on `Mulaydm10/ColdCall`** — the one blocker only a human can clear,
-   and the one that ages worst. Then `/agentic_review` on PR #1, resolve findings, merge, and
-   fill the README's `## Qodo Code Review Evidence` section with the merged link.
+1. Land PR #1: follow-up Qodo review, then merge, then fill the README's evidence section with
+   the merged link and a line on what Qodo surfaced.
 2. Mulaydm10: supply the ColdCall idea → `VISION.md` gets drafted and applied, `DEMO-0001`
    becomes writable, `ADR-0002` can close.
 3. Mulaydm10: model provider key (`Q-0003`) so the harness can actually think.
+4. Optional but time-boxed: the San Francisco day is **2026-08-29** and still upcoming — decide
+   whether to attend (separate Luma registration, attendee-only OpenAI credits).
 
 ## Latest experiment
 
