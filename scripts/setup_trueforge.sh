@@ -107,10 +107,18 @@ echo "Sandbox provider"
 # fallback is undocumented and is continuity only, not the sandbox we present to judges.
 if ! is_placeholder "${DAYTONA_API_KEY:-}"; then
   # Singleton resource: PUT only, no POST. All four timers are required by the schema.
+  #
+  # The delete timer is deliberately short. Every incident spawns a sandbox for the
+  # orchestrator and one per strand - five or six per run, ~3 GiB each - and the previous
+  # 7200-minute (5 day) setting meant they accumulated until Daytona's 30 GiB free-tier
+  # ceiling was hit. The resulting failure does NOT say "out of disk": it surfaces as
+  # "git ls-remote failed ... Connection reset by peer", which is indistinguishable from the
+  # transient cold-start network race, so you retry and debug the wrong thing while the agent
+  # runs without its SOP. See scripts/daytona_gc.sh to reap what has already piled up.
   put "daytona" /api/v1/settings/sandbox-providers "$(cat <<JSON
 {"manifest":{"type":"daytona","auth":{"api_key":"$DAYTONA_API_KEY"},
  "exec_timeout_ms":60000,"auto_stop_interval_in_minutes":5,
- "auto_archive_interval_in_minutes":60,"auto_delete_interval_in_minutes":7200}}
+ "auto_archive_interval_in_minutes":15,"auto_delete_interval_in_minutes":120}}
 JSON
 )"
 else

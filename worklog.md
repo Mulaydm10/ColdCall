@@ -515,3 +515,111 @@ to cite.
 **One honest caveat for the demo.** The git-backed skill fetch is a cold-start race against
 Daytona's network, and each strand gets its own sandbox, so each rolls the dice separately. It
 failed once and cleared on retry. Rehearse twice; do not assume a clean first run.
+
+### 2026-08-27 13:45 CEST — three rounds of Qodo, and what the repeats were actually telling us
+
+Qodo reviewed all four milestone PRs and raised **26 findings across three rounds**. 23 fixed,
+3 dismissed in-thread with reasons. Several were genuinely serious, and the pattern in the
+repeats matters more than any individual fix.
+
+**The one real regulatory bug.** `disposition()` ignored the label's *permitted excursion
+range* entirely. A real label states two bands — "store at 20–25 °C" **and** "excursions
+permitted to 15–30 °C" — and only the first was reaching the maths. So an 18 °C reading, which
+the label explicitly permits, was quarantining as a **freeze event**; and a brief 35 °C spike
+could release whenever MKT and the time percentage stayed low. Wrong in both directions. Both
+bands now flow through: time outside the storage range spends the budget, time outside the
+permitted range is a condition the label makes no claim about and quarantines regardless.
+
+Subtlety that cost a test cycle: the envelope rule must fire **only when a label actually
+states a wider range**. Defaulting it to the storage band made every excursion "beyond the
+envelope" and left the budget rules unreachable.
+
+**The one real safety bug.** The approval gate could authorise a call whose name and arguments
+the operator never saw — `resolve_pending_calls()` returned a `<could not resolve>` placeholder
+and the driver still offered `allow`. That is worse than having no gate, because it *looks*
+like oversight while manufacturing consent. It now fails closed. Immediately proved its own
+worth by denying a legitimate action, which exposed that my resolver was keyed to a single
+turn while the requesting `model.message` had landed in another — fail-closed turns a lookup
+bug into a denied action rather than an unreviewed approval, which is the right direction, but
+it means resolution has to actually work or the gate is unusable.
+
+**Three findings were regressions from my own previous fixes.** Making telemetry ingestion
+idempotent with `INSERT OR IGNORE` silently swallowed NOT NULL and CHECK violations too.
+Tightening the timestamp rules rejected telemetry whose readings all carried explicit
+durations, over a field nothing was going to read. Adding a leg-loading handler caught
+`JSONDecodeError` but not the document's shape. Fixing a bug is where the next one gets in.
+
+**`restart_proof.sh` needed three rounds, and that is the finding.** Every version shipped a
+check that could pass without proving anything: first it compared 0 verdicts against 0; then
+equal cardinalities, so replaced content passed; then five hand-picked fields, so a change to
+any sixth passed. The common cause was **enumerating what matters**. For an integrity check the
+only safe list is "all of it" — it now hashes whole event objects, and every read goes through
+a helper that aborts rather than letting a failed fetch become the SHA-256 of an empty string.
+
+**Two things dismissed, with reasons.** The "thesis is fabricated" rule violation fired
+correctly on the evidence in the diff but on a false premise: the thesis *was* supplied, as a
+build spec. `VISION.md` reads `TODO` only because it is LOCKED and an agent may not edit it —
+the thesis is proposed in `proposals/VISION.md` for a human to apply. Writing it directly into
+`VISION.md` is exactly what that rule should prevent.
+
+### 2026-08-27 13:50 CEST — the Daytona quota trap (`EXP-0012`)
+
+Worth its own entry because of how well it hid. Live runs began failing with
+`git ls-remote failed ... Recv failure: Connection reset by peer` — identical to the transient
+cold-start race already recorded in `EXP-0011`. It was not the network. A bare probe turn
+returned the real cause: **`Total disk limit exceeded. Maximum allowed: 30GiB.`**
+
+Every incident spawns a sandbox for the orchestrator and one per strand — five or six per run
+at ~3 GiB each — and setup was registering Daytona with a five-day delete timer. The account
+had reached **16 sandboxes / 48 GiB**.
+
+The dangerous part is the disguise. A connection reset invites a retry, which fails the same
+way, so the time goes into networking. Meanwhile the agent proceeds **without its SOP skill**
+and produces a plausible-looking incident that never reaches an approval gate — a demo silently
+skipping its own safety beat.
+
+Fixed forward: `scripts/daytona_gc.sh` diagnoses and reaps (dry-run by default, never touches a
+running sandbox); setup now sets 15-minute archive / 2-hour delete; and `replay/incident.py`
+retries once past the genuine cold-start race and **refuses to present a run whose skill never
+loaded**. Clearing the existing 45 GiB backlog needs Mulaydm10 — the DELETE was blocked by the
+local permission classifier as a destructive external action, which is the correct call.
+
+### 2026-08-27 14:10 CEST — M1 merged; the fourth review round, and what it caught
+
+**PR #6 merged at 11:43 UTC** by Devin, after Qodo cleared it. `main` now carries the
+deterministic disposition maths. #7 auto-retargeted to `main`; the rest of the stack follows.
+
+The fourth round produced the two findings I would least like to have shipped, and neither was
+in code I would have re-read.
+
+**A retry that could repeat an irreversible action.** I added a single retry to `incident.py`
+so the cold-start skill-fetch race would not eat a take. It keyed only on "did a sandbox
+fail" — but a run can report one strand's sandbox failure *and* still reach an approval gate.
+So under `--auto allow`, a retry would create the branch again, commit again, notify again. I
+added reliability to a demo and handed it the power to double-execute the exact class of
+action this entire project exists to gate. Retry is now conditional on nothing having been
+approved, and a run that is untrustworthy exits non-zero instead of contradicting its own
+warning.
+
+**A predictable temp file in a destructive path.** `daytona_gc.sh` wrote sandbox ids through a
+fixed `/tmp` path before reading them back to issue `DELETE`s — a symlink there truncates
+someone else's file, and replaced contents feed attacker-chosen ids into irreversible deletes.
+Ids now live in a shell array.
+
+**Two failures-become-successes in the same script, one hiding the other.** The GC parser
+rejected only a body whose `statusCode` was exactly 401, so a 403 or a 500 read as "no
+sandboxes" and the script reported success. Fixing that to assert on HTTP status exposed the
+same shape one scope up: `die` inside a command substitution exits only the *subshell*, so the
+new guard fired, printed, and the script sailed on with an empty list. Both verified from the
+failure side now.
+
+**And the leg loader turned out to be three findings wearing one hat.** Validating readings in
+isolation was never enough, because `replay` reads the series *in file order*: timestamps have
+to parse, be strictly increasing, and not repeat. The duplicate case is the subtle one — the
+store keeps only the first reading at an instant while `replay` evaluated every raw
+temperature, so an incident's peak could rest on a reading absent from the audit telemetry its
+own verdict is computed from.
+
+Rejected rather than sorted or deduplicated, both times. Silently reordering or picking a
+winner among someone's telemetry is its own integrity question, and the caller knows which of
+the two records is real.

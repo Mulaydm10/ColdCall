@@ -5,9 +5,10 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-27 12:30 CEST — **the thesis arrived.** ColdCall is a pharmaceutical
-cold-chain *disposition* agent. The disposition math runs green on real telemetry against a
-real drug label. Build is underway against `coldchain-build-spec.md`.
+Last updated: 2026-08-27 11:30 CEST — **the thesis arrived and the judged path is proven.**
+ColdCall is a pharmaceutical cold-chain *disposition* agent. One incident now runs end to end:
+real excursion → four strands → deterministic maths in a Daytona microVM → approval gate →
+executed action with a checkable receipt.
 
 > **Note on this file's history.** PRs #4 and #5 merged in the order #5 then #4, so #4's older
 > `STATE.md` landed on top of #5's newer one. Nothing was lost — this rewrite supersedes both.
@@ -34,8 +35,9 @@ openFDA amoxicillin label, 20–25 °C, excursions permitted 15–30 °C.
 
 **Process**
 
-- Public repo (MIT); Qodo installed and reviewing. **PRs #1–#5 merged, zero direct pushes to
+- Public repo (MIT); Qodo installed and reviewing. **PRs #1–#6 merged, zero direct pushes to
   `main`.** Every merge carried a completed review with findings fixed or dismissed in-thread.
+  #6 carried four rounds of review before it landed.
 
 **Platform, proven not asserted** (`EXP-0008`)
 
@@ -43,7 +45,7 @@ openFDA amoxicillin label, 20–25 °C, excursions permitted 15–30 °C.
   `gpt-5`/`-mini`/`-pro`, *not* the catalog's `gpt-5.6-sol`).
 - **Daytona verified** — a live turn returned `Linux x86_64 3.13.15` from a real remote microVM.
 - **Git-backed skill mounts and is read** by the agent inside the sandbox.
-- **GitHub MCP — 44 tools live.** `scripts/setup_trueforge.sh`: 4 configured, 0 failed.
+- **GitHub MCP — 44 tools live.** `scripts/setup_trueforge.sh`: 5 configured, 0 failed.
   `scripts/verify_apis.sh`: 7/7 sources pass.
 
 **The disposition core — running on real data**
@@ -58,7 +60,7 @@ openFDA amoxicillin label, 20–25 °C, excursions permitted 15–30 °C.
   payload must import against a stock sandbox interpreter.
 - `src/coldcall/cli.py` — the sandbox entry point. Derives reading durations from timestamps
   rather than assuming a flat interval.
-- **72 tests green**, ruff clean. Sandbox-payload import is proven by subprocess under `-I`.
+- **130 tests green**, ruff clean. Sandbox-payload import is proven by subprocess under `-I`.
 
 **The demo case is real and was not tuned**
 
@@ -74,7 +76,20 @@ into every emitted record.
 
 ## In flight
 
-Building the spec end to end. Milestone PRs open as each lands; Devin AI merges.
+**PR #6 (M1, the disposition core) is MERGED** — Devin merged it at 11:43 UTC after Qodo
+cleared. `main` now carries the deterministic maths, and PR #7 has auto-retargeted to `main`.
+
+**Three still open: #7 → #8 → #9, in that order.** Each is based on its predecessor's branch,
+so every diff stays scoped to its own milestone and retargets automatically as its parent
+lands.
+
+Qodo raised **36 findings across four rounds**; 33 fixed, 3 dismissed in-thread with reasons.
+The dismissals are all the same rule firing on a false premise — "the thesis is fabricated" —
+which is correct on the diff but wrong on the facts: the thesis was supplied, and `VISION.md`
+reads `TODO` only because it is LOCKED. It will keep re-reporting until a human applies
+`proposals/VISION.md`.
+**Merge order: #6 → #7 → #8 → #9.** Each is based on its predecessor's branch, not `main`, so
+each diff stays scoped to its own milestone and retargets automatically as its parent lands.
 
 **M3 is complete** — one incident runs end to end against the live harness, including the
 approval gate and an executed action with a checkable receipt (`EXP-0010`). Deny → the agent
@@ -89,7 +104,13 @@ orchestrator's real instructions.
 
 ## Blocked
 
-Nothing is blocking the critical path.
+1. **Daytona's free-tier disk is full — live runs fail until it is reaped** (`EXP-0012`).
+   16 sandboxes / 48 GiB against a 30 GiB ceiling. Run **`./scripts/daytona_gc.sh --yes`**;
+   the dry run shows 15 reapable and 45 GiB recoverable. I could not do it myself: the local
+   permission classifier blocks the DELETE as a destructive external action, correctly.
+   **This is why live incident runs currently fail**, and the error message blames the network,
+   so do not go looking at networking. Setup now sets a 2-hour delete timer so it stops
+   recurring, but that does not clear the existing backlog.
 
 ## Deferred backlog (scheduled, not blocked)
 
@@ -100,12 +121,33 @@ Nothing is blocking the critical path.
 | **`tests/README.md`** | LOCKED; its layout table names files that changed. | Nothing |
 | **San Francisco day / blog post / star TrueForge repo** | Optional prize tracks | Nothing |
 
+## The judged path, proven end to end (`EXP-0010`, `EXP-0011`)
+
+The whole loop runs: excursion → four strands in parallel → deterministic maths in a real
+Daytona microVM → generative-UI evidence bundle → **approval gate** → executed action with a
+checkable receipt.
+
+- **The verdict reproduces exactly.** Laptop and remote microVM both return MKT **24.54 °C**,
+  budget **64.35 %**, `quarantine_retest`. Same inputs, same arithmetic, different machine.
+- **The gate works both ways.** Deny → the agent reported the denial and stopped, no retry.
+  Allow → branch `incident/INC-VCC-118-A2231-…`, deviation record committed as **`1c859fc`**.
+- **The record survives `kill -9`.** `./scripts/restart_proof.sh` — 86 events and 7
+  verdict-bearing responses intact across a SIGKILL.
+- **README and `DEMO-0001` are written** against what actually ran, not against intentions.
+
 ## Next intended step
 
-1. Agent manifest + orchestrator instructions against the real thesis; SOP skill reconciled.
-2. Replay engine → excursion webhook → incident session; four strands fan out.
-3. Approval gate + executed actions with receipts; deny path.
-4. Generative-UI incident board; restart-mid-incident proof; README + demo script.
+**Mulaydm10, in this order:**
+
+1. **`./scripts/daytona_gc.sh --yes`** — one minute, and live runs fail until it is done. See
+   Blocked above; the error it prevents blames the network, so it is easy to misdiagnose.
+2. **Merge #7 → #8 → #9.** All three are Qodo-clean and mergeable.
+3. **Apply `proposals/VISION.md`** to the LOCKED `VISION.md` and log it in `GOVERNANCE.md`.
+   Until then Qodo will keep re-reporting "the thesis is fabricated", correctly by its rule.
+4. **Re-register the skills against `main`** once #9 lands:
+   `COLDCALL_SKILL_REF=main ./scripts/setup_trueforge.sh`.
+5. **Record the ~3-minute video** against `DEMO-0001`. Rehearse twice — reap Daytona first.
+6. Optional prize tracks are in the deferred backlog.
 
 **Do not re-run platform setup.** It is configured and verified; the script is idempotent and
 exists for re-verification after a restart, not as a step.
@@ -114,4 +156,4 @@ exists for re-verification after a restart, not as a step.
 
 | Surface | Claimed by | Since | Status |
 |---|---|---|---|
-| `src/coldcall/`, `tests/` | Claude (autonomous run) | 2026-08-27 12:30 CEST | active |
+| _(none — autonomous run yielded 2026-08-27 14:20 CEST)_ | — | — | — |
