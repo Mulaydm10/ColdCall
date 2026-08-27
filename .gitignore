@@ -31,3 +31,10 @@ build/
 
 # Gitignored working directories are governed by their own local .gitignore
 # (logs/, scratch/) using the whitelist pattern — see those files, not this one.
+
+# Agent/browser tooling scratch (never part of the project)
+.playwright-mcp/
+
+# Python: uv + project-local venv only, never a global install (see CLAUDE.md)
+.uv/
+.python-version

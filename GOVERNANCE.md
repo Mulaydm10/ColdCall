@@ -56,3 +56,4 @@ correct, not a violation; logging it models the right behavior for whoever edits
 | 2026-08-27 | `logs/README.md` | Initial authorship (scaffold) | Mulaydm10 | Defines runtime-log convention |
 | 2026-08-27 | `notes/ai_onboarding_prompt.md` | Initial authorship (scaffold) | Mulaydm10 | Paste-ready cold-start prompt |
 | 2026-08-27 | `tests/README.md` | Initial authorship (scaffold) | Mulaydm10 | No baseline yet; pending ADR-0002 |
+| 2026-08-27 | `COMPETITION.md` | Filled all event facts from official sources (deadline, TrueForge/Qodo requirements, rubric, tracks, hard rules) | Mulaydm10 (via Claude, on their behalf) | Replaces scaffold TODOs; sourced from event overview/rules/schedule/resources + kick-off guide |

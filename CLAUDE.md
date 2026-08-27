@@ -1,9 +1,10 @@
 # tru — cold-start entry point
 
-TODO(Mulaydm10): real event/project name. This is an **agentic hackathon** repo worked by
-humans and AI agents concurrently, under deadline pressure. If you are an agent picking this
-up cold, read this file fully, then follow the read order below. Do not ask a human anything
-this repo can already answer you.
+Event: **The Agent Harness Hackathon** (WeMakeDevs × TrueFoundry × Qodo) — full facts in
+`COMPETITION.md`. Project name: TODO(Mulaydm10), pending the idea. This is an **agentic
+hackathon** repo worked by humans and AI agents concurrently, under deadline pressure. If you
+are an agent picking this up cold, read this file fully, then follow the read order below. Do
+not ask a human anything this repo can already answer you.
 
 ## Read order (cold agent)
 
@@ -41,14 +42,48 @@ One scheme, used everywhere, so `grep -rn '<ID>' .` recovers a thing's full trac
 
 ## Canonical commands
 
-**TODO(Mulaydm10) — pending stack selection.** The stack (Python / TypeScript-Next.js / both)
-is explicitly undecided; see `design/decisions/ADR-0002-stack-selection.md` (open, `Q-0002`).
-This repo intentionally has no `pyproject.toml`, `package.json`, or `Makefile` yet — do not add
-one outside of finalizing that ADR. **Whoever resolves ADR-0002 must, in the same change: fill
-in this section with the real setup/test/lint commands, AND land a green smoke test.** Until
-then there is no runnable test baseline — see `tests/README.md`.
+**The harness (mandatory, works today):**
+
+```sh
+npx @truefoundry/trueforge      # standalone; needs Node 22+ (this machine: 26.5.0)
+                                # → http://localhost:8790, API docs at /api/v1/docs
+```
+
+Verified running as v0.1.4 on 2026-08-27 (`EXP-0001`). SQLite-backed, no account, nothing to
+clone. Do **not** use the `docker compose` route — Docker is not installed here and standalone
+is sufficient.
+
+**Project build/test commands: TODO(Mulaydm10) — pending stack selection**
+(`design/decisions/ADR-0002-stack-selection.md`, `Q-0002`; its options are now narrowed by
+TrueForge being Node/TS). This repo intentionally has no `package.json` or `pyproject.toml`
+yet — do not add one outside of finalizing that ADR. **Whoever resolves ADR-0002 must, in the
+same change: fill in this section with the real setup/test/lint commands, AND land a green
+smoke test.** Until then there is no runnable test baseline — see `tests/README.md`.
+
+**Environment rule — nothing global, ever:**
+
+- **Python → `uv`, in a project-local virtual environment.** `uv venv` + `uv add` / `uv run`.
+  Never `pip install` globally or into the system/homebrew interpreter. One-off tools: `uvx`.
+- **Node → project-local.** `npx` or a devDependency; never `npm install -g`.
+- If a command in this file ever needs a global install to work, the command is wrong.
 
 ## Hard rules
+
+### Event rules that bind every commit (from `COMPETITION.md`)
+
+- **Every substantive change goes through a GitHub pull request reviewed by Qodo before merge.
+  Direct pushes to `main` do not count as reviewed work** and are worth zero to the judges.
+  Branch → PR → Qodo review (`/agentic_review` if it doesn't fire) → fix every valid High
+  finding or dismiss it in-thread with a reason → push → follow-up review → a human merges.
+- **The agent must run on TrueForge, visibly.** If a change would work just as well behind a
+  plain chat box, it is the wrong change.
+- **AI-assistant use must be disclosed** in the README, and every participant must be able to
+  explain the architecture and the technical decisions. Do not build anything the team cannot
+  explain — that is a stated rejection criterion, not a style note.
+- **Nothing the agent touches may be someone else's to touch**; no keys or personal data in the
+  repo or the demo video.
+
+### Repo rules
 
 - Never edit a LOCKED file in place. Propose the change; Main Agent applies it + logs it.
 - `STATE.md` is overwritten, not appended to. `worklog.md` entries are dated **and timestamped**

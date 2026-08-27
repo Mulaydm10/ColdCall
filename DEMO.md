@@ -9,6 +9,24 @@ is higher priority than new features.
 Scenarios are numbered `DEMO-####` so they can be cited from `worklog.md`, `STATE.md`, or an
 `EXP-####` entry (`grep -rn DEMO-0001 .` finds every mention).
 
+## Non-negotiable beats — every scenario must contain all three
+
+Independent of what the idea turns out to be, `COMPETITION.md` fixes what a qualifying demo has
+to show on camera. These are not suggestions; the first is the qualification gate and the third
+is a full judging criterion of its own ("Control and safety") that the organizers say nobody
+films.
+
+1. **A real tool reached through MCP** — connected to something real, not mocked.
+2. **Agent-written code executing in the sandbox** — show *where* it ran.
+3. **A pause for human approval before something irreversible** — show the moment it stops
+   and asks, and the approval landing.
+
+Plus, for the ~3-minute video as a whole: state the problem, show the agent working, and make
+clear where the harness fits. Keep every key and every piece of personal data off screen.
+
+Organizers' framing to design against: *"If it would work just as well as a chat box, change
+the project."*
+
 ## DEMO-0001 — TODO(Mulaydm10): scenario name
 
 Status: **not yet defined** — depends on `VISION.md` (`Q-0001`) and the stack decision

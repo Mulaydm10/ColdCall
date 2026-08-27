@@ -1,7 +1,8 @@
 # tru
 
-TODO(Mulaydm10): real event/project name goes here once known. This is an agentic-hackathon
-repo, worked concurrently by humans and AI agents under deadline pressure. Every file here
+Our entry to **The Agent Harness Hackathon** (WeMakeDevs × TrueFoundry × Qodo, 2026-08-24 →
+2026-08-30) — event facts in `COMPETITION.md`. Project name TODO(Mulaydm10), pending the idea.
+Worked concurrently by humans and AI agents under deadline pressure. Every file here
 exists to serve one of two goals: (1) an agent picking this repo up cold can reconstruct full
 project state without asking a human, or (2) a human under deadline can find the one thing they
 need in under 15 seconds. If a file doesn't serve one of those, it shouldn't be here — flag it.
@@ -45,9 +46,19 @@ framework — the two are kept consistent). Paste-ready onboarding prompt for a 
 
 ## Quickstart
 
-TODO(Mulaydm10) — pending stack selection (`design/decisions/ADR-0002-stack-selection.md`,
-`Q-0002`). There is no build/run/test command yet; see `CLAUDE.md`'s "Canonical commands"
-section, which must be filled in the same change that resolves ADR-0002.
+Start the agent harness every submission must run on (needs Node 22+):
+
+```sh
+npx @truefoundry/trueforge   # → http://localhost:8790
+```
+
+Then add a model provider (Settings → Models), connect tools (Settings → Connectors), and a
+sandbox (Settings → Sandbox providers).
+
+Project build/run/test commands: TODO(Mulaydm10) — pending stack selection
+(`design/decisions/ADR-0002-stack-selection.md`, `Q-0002`). See `CLAUDE.md`'s "Canonical
+commands", which must be filled in the same change that resolves ADR-0002. Any Python work runs
+under **`uv` in a project-local venv** — never a global install.
 
 ## End-of-session checklist
 
