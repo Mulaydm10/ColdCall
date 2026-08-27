@@ -470,3 +470,48 @@ than mid-demo.
 
 72 tests green, ruff clean. `VISION.md` is LOCKED, so the thesis is proposed in
 `proposals/VISION.md` rather than written directly.
+
+### 2026-08-27 11:15 CEST — one incident, end to end, with a receipt
+
+The whole judged path now runs: excursion → four strands in parallel → deterministic math in a
+Daytona microVM → generative-UI evidence bundle → **approval gate** → executed action with a
+real receipt. Recorded as `EXP-0010` and `EXP-0011`.
+
+**The verdict reproduces exactly.** The agent cloned the repo inside the sandbox, ran
+`python -m coldcall.cli`, and returned `quarantine_retest`, MKT **24.54 °C**, budget **64.35%** —
+byte-identical to the local run. That is the auditability claim demonstrated rather than
+asserted: same inputs, same arithmetic, different machine.
+
+**The gate works in both directions.** On deny the agent reported the denial and stopped without
+retrying. On allow it created branch `incident/INC-VCC-118-A2231-20260827T090841Z` and committed
+the 5 984-byte deviation record as `1c859fc` — a real, checkable audit trail on the public repo.
+
+**Four bugs stood between here and there. Three were mine.**
+
+1. A session body is `{"agent":{"spec":…}}`, not `{"agent":…}`. The build spec's Appendix A.6 is
+   wrong and the API only says "Invalid input at agent".
+2. Compaction nests under `config.context_management.compaction`.
+3. `turn.created` carries `turn_id` **alongside** its own event `id`. I resumed the approval with
+   the event id, so the gate fired correctly and the answer went nowhere — HTTP 404.
+4. `ToolCallRef` carries only `{id, source_event_id}` — no name, no arguments. The first working
+   gate therefore printed `?` and `{}` and asked a human to approve it. That is exactly the
+   rubber stamp the SOP condemns, so the driver now resolves each pending call back to the
+   `model.message` that requested it.
+
+**And one in our own script, which cost the most time.** `setup_trueforge.sh` loaded `.env` with
+`set -a`, which overrides variables the caller already exported. `.env` pins
+`COLDCALL_SKILL_REF=main`, so passing a branch ref was silently ignored — and reported `ok`,
+because the PUT succeeded with the wrong ref. The run then failed with
+`path 'skills/coldchain-sop' not found in repository`, because `main` has not had that skill
+since `ADR-0006`. Now uses standard dotenv semantics: the environment wins over the file.
+
+**Two things the agent got right that are worth recording**, because they are the safety story
+working rather than being described. When the module failed to import on an earlier run, it
+**reported the error as the finding instead of estimating a verdict**. And when the Exposure
+strand had no source for the shipment's units and value, it **listed what it needed rather than
+inventing figures** — which is why the turn now points it at `replay/seed.json` for a real source
+to cite.
+
+**One honest caveat for the demo.** The git-backed skill fetch is a cold-start race against
+Daytona's network, and each strand gets its own sandbox, so each rolls the dice separately. It
+failed once and cleared on retry. Rehearse twice; do not assume a clean first run.
