@@ -65,6 +65,17 @@ yet — do not add one outside of finalizing that ADR. **Whoever resolves ADR-00
 same change: fill in this section with the real setup/test/lint commands, AND land a green
 smoke test.** Until then there is no runnable test baseline — see `tests/README.md`.
 
+**Qodo review loop (mandatory — see `COMPETITION.md`):**
+
+```sh
+npx skills add qodo-ai/qodo-skills/skills   # already installed; skills-lock.json is committed
+```
+
+Gives this repo the `qodo-pr-resolver` and `qodo-get-rules` skills for working through Qodo
+findings on a PR branch. The expanded skills (`.agents/`, `.claude/`) are gitignored — only the
+lockfile is committed, so the install is reproducible. If Qodo does not review a PR on its own,
+comment `/agentic_review` on it.
+
 **Environment rule — nothing global, ever:**
 
 - **Python → `uv`, in a project-local virtual environment.** `uv venv` + `uv add` / `uv run`.

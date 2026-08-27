@@ -38,3 +38,9 @@ build/
 # Python: uv + project-local venv only, never a global install (see CLAUDE.md)
 .uv/
 .python-version
+
+# Qodo Agent Skills: installed content is generated from skills-lock.json
+# (`npx skills add qodo-ai/qodo-skills/skills`). The lockfile is committed so the
+# install is reproducible; the expanded skills and editor symlinks are not.
+.agents/
+.claude/
