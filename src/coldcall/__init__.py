@@ -11,10 +11,14 @@ Two layers, deliberately separate:
 * :mod:`coldcall.disposition` — the decision a quality director signs: release,
   quarantine-and-retest, or destroy, with the policy inputs recorded alongside the verdict.
 
-:mod:`coldcall.plot` renders the evidence chart (stdlib SVG, no matplotlib) and
-:mod:`coldcall.cli` is the sandbox entry point the agent invokes.
+:mod:`coldcall.crosscheck` recomputes the verdict by deliberately different numerical means
+and refuses to let a bundle be presented when the two disagree. :mod:`coldcall.weather` answers
+why the load warmed, which the arithmetic cannot. :mod:`coldcall.plot` renders the evidence
+chart (stdlib SVG, no matplotlib) and :mod:`coldcall.cli` is the sandbox entry point the agent
+invokes.
 """
 
+from coldcall.crosscheck import CrossCheck, cross_check
 from coldcall.disposition import (
     DESTROY,
     QUARANTINE_RETEST,
@@ -36,6 +40,7 @@ from coldcall.plot import excursion_svg
 
 __all__ = [
     "DESTROY",
+    "CrossCheck",
     "QUARANTINE_RETEST",
     "RELEASE",
     "Disposition",
@@ -43,6 +48,7 @@ __all__ = [
     "ExcursionSummary",
     "Reading",
     "StabilityBudget",
+    "cross_check",
     "disposition",
     "excursion_summary",
     "excursion_svg",

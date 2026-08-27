@@ -38,6 +38,17 @@ plainly and move on — a disagreement you hide is the one that ends up in a reg
 If the module fails to run, that is the finding. Report the error. **Never fall back to
 estimating the verdict yourself.**
 
+### If the cross-check disagrees, stop
+
+The module computes the verdict twice, by deliberately different numerical routes, and reports
+`cross_check` in its output. When `agrees` is `false` — or the module exits **3** — two
+implementations of a regulated calculation have reached different answers and **nobody knows
+which is right**.
+
+Do not present the bundle. Do not annotate it and present it anyway; a labelled verdict is
+still a verdict someone may act on. Report which two numbers disagree, by how much, and stop.
+An agent that carries on past this has defeated the point of computing it twice.
+
 ## The incident, in order
 
 ### 1. Open the incident
@@ -65,7 +76,8 @@ Strands report findings. **No strand executes an action.** Actions happen only a
 
 The bundle is what the human reads before signing. It must carry, in this order:
 
-1. **The verdict**, with the module's own rationale lines.
+1. **The verdict**, with the module's own rationale lines — and confirmation that the
+   independent cross-check agreed. If it did not, there is no bundle to assemble.
 2. **The arithmetic**: MKT, minutes out of range against the total record, budget consumed, and
    the margin to the next-worse verdict. If the call is borderline, lead with that — a verdict
    two points from flipping is a different fact from one that clears by forty.

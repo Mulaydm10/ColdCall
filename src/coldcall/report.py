@@ -182,11 +182,39 @@ def deviation_report(
             "",
         ]
 
-    lines += ["## 6. Basis for the disposition", ""]
+    check = verdict.get("cross_check")
+    if isinstance(check, dict):
+        agreed = check.get("agrees")
+        lines += [
+            "## 6. Independent verification",
+            "",
+            "The disposition was computed **twice**, by deliberately different numerical "
+            "routes, and the results were compared before this record was produced.",
+            "",
+            "| | |",
+            "|---|---|",
+            f"| Agreement | **{'YES' if agreed else 'NO — DO NOT ACT ON THIS RECORD'}** |",
+            f"| Primary MKT | {_fmt(check.get('primary_mkt_c'), ' °C', 4)} |",
+            f"| Independent MKT | {_fmt(check.get('independent_mkt_c'), ' °C', 4)} |",
+            f"| Difference | {check.get('mkt_difference_c', '?')} °C |",
+            f"| Independent verdict | "
+            f"{str(check.get('independent_verdict', '?')).replace('_', ' ')} |",
+            "",
+            f"> Method: {check.get('method', '')}",
+            "",
+            f"> Limit: {check.get('limits', '')}",
+            "",
+        ]
+        if not agreed:
+            lines += ["**Disagreements:**", ""]
+            lines += [f"- {d}" for d in check.get("disagreements", [])]
+            lines.append("")
+
+    lines += ["## 7. Basis for the disposition", ""]
     lines += [f"{i}. {reason}" for i, reason in enumerate(verdict.get("rationale", []), 1)]
     lines += [
         "",
-        "## 7. What is regulation and what is ColdCall policy",
+        "## 8. What is regulation and what is ColdCall policy",
         "",
         "| Regulation-anchored | ColdCall policy |",
         "|---|---|",
@@ -205,7 +233,7 @@ def deviation_report(
 
     if consignees:
         lines += [
-            "## 8. Affected consignees",
+            "## 9. Affected consignees",
             "",
             "| Consignee | Units expected |",
             "|---|---|",
@@ -215,7 +243,7 @@ def deviation_report(
         ]
         lines.append("")
 
-    lines += ["## 9. Sections to be completed", ""]
+    lines += ["## 10. Sections to be completed", ""]
     for section in _AGENT_SECTIONS:
         lines += [
             f"### {section}",
@@ -226,7 +254,7 @@ def deviation_report(
         ]
 
     lines += [
-        "## 10. Signature",
+        "## 11. Signature",
         "",
         "| | |",
         "|---|---|",

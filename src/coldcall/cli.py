@@ -12,8 +12,11 @@ stdout; diagnostics go to stderr so that ``stdout`` stays machine-readable even 
 something is wrong.
 
 Exit codes: 0 on a computed verdict (including ``destroy`` — a verdict is a success),
-2 on bad input. The verdict itself is never signalled through the exit code, because a
-caller that branches on exit status would silently treat a destroy as a crash.
+2 on bad input, **3 when the independent cross-check disagrees with the primary
+implementation**. The verdict itself is never signalled through the exit code, because a
+caller that branches on exit status would silently treat a destroy as a crash — but a
+disagreement between two implementations of a regulated calculation is a different kind of
+event from either, and deserves its own code.
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from coldcall.crosscheck import cross_check
 from coldcall.disposition import DispositionPolicy, disposition
 from coldcall.mkt import Reading
 from coldcall.plot import excursion_svg
@@ -349,6 +353,13 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     document = result.to_dict()
+
+    # Recompute independently before anyone sees the verdict. On a disagreement the document
+    # says so and the exit code is non-zero, because a bundle whose two implementations
+    # disagree must not reach a human who might act on it.
+    check = cross_check(result, readings, policy)
+    document["cross_check"] = check.to_dict()
+
     document["shipment_id"] = args.shipment_id
     document["lot_id"] = args.lot_id
     if product:
@@ -417,6 +428,15 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as exc:  # a missing chart must not lose the verdict
             print(f"warning: could not write the chart to {args.svg_out}: {exc}", file=sys.stderr)
 
+    if check.blocks_presentation:
+        for line in check.disagreements:
+            print(f"CROSS-CHECK FAILED: {line}", file=sys.stderr)
+        print(
+            "The verdict above was computed twice and the two implementations disagree. "
+            "Do not present it. Exit code 3.",
+            file=sys.stderr,
+        )
+
     rendered = json.dumps(document, indent=2, sort_keys=False)
     if args.json_out:
         try:
@@ -424,7 +444,10 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as exc:
             print(f"warning: could not write JSON to {args.json_out}: {exc}", file=sys.stderr)
     print(rendered)
-    return 0
+    # 3, distinct from 2 (bad input) and 0 (a verdict, including destroy). A caller that
+    # branches on this can tell "your telemetry is wrong" from "our arithmetic is wrong",
+    # which are different emergencies.
+    return 3 if check.blocks_presentation else 0
 
 
 if __name__ == "__main__":  # pragma: no cover - exercised through the console entry point
