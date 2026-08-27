@@ -5,9 +5,10 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-27 12:30 CEST — **the thesis arrived.** ColdCall is a pharmaceutical
-cold-chain *disposition* agent. The disposition math runs green on real telemetry against a
-real drug label. Build is underway against `coldchain-build-spec.md`.
+Last updated: 2026-08-27 11:30 CEST — **the thesis arrived and the judged path is proven.**
+ColdCall is a pharmaceutical cold-chain *disposition* agent. One incident now runs end to end:
+real excursion → four strands → deterministic maths in a Daytona microVM → approval gate →
+executed action with a checkable receipt.
 
 > **Note on this file's history.** PRs #4 and #5 merged in the order #5 then #4, so #4's older
 > `STATE.md` landed on top of #5's newer one. Nothing was lost — this rewrite supersedes both.
@@ -43,7 +44,7 @@ openFDA amoxicillin label, 20–25 °C, excursions permitted 15–30 °C.
   `gpt-5`/`-mini`/`-pro`, *not* the catalog's `gpt-5.6-sol`).
 - **Daytona verified** — a live turn returned `Linux x86_64 3.13.15` from a real remote microVM.
 - **Git-backed skill mounts and is read** by the agent inside the sandbox.
-- **GitHub MCP — 44 tools live.** `scripts/setup_trueforge.sh`: 4 configured, 0 failed.
+- **GitHub MCP — 44 tools live.** `scripts/setup_trueforge.sh`: 5 configured, 0 failed.
   `scripts/verify_apis.sh`: 7/7 sources pass.
 
 **The disposition core — running on real data**
@@ -58,7 +59,7 @@ openFDA amoxicillin label, 20–25 °C, excursions permitted 15–30 °C.
   payload must import against a stock sandbox interpreter.
 - `src/coldcall/cli.py` — the sandbox entry point. Derives reading durations from timestamps
   rather than assuming a flat interval.
-- **72 tests green**, ruff clean. Sandbox-payload import is proven by subprocess under `-I`.
+- **107 tests green**, ruff clean. Sandbox-payload import is proven by subprocess under `-I`.
 
 **The demo case is real and was not tuned**
 
@@ -119,4 +120,4 @@ exists for re-verification after a restart, not as a step.
 
 | Surface | Claimed by | Since | Status |
 |---|---|---|---|
-| `src/coldcall/`, `tests/` | Claude (autonomous run) | 2026-08-27 12:30 CEST | active |
+| `src/coldcall/`, `tests/`, `replay/`, `scripts/`, docs | Claude (autonomous run) | 2026-08-27 | active |
