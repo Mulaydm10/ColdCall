@@ -55,10 +55,10 @@ Only the canonical file may allocate a new number.
 
 | Path | What |
 |---|---|
-| `src/coldcall/` | Dependency-free Python: stability maths (`mkt.py`), streaming telemetry replay (`replay.py`). Runs inside the sandbox, so it must import against a stock interpreter. |
-| `tests/` | pytest suite, 43 tests |
+| `src/coldcall/` | Dependency-free Python, uploaded into the sandbox — so it must import against a stock interpreter. **Currently empty of domain logic**: the inferred mission was cleared in `ADR-0006` and real logic waits on the thesis. |
+| `tests/` | pytest suite. 2 tests — the green baseline plus a guard that fails if domain logic reappears before `VISION.md` is real. |
 | `agents/coldcall.agent.json` | The agent manifest: model, instructions, MCP servers with their approval gates, skills, harness features |
-| `skills/coldchain-sop/` | Git-backed `SKILL.md` the harness loads at runtime |
+| `skills/repo-evidence/` | Git-backed `SKILL.md` the harness loads at runtime |
 | `scripts/` | Idempotent setup + a real pre-demo API check |
 | `data/samples/` | Gitignored; re-fetchable telemetry sample |
 
@@ -86,7 +86,7 @@ the numbers):
 ```sh
 uv venv --python 3.12 .venv     # project-local; never a global install
 uv sync --group dev             # pytest, pytest-cov, ruff
-uv run pytest                   # 43 tests, green
+uv run pytest                   # green
 uv run ruff check .             # lint
 ```
 
@@ -145,6 +145,9 @@ comment `/agentic_review` on it.
   (hackathon history moves hourly, not daily) and are never edited after the fact.
 - Before yielding a unit of work, update `STATE.md` (see `AGENTS.md` for the claim protocol).
 - Never invent a thesis, rubric detail, or result to fill a gap — leave it `TODO(Mulaydm10)`.
+- **Domain logic follows the thesis; it never precedes it** (`ADR-0006`). Do not infer what
+  ColdCall does from the tools, APIs or dataset wired up here — they say what is *possible*,
+  never what is *wanted*. Until `VISION.md` is real, ask.
 - `DEMO.md` must stay runnable at all times once a demo path exists — it is what judges see.
 
 ## Vendor-neutral twin
