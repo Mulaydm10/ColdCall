@@ -26,7 +26,7 @@
       "status": "in_transit",
       "route_lat": 39.4565,
       "route_lon": -0.3465,
-      "route_note": "LAST-KNOWN POSITION, not a position during the excursion. The dataset's 15 GPS fixes for this device all fall on 2021-11-08 17:48-20:06Z, spanning 367 m; the leg begins 2021-11-09T08:23:09Z, 12.3 h after the final fix. Weather is fetched for this coordinate, so the attribution assumes the consignment remained in comparable conditions - an assumption, not an observation. See replay/SHIPMENT.md and src/coldcall/weather.py.",
+      "route_note": "LAST-KNOWN POSITION, not a position during the excursion. The dataset's 15 GPS fixes for this device all fall on 2021-11-08 17:48-20:06Z, spanning 367 m. The leg begins 2021-11-09T08:23:09Z (12.3 h later) and the excursion the weather is correlated against runs 14:58-18:49 on the 9th - 18.9 h after the final fix. The attribution therefore assumes the consignment remained in comparable conditions: an assumption, not an observation. See replay/SHIPMENT.md and src/coldcall/weather.py.",
       "route_fix_count": 15,
       "route_earliest_fix": "2021-11-08T17:48:04Z",
       "route_latest_fix": "2021-11-08T20:06:41Z",

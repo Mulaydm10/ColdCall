@@ -215,21 +215,20 @@ def load_readings(payload: Any, default_interval_minutes: float = 1.0) -> list[R
     ]
 
 
-def _location_evidence(args: argparse.Namespace, stamps: list[datetime]) -> Any:
-    """Assemble what is known about the coordinate, or nothing if the caller said nothing.
+def _location_evidence(args: argparse.Namespace) -> Any:
+    """Assemble the raw fixes behind the coordinate, or nothing if the caller said nothing.
 
-    Absent fix metadata yields ``None`` rather than a fabricated "observed" claim: a caller
-    that does not tell us when the position was taken has not told us it was current, and
-    inventing that is the overclaim this whole block exists to prevent.
+    Deliberately does NOT decide whether they cover anything. That question is about the
+    excursion window, which `attribute_excursion` computes — asking it here, against the whole
+    telemetry record, meant a fix taken during a quiet in-range hour cleared the qualification
+    for an excursion it never covered.
+
+    Returns ``None`` when no fix timestamp was given. That is not treated as clean: the
+    attribution reports ``provenance_unstated`` and stays qualified, because a caller who does
+    not say when the position was taken has not said it was current.
     """
-    if not args.route_fix_latest:
+    if not args.route_fix_latest or _parse_iso(args.route_fix_latest) is None:
         return None
-    latest = _parse_iso(args.route_fix_latest)
-    if latest is None or not stamps:
-        return None
-    window_start, window_end = min(stamps), max(stamps)
-    covers = window_start <= latest <= window_end
-    gap = 0.0 if covers else (window_start - latest).total_seconds() / 3600.0
     return LocationEvidence(
         latitude=args.route_lat,
         longitude=args.route_lon,
@@ -237,8 +236,6 @@ def _location_evidence(args: argparse.Namespace, stamps: list[datetime]) -> Any:
         earliest_fix=args.route_fix_earliest or args.route_fix_latest,
         latest_fix=args.route_fix_latest,
         spread_m=args.route_fix_spread_m,
-        covers_window=covers,
-        gap_hours=abs(gap),
     )
 
 
@@ -449,7 +446,7 @@ def main(argv: list[str] | None = None) -> int:
                     ambient,
                     float(upper),
                     threshold_c=args.containment_gap_c,
-                    location=_location_evidence(args, known),
+                    location=_location_evidence(args),
                 )
                 document["route_context"] = context.to_dict()
                 document["route_context"]["ambient_source"] = ambient.source

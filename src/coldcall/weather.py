@@ -53,7 +53,12 @@ __all__ = [
     "AMBIENT_ARCHIVE_URL",
     "CONTAINMENT_GAP_C",
     "AmbientSeries",
+    "LocationAssessment",
     "LocationEvidence",
+    "OBSERVED",
+    "LAST_KNOWN",
+    "RECORDED_AFTER",
+    "UNSTATED",
     "RouteContext",
     "attribute_excursion",
     "fetch_ambient",
@@ -67,6 +72,24 @@ AMBIENT_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 #: regulatory value** — a closed vehicle in sun genuinely runs warmer than shade temperature,
 #: so some positive gap is expected. Stated in every record that quotes an attribution.
 CONTAINMENT_GAP_C = 5.0
+
+#: How much is known about where the consignment was during the correlated window. Four
+#: states, not a boolean: "nobody told us" and "we checked and it was stale" are different
+#: facts, and collapsing them lets unknown provenance pass for verified provenance.
+OBSERVED = "observed_during_window"
+LAST_KNOWN = "last_known_position"
+RECORDED_AFTER = "recorded_after_window"
+UNSTATED = "provenance_unstated"
+
+
+def _parse_fix(raw: str) -> datetime | None:
+    """Parse a fix timestamp, assuming UTC when no offset is given."""
+    try:
+        parsed = datetime.fromisoformat(str(raw).strip().replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
 
 #: Attribution vocabulary. Deliberately includes an "undetermined" option: an investigation
 #: that cannot tell is a legitimate outcome, and forcing a cause is how bad CAPAs get written.
@@ -110,7 +133,12 @@ class AmbientSeries:
 
 @dataclass(frozen=True, slots=True)
 class LocationEvidence:
-    """What is actually known about *where* the consignment was, and when it was known.
+    """The raw facts about *where* the consignment was fixed, and when.
+
+    Deliberately holds no coverage claim. Whether these fixes cover the readings being
+    correlated is a question about the **excursion window**, which only ``attribute_excursion``
+    knows — computing it against the whole telemetry record instead meant a fix taken during a
+    quiet in-range hour cleared the qualification for an excursion it never covered.
 
     A weather lookup is only as good as the coordinate it is given, and a coordinate has a
     timestamp. Treating a last-known position as an established location during a later
@@ -125,34 +153,83 @@ class LocationEvidence:
     latest_fix: str
     spread_m: float
     """How far apart the fixes are — the radius of what "here" actually means."""
-    covers_window: bool
-    """Whether any fix falls inside the correlated window. When False the coordinate is a
-    last-known position and the attribution rests on an assumption, not an observation."""
+
+    def assess(self, window_start: datetime, window_end: datetime) -> LocationAssessment:
+        """Resolve these fixes against the window actually being correlated."""
+        latest = _parse_fix(self.latest_fix)
+        earliest = _parse_fix(self.earliest_fix) or latest
+        if latest is None or earliest is None:
+            return LocationAssessment(self, UNSTATED, 0.0)
+
+        # "Covers" means a fix falls inside the window, not merely that one exists nearby.
+        if earliest <= window_end and latest >= window_start:
+            return LocationAssessment(self, OBSERVED, 0.0)
+
+        # Signed, and the sign is the whole point: `abs()` would narrate a fix taken AFTER the
+        # excursion as a last-known position BEFORE it — a false temporal statement in a
+        # regulated record. Positive means the fixes precede the window.
+        if latest < window_start:
+            return LocationAssessment(
+                self, LAST_KNOWN, (window_start - latest).total_seconds() / 3600.0
+            )
+        return LocationAssessment(
+            self, RECORDED_AFTER, -((earliest - window_end).total_seconds() / 3600.0)
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class LocationAssessment:
+    """What the fixes turn out to say about the window that was correlated."""
+
+    fixes: LocationEvidence | None
+    confidence: str
     gap_hours: float
-    """Hours from the latest fix to the start of the correlated window. Zero when covered."""
+    """Signed. Positive: the fixes precede the window. Negative: they follow it. Zero when a
+    fix falls inside it, or when no provenance was supplied at all."""
+
+    @property
+    def qualified(self) -> bool:
+        """Anything other than an observed position leaves the attribution resting on an
+        assumption — including *unstated*, which is the case a boolean alone used to hide."""
+        return self.confidence != OBSERVED
 
     def to_dict(self) -> dict[str, object]:
-        return {
-            "latitude": self.latitude,
-            "longitude": self.longitude,
-            "provenance": (
-                "position observed during the correlated window"
-                if self.covers_window
-                else "LAST-KNOWN POSITION — no fix falls inside the correlated window"
-            ),
-            "fix_count": self.fix_count,
-            "earliest_fix": self.earliest_fix,
-            "latest_fix": self.latest_fix,
+        provenance = {
+            OBSERVED: "position observed during the correlated window",
+            LAST_KNOWN: "LAST-KNOWN POSITION — every fix predates the correlated window",
+            RECORDED_AFTER: "POSITION RECORDED AFTER the correlated window — not where it was",
+            UNSTATED: "PROVENANCE NOT SUPPLIED — no fix timestamp was given for this coordinate",
+        }[self.confidence]
+        document: dict[str, object] = {
+            "confidence": self.confidence,
+            "provenance": provenance,
             "gap_hours_to_window": round(self.gap_hours, 1),
-            "fix_spread_m": round(self.spread_m, 1),
-            "covers_window": self.covers_window,
+            "gap_direction": (
+                "fixes precede the window"
+                if self.gap_hours > 0
+                else "fixes follow the window"
+                if self.gap_hours < 0
+                else "not applicable"
+            ),
             "limit": (
-                "Weather was fetched for this coordinate. Where the consignment actually was "
-                "during the window is not established by these fixes."
-                if not self.covers_window
-                else "Fixes fall inside the correlated window."
+                "Fixes fall inside the correlated window."
+                if self.confidence == OBSERVED
+                else "Weather was fetched for this coordinate. Where the consignment actually "
+                "was during the window is not established by these fixes."
             ),
         }
+        if self.fixes is None:
+            document["latitude"] = None
+            document["longitude"] = None
+            document["fix_count"] = 0
+        else:
+            document["latitude"] = self.fixes.latitude
+            document["longitude"] = self.fixes.longitude
+            document["fix_count"] = self.fixes.fix_count
+            document["earliest_fix"] = self.fixes.earliest_fix
+            document["latest_fix"] = self.fixes.latest_fix
+            document["fix_spread_m"] = round(self.fixes.spread_m, 1)
+        return document
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,7 +245,7 @@ class RouteContext:
     total_excursion_readings: int
     threshold_c: float
     notes: tuple[str, ...]
-    location: LocationEvidence | None = None
+    location: LocationAssessment | None = None
 
     @property
     def qualified(self) -> bool:
@@ -178,8 +255,12 @@ class RouteContext:
         not explained by having been a few hundred metres away. But "qualified" has to be
         machine-readable, because a downstream reader that only checks `attribution` would
         otherwise treat an assumed location exactly like an observed one.
+
+        A missing assessment counts as qualified, not as verified. That was the same trap one
+        level up: a reader checking only this boolean would have read "we were never told
+        where it was" as "we confirmed where it was".
         """
-        return self.location is not None and not self.location.covers_window
+        return self.location is None or self.location.qualified
 
     @property
     def coverage(self) -> float:
@@ -203,7 +284,14 @@ class RouteContext:
                 "so some positive gap is expected."
             ),
             "qualified": self.qualified,
-            "location_evidence": None if self.location is None else self.location.to_dict(),
+            "location_confidence": (
+                UNSTATED if self.location is None else self.location.confidence
+            ),
+            "location_evidence": (
+                LocationAssessment(None, UNSTATED, 0.0).to_dict()
+                if self.location is None
+                else self.location.to_dict()
+            ),
             "notes": list(self.notes),
         }
 
@@ -317,10 +405,12 @@ def attribute_excursion(
         label_upper_c: the labelled maximum, which defines what counts as an excursion here.
         threshold_c: median gap above which this is a containment failure. Ours, not a
             regulation.
-        location: what is known about where the consignment was. When the fixes do not
-            temporally cover the correlated window, the attribution is marked ``qualified``
-            and says so in its own notes — the weather is real, but which weather applies
-            rests on an assumption.
+        location: the raw GPS fixes behind the coordinate. They are assessed **against the
+            excursion window computed here**, not against the whole telemetry record: a fix
+            taken during a quiet in-range hour says nothing about where the consignment was
+            while it was warming. When the fixes do not cover that window — or when no
+            provenance was supplied at all — the attribution is marked ``qualified`` and says
+            so in its own notes.
 
     Returns:
         A :class:`RouteContext`. Returns ``undetermined`` — never a guess — when too few
@@ -335,6 +425,15 @@ def attribute_excursion(
         )
 
     hot = [(when, temp) for when, temp in readings if temp > label_upper_c]
+
+    # Assess location against the EXCURSION window, which is what the weather is being
+    # correlated with. Timestamps outside it are irrelevant to the question being asked.
+    hot_stamps = [when for when, _ in hot if when is not None]
+    if location is None or not hot_stamps:
+        assessment = LocationAssessment(location, UNSTATED, 0.0)
+    else:
+        assessment = location.assess(min(hot_stamps), max(hot_stamps))
+
     if not hot:
         return RouteContext(
             attribution=UNDETERMINED,
@@ -345,7 +444,7 @@ def attribute_excursion(
             total_excursion_readings=0,
             threshold_c=threshold_c,
             notes=("No reading exceeded the labelled maximum, so there is nothing to explain.",),
-            location=location,
+            location=assessment,
         )
 
     gaps: list[float] = []
@@ -380,7 +479,7 @@ def attribute_excursion(
             total_excursion_readings=len(hot),
             threshold_c=threshold_c,
             notes=tuple(notes),
-            location=location,
+            location=assessment,
         )
 
     ordered = sorted(gaps)
@@ -416,17 +515,34 @@ def attribute_excursion(
         "moved and the trailer was not the open air, so treat the gap as indicative."
     )
 
-    if location is not None and not location.covers_window:
+    if assessment.qualified:
         # State the assumption in the record, not only in prose. A reader who checks
         # `attribution` and stops must still be able to find this by checking `qualified`.
-        notes.append(
-            f"QUALIFIED: the coordinate is a LAST-KNOWN POSITION from {location.latest_fix}, "
-            f"{location.gap_hours:.1f} h before this window began, and the {location.fix_count} "
-            f"available fixes span {location.spread_m:.0f} m. Where the consignment actually "
-            f"was during the excursion is not established. This attribution assumes it "
-            f"remained in weather comparable to that coordinate's — plausible for a gap this "
-            f"size against a regional ambient, but an assumption, not an observation."
-        )
+        if assessment.confidence == UNSTATED and location is None:
+            notes.append(
+                "QUALIFIED: no provenance was supplied for this coordinate — nothing records "
+                "when the position was taken, so whether it describes the consignment during "
+                "the excursion is unknown. Unknown is not the same as verified."
+            )
+        elif assessment.confidence == RECORDED_AFTER:
+            notes.append(
+                f"QUALIFIED: every fix was recorded AFTER this window closed — the earliest "
+                f"is {abs(assessment.gap_hours):.1f} h past its end, from "
+                f"{location.fix_count if location else 0} fixes spanning "
+                f"{location.spread_m if location else 0:.0f} m. It is where the consignment "
+                f"ended up, not where it was while it warmed."
+            )
+        else:
+            notes.append(
+                f"QUALIFIED: the coordinate is a LAST-KNOWN POSITION from "
+                f"{location.latest_fix if location else '?'}, {assessment.gap_hours:.1f} h "
+                f"before this window began, and the {location.fix_count if location else 0} "
+                f"available fixes span {location.spread_m if location else 0:.0f} m. Where the "
+                f"consignment actually was during the excursion is not established. This "
+                f"attribution assumes it remained in weather comparable to that coordinate's — "
+                f"plausible for a gap this size against a regional ambient, but an assumption, "
+                f"not an observation."
+            )
     return RouteContext(
         attribution=attribution,
         median_gap_c=median_gap,
@@ -436,5 +552,5 @@ def attribute_excursion(
         total_excursion_readings=len(hot),
         threshold_c=threshold_c,
         notes=tuple(notes),
-        location=location,
+        location=assessment,
     )

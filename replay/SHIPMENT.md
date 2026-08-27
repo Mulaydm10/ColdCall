@@ -197,10 +197,13 @@ fixes**, and this is the part that matters:
 | Spread of those fixes | **367 m** from their centroid |
 | The leg begins | **2021-11-09 08:23:09Z** |
 | Gap from the last fix to the leg | **12.3 hours** |
+| Gap from the last fix to the **excursion** | **18.9 hours** |
 | The excursion runs | 2021-11-09 14:58 → 18:49Z |
 
-So `39.4565, −0.3465` (Valencia, Spain) is the consignment's **last known position, twelve
-hours before the leg started**. No fix falls inside the excursion window. It is not established
+So `39.4565, −0.3465` (Valencia, Spain) is the consignment's **last known position, 12.3 h
+before the leg started and 18.9 h before the excursion the weather is correlated against**.
+The second figure is the one the attribution rests on, and it is the one the emitted record
+carries. No fix falls inside the excursion window. It is not established
 where the consignment was while it was warming.
 
 That distinction was not made when this section was first written — it said "the leg's own
@@ -209,8 +212,10 @@ matters more here than most, because `src/coldcall/weather.py` fetches weather *
 coordinate** and attributes a root cause from the comparison.
 
 **What the code does about it.** When the fixes do not temporally cover the correlated window,
-the emitted `route_context` carries `qualified: true` and a `location_evidence` block with the
-fix count, the timestamps, the spread and the gap — and the attribution's own notes say the
+the emitted `route_context` carries `qualified: true`, a `location_confidence` of
+`last_known_position`, and a `location_evidence` block with the fix count, the timestamps, the
+spread and the **signed** gap — signed because a fix recorded *after* a window is a different
+fact from one recorded before it — and the attribution's own notes say the
 finding assumes the consignment stayed in comparable conditions. The limit lives in the record,
 not only in this file.
 

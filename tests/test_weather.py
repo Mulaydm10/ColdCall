@@ -14,7 +14,11 @@ import pytest
 from coldcall.weather import (
     CONTAINMENT,
     ENVIRONMENTAL,
+    LAST_KNOWN,
+    OBSERVED,
+    RECORDED_AFTER,
     UNDETERMINED,
+    UNSTATED,
     AmbientSeries,
     LocationEvidence,
     attribute_excursion,
@@ -164,34 +168,27 @@ class TestLocationEvidence:
     right; the record has to say what it rests on.
     """
 
+    def fixes(self, earliest: str, latest: str, spread: float = 366.8) -> LocationEvidence:
+        return LocationEvidence(
+            latitude=39.4565,
+            longitude=-0.3465,
+            fix_count=15,
+            earliest_fix=earliest,
+            latest_fix=latest,
+            spread_m=spread,
+        )
+
     def stale(self) -> LocationEvidence:
-        """The demo leg's real situation: 15 fixes ending 12.3 h before the window."""
-        return LocationEvidence(
-            latitude=39.4565,
-            longitude=-0.3465,
-            fix_count=15,
-            earliest_fix="2021-11-08T17:48:04Z",
-            latest_fix="2021-11-08T20:06:41Z",
-            spread_m=366.8,
-            covers_window=False,
-            gap_hours=12.3,
-        )
+        """The demo leg's real situation: 15 fixes ending well before the window."""
+        return self.fixes("2021-11-08T17:48:04Z", "2021-11-08T20:06:41Z")
 
-    def current(self) -> LocationEvidence:
-        return LocationEvidence(
-            latitude=39.4565,
-            longitude=-0.3465,
-            fix_count=15,
-            earliest_fix="2021-11-09T14:00:00Z",
-            latest_fix="2021-11-09T18:00:00Z",
-            spread_m=40.0,
-            covers_window=True,
-            gap_hours=0.0,
-        )
-
-    def containment_case(self, location):
-        series = ambient(START, [15.0, 15.0, 16.0, 15.0])
-        readings = [(at(START, m), 27.0) for m in (10, 70, 130, 190)]
+    def containment_case(self, location, in_range_first: bool = False):
+        """An excursion at +130..+190 min, optionally preceded by in-range readings."""
+        series = ambient(START, [15.0, 15.0, 16.0, 15.0, 15.0])
+        readings = []
+        if in_range_first:
+            readings += [(at(START, m), 22.0) for m in (10, 70)]
+        readings += [(at(START, m), 27.0) for m in (130, 190)]
         return attribute_excursion(readings, series, LABEL_UPPER, location=location)
 
     def test_a_stale_coordinate_qualifies_the_attribution_without_withdrawing_it(self):
@@ -203,35 +200,126 @@ class TestLocationEvidence:
         result = self.containment_case(self.stale())
         assert result.attribution == CONTAINMENT
         assert result.qualified is True
+        assert result.to_dict()["location_confidence"] == LAST_KNOWN
         assert any("LAST-KNOWN POSITION" in n for n in result.notes)
         assert any("an assumption, not an observation" in n for n in result.notes)
 
     def test_a_coordinate_observed_during_the_window_is_not_qualified(self):
-        result = self.containment_case(self.current())
-        assert result.attribution == CONTAINMENT
+        covering = self.fixes(
+            (START + timedelta(minutes=120)).isoformat(),
+            (START + timedelta(minutes=200)).isoformat(),
+            spread=40.0,
+        )
+        result = self.containment_case(covering)
         assert result.qualified is False
+        assert result.to_dict()["location_confidence"] == OBSERVED
+        assert not any("QUALIFIED" in n for n in result.notes)
+
+
+class TestCoverageIsAboutTheExcursionWindow:
+    """Devin/Qodo finding 1: coverage was tested against the whole telemetry record."""
+
+    def test_a_fix_during_a_quiet_in_range_hour_does_not_clear_the_qualification(self):
+        """The correlated question is about the EXCURSION, not the record.
+
+        A GPS fix taken while the load sat comfortably in band says nothing about where the
+        consignment was while it was warming — but measured against the full span it looked
+        like coverage, cleared `qualified`, and dropped the last-known-position warning
+        entirely from an attribution that had no location evidence for its excursion at all.
+        """
+        helper = TestLocationEvidence()
+        # Fixes land at +10..+70 min: inside the record, well before the +130..+190 excursion.
+        early = helper.fixes(
+            (START + timedelta(minutes=10)).isoformat(),
+            (START + timedelta(minutes=70)).isoformat(),
+        )
+        result = helper.containment_case(early, in_range_first=True)
+
+        assert result.qualified is True, "a fix outside the excursion is not coverage of it"
+        assert result.to_dict()["location_confidence"] == LAST_KNOWN
+        assert any("LAST-KNOWN POSITION" in n for n in result.notes)
+
+    def test_a_fix_inside_the_excursion_does_clear_it(self):
+        helper = TestLocationEvidence()
+        during = helper.fixes(
+            (START + timedelta(minutes=140)).isoformat(),
+            (START + timedelta(minutes=180)).isoformat(),
+        )
+        result = helper.containment_case(during, in_range_first=True)
+        assert result.qualified is False
+        assert result.to_dict()["location_confidence"] == OBSERVED
+
+
+class TestUnknownProvenanceIsNotVerifiedProvenance:
+    """Devin/Qodo finding 2: no fix metadata serialised as `qualified: false`."""
+
+    def test_a_coordinate_with_no_provenance_is_qualified_not_clean(self):
+        """The same trap as `attribution`, one level up: a reader checking only `qualified`
+        would have read "nobody told us where it was" as "we confirmed where it was".
+        """
+        result = TestLocationEvidence().containment_case(None)
+        assert result.attribution == CONTAINMENT
+        assert result.qualified is True
+        assert result.to_dict()["location_confidence"] == UNSTATED
+        assert any("no provenance was supplied" in n for n in result.notes)
+
+    def test_the_record_says_unstated_rather_than_omitting_the_block(self):
+        """Silence is what made the two cases indistinguishable; the record now names it."""
+        evidence = TestLocationEvidence().containment_case(None).to_dict()["location_evidence"]
+        assert evidence["confidence"] == UNSTATED
+        assert "PROVENANCE NOT SUPPLIED" in evidence["provenance"]
+        assert evidence["fix_count"] == 0
+
+
+class TestTheGapKeepsItsSign:
+    """Devin/Qodo finding 3: abs() narrated a post-window fix as preceding the window."""
+
+    def test_a_fix_recorded_after_the_window_is_not_called_last_known(self):
+        """A false temporal statement in a regulated record. It does not bite the demo leg,
+        whose fixes predate the window, but the path exists for any other caller.
+        """
+        helper = TestLocationEvidence()
+        later = helper.fixes(
+            (START + timedelta(minutes=400)).isoformat(),
+            (START + timedelta(minutes=460)).isoformat(),
+        )
+        result = helper.containment_case(later)
+        document = result.to_dict()
+
+        assert result.qualified is True
+        assert document["location_confidence"] == RECORDED_AFTER
+        assert document["location_evidence"]["gap_hours_to_window"] < 0
+        assert document["location_evidence"]["gap_direction"] == "fixes follow the window"
+        assert any("recorded AFTER this window" in n for n in result.notes)
         assert not any("LAST-KNOWN POSITION" in n for n in result.notes)
 
-    def test_no_location_evidence_never_claims_the_position_was_current(self):
-        """Saying nothing about when a fix was taken is not the same as saying it was current."""
-        result = self.containment_case(None)
-        assert result.qualified is False
-        assert result.to_dict()["location_evidence"] is None
+    def test_a_fix_before_the_window_keeps_a_positive_gap(self):
+        helper = TestLocationEvidence()
+        result = helper.containment_case(helper.stale())
+        document = result.to_dict()["location_evidence"]
+        assert document["gap_hours_to_window"] > 0
+        assert document["gap_direction"] == "fixes precede the window"
 
-    def test_the_emitted_record_carries_the_gap_and_the_spread(self):
+
+class TestEmittedRecordCarriesTheEvidence:
+    def test_the_gap_and_the_spread_reach_the_record(self):
         """The honest limit has to live in the record, not only in the prose around it."""
-        document = self.containment_case(self.stale()).to_dict()
+        helper = TestLocationEvidence()
+        document = helper.containment_case(helper.stale()).to_dict()
         evidence = document["location_evidence"]
         assert document["qualified"] is True
-        assert evidence["covers_window"] is False
-        assert evidence["gap_hours_to_window"] == 12.3
+        assert evidence["confidence"] == LAST_KNOWN
         assert evidence["fix_spread_m"] == 366.8
+        assert evidence["fix_count"] == 15
         assert "LAST-KNOWN POSITION" in evidence["provenance"]
 
     def test_an_undetermined_attribution_still_reports_its_location_evidence(self):
         """Whichever way the attribution lands, the reader gets the same provenance."""
+        helper = TestLocationEvidence()
         series = ambient(START, [15.0])
         readings = [(at(START, m), 27.0) for m in (10, 200, 260, 320, 380)]
-        result = attribute_excursion(readings, series, LABEL_UPPER, location=self.stale())
+        result = attribute_excursion(
+            readings, series, LABEL_UPPER, location=helper.stale()
+        )
         assert result.attribution == UNDETERMINED
-        assert result.to_dict()["location_evidence"]["covers_window"] is False
+        assert result.to_dict()["location_evidence"]["confidence"] != OBSERVED

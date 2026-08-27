@@ -182,19 +182,33 @@ def deviation_report(
                 f"| Coordinate | {evidence.get('latitude')}, {evidence.get('longitude')} |",
                 f"| Provenance | **{evidence.get('provenance')}** |",
                 f"| Fixes available | {evidence.get('fix_count')}, "
-                f"{evidence.get('earliest_fix')} to {evidence.get('latest_fix')} |",
+                f"{evidence.get('earliest_fix', 'n/a')} to {evidence.get('latest_fix', 'n/a')} |",
                 f"| Spread of those fixes | {_fmt(evidence.get('fix_spread_m'), ' m', 0)} |",
                 f"| Gap to the excursion window | "
-                f"{_fmt(evidence.get('gap_hours_to_window'), ' h', 1)} |",
+                f"{_fmt(abs(evidence.get('gap_hours_to_window') or 0), ' h', 1)}, "
+                f"{evidence.get('gap_direction')} |",
                 "",
             ]
             if route.get("qualified"):
+                reason = {
+                    "provenance_unstated": (
+                        "**nothing records when this position was taken**, so whether it "
+                        "describes the consignment during the excursion is unknown"
+                    ),
+                    "recorded_after_window": (
+                        "**every fix was recorded after the excursion closed** — it is where "
+                        "the consignment ended up, not where it was while it warmed"
+                    ),
+                }.get(
+                    str(route.get("location_confidence")),
+                    "the consignment is **assumed** to have stayed in conditions comparable "
+                    "to its last recorded position",
+                )
                 lines += [
-                    "> **This attribution is QUALIFIED.** The weather is real and the "
-                    "arithmetic is real, but *which* weather applies rests on the assumption "
-                    "that the consignment stayed in conditions comparable to its last recorded "
-                    "position. That is an assumption, not an observation, and a reader acting "
-                    "on this section should weigh it as one.",
+                    f"> **This attribution is QUALIFIED.** The weather is real and the "
+                    f"arithmetic is real, but *which* weather applies rests on an assumption: "
+                    f"{reason}. That is an assumption, not an observation, and a reader acting "
+                    f"on this section should weigh it as one.",
                     "",
                 ]
         lines += [f"{i}. {note}" for i, note in enumerate(route.get("notes", []), 1)]
