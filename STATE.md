@@ -75,6 +75,8 @@ into every emitted record.
 ## In flight
 
 Building the spec end to end. Milestone PRs open as each lands; Devin AI merges.
+**Merge order: #6 → #7 → #8 → #9.** Each is based on its predecessor's branch, not `main`, so
+each diff stays scoped to its own milestone and retargets automatically as its parent lands.
 
 ## Blocked
 
@@ -89,12 +91,26 @@ Nothing is blocking the critical path.
 | **`tests/README.md`** | LOCKED; its layout table names files that changed. | Nothing |
 | **San Francisco day / blog post / star TrueForge repo** | Optional prize tracks | Nothing |
 
+## The judged path, proven end to end (`EXP-0010`, `EXP-0011`)
+
+The whole loop runs: excursion → four strands in parallel → deterministic maths in a real
+Daytona microVM → generative-UI evidence bundle → **approval gate** → executed action with a
+checkable receipt.
+
+- **The verdict reproduces exactly.** Laptop and remote microVM both return MKT **24.54 °C**,
+  budget **64.35 %**, `quarantine_retest`. Same inputs, same arithmetic, different machine.
+- **The gate works both ways.** Deny → the agent reported the denial and stopped, no retry.
+  Allow → branch `incident/INC-VCC-118-A2231-…`, deviation record committed as **`1c859fc`**.
+- **The record survives `kill -9`.** `./scripts/restart_proof.sh` — 86 events and 7
+  verdict-bearing responses intact across a SIGKILL.
+- **README and `DEMO-0001` are written** against what actually ran, not against intentions.
+
 ## Next intended step
 
-1. Agent manifest + orchestrator instructions against the real thesis; SOP skill reconciled.
-2. Replay engine → excursion webhook → incident session; four strands fan out.
-3. Approval gate + executed actions with receipts; deny path.
-4. Generative-UI incident board; restart-mid-incident proof; README + demo script.
+1. Record the ~3-minute video against `DEMO-0001`. Rehearse twice — see the cold-start caveat.
+2. Land the milestone PRs in order and re-register the skills against `main` afterwards.
+3. Apply `proposals/VISION.md` to the LOCKED `VISION.md` and log it in `GOVERNANCE.md`.
+4. Optional prize tracks in the deferred backlog.
 
 **Do not re-run platform setup.** It is configured and verified; the script is idempotent and
 exists for re-verification after a restart, not as a step.
