@@ -177,8 +177,31 @@ If it fails to run, that is the finding — report the error rather than estimat
 For the deviation report, use the repository's own generator rather than writing the numbers
 by hand, then complete the narrative sections it marks as yours:
 
-    PYTHONPATH=src python -c "import json,sys; from coldcall.report import deviation_report; \\
-      print(deviation_report(json.load(open('/work/verdict.json'))))" > /work/deviation.md
+    PYTHONPATH=src python scripts/make_report.py \\
+      --verdict /work/verdict.json \\
+      --shipment-id {payload.get('shipment_id', '')} \\
+      --incident-id "$INCIDENT_ID" \\
+      --out /work/deviation.md
+
+## Then execute the disposition — and expect to be stopped
+
+Once the evidence bundle is on screen, carry out the actions the verdict calls for. Do not ask
+whether you may; attempt them. The harness will hold each irreversible one for approval, and
+that pause IS the control — asking permission to ask permission just wastes the operator's time.
+
+For a `quarantine_retest` verdict the actions are:
+
+1. **Commit the deviation report** via the GitHub connector, to
+   `incidents/{payload.get('shipment_id', '')}-{payload.get('lot_id', '')}.md`
+   on a new branch of {PUBLIC_REPO}. This is the permanent audit trail.
+2. **Quarantine the lot** and **notify the consignees** listed in `replay/seed.json`.
+
+Where a connector for an action is not attached to this session, say so plainly and name what
+is missing. Do not simulate the action, do not write a file pretending to be the receipt, and
+do not describe an unexecuted action in the past tense.
+
+After each approved action, report its receipt — a commit sha, an issue number, a row id. An
+action without a receipt did not happen.
 
 ## Telemetry for this shipment ({len(readings)} readings, real recorded data, replayed)
 
