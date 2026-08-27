@@ -49,10 +49,25 @@ put() {
 curl -sf --max-time 5 "$TF/api/v1/capabilities" >/dev/null \
   || die "TrueForge is not reachable at $TF (start it: npx @truefoundry/trueforge)"
 
+# A value that is only the prefix of a real credential is not a credential. `.env.example`
+# ships `STRIPE_SECRET_KEY=sk_test_` as a hint about the required form, and treating that as
+# configured silently registers a connector that will fail on first use — the worst moment to
+# discover it. Anything at or below this length is a leftover placeholder, not a secret.
+MIN_SECRET_LEN=12
+
+is_placeholder() {
+  local v="$1"
+  [[ -z "$v" ]] && return 0
+  (( ${#v} < MIN_SECRET_LEN )) && return 0
+  # Bare scheme prefixes left in .env.example
+  [[ "$v" =~ ^(sk_test_|sk_live_|dtn_|ghp_|sbp_|Bearer)$ ]] && return 0
+  return 1
+}
+
 echo "ColdCall — TrueForge configuration  ($TF)"
 echo
 echo "Model provider"
-if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+if ! is_placeholder "${OPENAI_API_KEY:-}"; then
   put "openai / $MODEL_ID" /api/v1/settings/model-providers "$(cat <<JSON
 {"manifest":{"type":"openai","auth":{"api_key":"$OPENAI_API_KEY"},
  "models":[{"model_id":"$MODEL_ID","name":"$MODEL_NAME"}]}}
@@ -64,7 +79,7 @@ fi
 
 echo
 echo "Sandbox provider"
-if [[ -n "${DAYTONA_API_KEY:-}" ]]; then
+if ! is_placeholder "${DAYTONA_API_KEY:-}"; then
   # Singleton resource: PUT only, no POST. All four timers are required by the schema.
   put "daytona" /api/v1/settings/sandbox-providers "$(cat <<JSON
 {"manifest":{"type":"daytona","auth":{"api_key":"$DAYTONA_API_KEY"},
@@ -79,7 +94,8 @@ fi
 echo
 echo "MCP servers"
 mcp_header() {  # name url token description
-  [[ -z "$3" ]] && { skip "$1" "token unset"; return 0; }
+  if [[ -z "$2" ]]; then skip "$1" "URL unset"; return 0; fi
+  if is_placeholder "$3"; then skip "$1" "token unset or still the .env.example placeholder"; return 0; fi
   put "$1" "/api/v1/settings/mcp-servers" "$(cat <<JSON
 {"manifest":{"type":"remote","name":"$1","url":"$2","description":"$4",
  "auth":{"type":"header","headers":{"Authorization":"Bearer $3"}}}}
