@@ -75,7 +75,16 @@ into every emitted record.
 
 ## In flight
 
-Building the spec end to end. Milestone PRs open as each lands; Devin AI merges.
+**Four milestone PRs open, all Qodo-reviewed, all awaiting merge.**
+**Merge order: #6 → #7 → #8 → #9.** Each is based on its predecessor's branch rather than
+`main`, so every diff stays scoped to its own milestone and retargets automatically as its
+parent lands.
+
+Qodo raised **26 findings across three rounds**; 23 fixed, 3 dismissed in-thread with reasons.
+The dismissals are all the same rule firing on a false premise — "the thesis is fabricated" —
+which is correct on the diff but wrong on the facts: the thesis was supplied, and `VISION.md`
+reads `TODO` only because it is LOCKED. It will keep re-reporting until a human applies
+`proposals/VISION.md`.
 **Merge order: #6 → #7 → #8 → #9.** Each is based on its predecessor's branch, not `main`, so
 each diff stays scoped to its own milestone and retargets automatically as its parent lands.
 
