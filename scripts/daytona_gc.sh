@@ -113,7 +113,23 @@ fi
 
 echo
 FAILED=0
+SKIPPED=0
 for id in "${IDS[@]}"; do
+  # Re-check state immediately before deleting. The list above is a snapshot, and a sandbox
+  # that was stopped when it was taken can be running by now — a demo started in the next
+  # terminal is exactly how. Deleting it would break the guarantee at the top of this file,
+  # and `?force=true` means it would go without complaint.
+  state=$(curl -sS -m 30 -H "Authorization: Bearer $KEY" "$API/sandbox/$id" 2>/dev/null \
+          | jq -r '.state // "unknown"')
+  case "$state" in
+    stopped|archived|archiving) ;;
+    *)
+      printf '  \033[33mskipped\033[0m %s (now %s — not reaping a live sandbox)\n' \
+        "${id:0:8}" "$state"
+      SKIPPED=$((SKIPPED+1))
+      continue
+      ;;
+  esac
   code=$(curl -sS -m 120 -o /dev/null -w '%{http_code}' -X DELETE \
          -H "Authorization: Bearer $KEY" "$API/sandbox/$id?force=true" 2>/dev/null)
   if [[ "$code" =~ ^2 ]]; then
@@ -132,5 +148,6 @@ if ! AFTER=$(inventory); then
   die "deletions ran but the resulting sandbox count could not be verified"
 fi
 printf '  now: %s sandbox(es), %s GiB\n' "${AFTER% *}" "${AFTER#* }"
+[[ "$SKIPPED" -eq 0 ]] || dim "  $SKIPPED skipped because they were running by the time we got to them"
 
 [[ "$FAILED" -eq 0 ]] || die "$FAILED deletion(s) failed — the quota may still be exhausted"

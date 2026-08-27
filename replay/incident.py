@@ -444,14 +444,19 @@ def run_once(
                 # exit 0 and look fine in CI.
                 print(f"\n{_RED}turn ended with errors — session {session_id}{_OFF}")
                 return 1, sandbox_failed and not approved_anything
-            print(f"\n{_GREEN}turn complete — session {session_id}{_OFF}")
             if sandbox_failed and approved_anything:
+                # Suppressing the retry was right; returning 0 was not. This run executed an
+                # irreversible action while at least one strand was missing its SOP — the
+                # definition of untrustworthy — so CI and any caller must see a failure.
+                print(f"\n{_RED}turn complete but NOT trustworthy — session {session_id}{_OFF}")
                 print(
                     f"{_RED}  a strand's sandbox failed AND an action was approved. Not "
                     f"retrying: a second run would repeat an irreversible action. Review "
                     f"session {session_id} by hand.{_OFF}"
                 )
-            return 0, sandbox_failed and not approved_anything
+                return 1, False
+            print(f"\n{_GREEN}turn complete — session {session_id}{_OFF}")
+            return 0, sandbox_failed
 
         # Fail closed. If any pending call could not be described, the whole batch is denied
         # without asking: an operator cannot consent to an action they were never shown, and
