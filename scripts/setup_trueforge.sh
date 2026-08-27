@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# Configure a running TrueForge instance for ColdCall. Idempotent: safe to re-run.
+#
+# Every step uses PUT (create-or-replace) rather than POST, so running this twice converges
+# on the same state instead of erroring on "already exists". That matters mid-event — the
+# fastest recovery from a confused harness is to re-run setup, not to debug it.
+#
+# Note on routes: PUT goes to the *collection* endpoint (/settings/skills), never to
+# /settings/skills/{name} — those per-name paths are read-only and return 404 on a write.
+# Verified against this build's OpenAPI spec, which disagrees with the published docs here.
+#
+# Reads secrets from .env (gitignored). Nothing is echoed back to the terminal.
+#
+# Usage:  ./scripts/setup_trueforge.sh [--dry-run]
+set -uo pipefail
+
+DRY=${1:-}
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ -f "$ROOT/.env" ]] && set -a && . "$ROOT/.env" && set +a
+
+TF=${TRUEFORGE_URL:-http://localhost:8790}
+MODEL_ID=${COLDCALL_MODEL_ID:-gpt-5.6-sol}
+MODEL_NAME=$(printf '%s' "$MODEL_ID" | tr '.' '-')
+SKIPPED=0
+DONE=0
+
+say()  { printf '  \033[32mok\033[0m    %s\n' "$1"; DONE=$((DONE+1)); }
+skip() { printf '  \033[33mskip\033[0m  %-26s %s\n' "$1" "$2"; SKIPPED=$((SKIPPED+1)); }
+die()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; exit 1; }
+
+# PUT a manifest and report. Prints the server's error message when it rejects one, because
+# a silent 422 during setup is the single most expensive minute of a hackathon.
+put() {
+  local label="$1" path="$2" body="$3"
+  if [[ -n "$DRY" ]]; then printf '  \033[36mdry\033[0m   %-26s PUT %s\n' "$label" "$path"; return 0; fi
+  local out code
+  out=$(curl -sS -X PUT "$TF$path" -H 'Content-Type: application/json' \
+        -w '\n%{http_code}' -d "$body" 2>&1)
+  code=$(printf '%s' "$out" | tail -1)
+  if [[ "$code" =~ ^2 ]]; then say "$label"; else
+    printf '  \033[31mFAIL\033[0m  %-26s HTTP %s — %s\n' "$label" "$code" \
+      "$(printf '%s' "$out" | sed '$d' | head -c 200)"
+    return 1
+  fi
+}
+
+curl -sf --max-time 5 "$TF/api/v1/capabilities" >/dev/null \
+  || die "TrueForge is not reachable at $TF (start it: npx @truefoundry/trueforge)"
+
+echo "ColdCall — TrueForge configuration  ($TF)"
+echo
+echo "Model provider"
+if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+  put "openai / $MODEL_ID" /api/v1/settings/model-providers "$(cat <<JSON
+{"manifest":{"type":"openai","auth":{"api_key":"$OPENAI_API_KEY"},
+ "models":[{"model_id":"$MODEL_ID","name":"$MODEL_NAME"}]}}
+JSON
+)"
+else
+  skip "openai" "OPENAI_API_KEY unset — the harness cannot think without this"
+fi
+
+echo
+echo "Sandbox provider"
+if [[ -n "${DAYTONA_API_KEY:-}" ]]; then
+  # Singleton resource: PUT only, no POST. All four timers are required by the schema.
+  put "daytona" /api/v1/settings/sandbox-providers "$(cat <<JSON
+{"manifest":{"type":"daytona","auth":{"api_key":"$DAYTONA_API_KEY"},
+ "exec_timeout_ms":60000,"auto_stop_interval_in_minutes":5,
+ "auto_archive_interval_in_minutes":60,"auto_delete_interval_in_minutes":7200}}
+JSON
+)"
+else
+  skip "daytona" "DAYTONA_API_KEY unset — no sandbox means no skills and no code execution"
+fi
+
+echo
+echo "MCP servers"
+mcp_header() {  # name url token description
+  [[ -z "$3" ]] && { skip "$1" "token unset"; return 0; }
+  put "$1" "/api/v1/settings/mcp-servers" "$(cat <<JSON
+{"manifest":{"type":"remote","name":"$1","url":"$2","description":"$4",
+ "auth":{"type":"header","headers":{"Authorization":"Bearer $3"}}}}
+JSON
+)"
+}
+mcp_header supabase "${SUPABASE_MCP_URL:-}" "${SUPABASE_ACCESS_TOKEN:-}" \
+  "Shipment inventory, telemetry and incident records. The quarantine write lands here."
+mcp_header stripe   "${STRIPE_MCP_URL:-}"   "${STRIPE_SECRET_KEY:-}" \
+  "Test-mode billing: reship orders and refunds for a rejected consignment."
+mcp_header github   "${GITHUB_MCP_URL:-}"   "${GITHUB_TOKEN:-}" \
+  "Commits the deviation report, which is what makes the audit trail permanent."
+
+echo
+echo "Skills"
+SKILL_REPO=${COLDCALL_SKILL_REPO:-https://github.com/Mulaydm10/ColdCall}
+SKILL_REF=${COLDCALL_SKILL_REF:-main}
+# `ref` is required by the schema even though the docs read as if pinning is optional.
+put "coldchain-sop" /api/v1/settings/skills "$(cat <<JSON
+{"manifest":{"type":"git","name":"coldchain-sop","url":"$SKILL_REPO",
+ "path":"skills/coldchain-sop","ref":"$SKILL_REF",
+ "description":"Standard operating procedure for judging a cold-chain temperature excursion: which readings count, how the stability budget is computed, and what must happen before a consignment is released or quarantined."}}
+JSON
+)" || true
+
+echo
+printf '  %d configured, %d skipped\n' "$DONE" "$SKIPPED"
+if [[ $SKIPPED -gt 0 ]]; then
+  echo
+  echo "  Skipped steps need values in .env (copy .env.example). Re-run this script after"
+  echo "  filling them in — it is idempotent, nothing is duplicated."
+fi

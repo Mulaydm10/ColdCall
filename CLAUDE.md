@@ -40,6 +40,17 @@ One scheme, used everywhere, so `grep -rn '<ID>' .` recovers a thing's full trac
 - `EXP-####` — experiments/spikes, in `experiments/experiment_log.md`
 - `DEMO-####` — demo-path scenarios, in `DEMO.md`
 
+## Layout
+
+| Path | What |
+|---|---|
+| `src/coldcall/` | Dependency-free Python: stability maths (`mkt.py`), streaming telemetry replay (`replay.py`). Runs inside the sandbox, so it must import against a stock interpreter. |
+| `tests/` | pytest suite, 43 tests |
+| `agents/coldcall.agent.json` | The agent manifest: model, instructions, MCP servers with their approval gates, skills, harness features |
+| `skills/coldchain-sop/` | Git-backed `SKILL.md` the harness loads at runtime |
+| `scripts/` | Idempotent setup + a real pre-demo API check |
+| `data/samples/` | Gitignored; re-fetchable telemetry sample |
+
 ## Where the code lives
 
 Public repo (open source is a submission requirement): **https://github.com/Mulaydm10/ColdCall**
@@ -58,12 +69,27 @@ Verified running as v0.1.4 on 2026-08-27 (`EXP-0001`). SQLite-backed, no account
 clone. Do **not** use the `docker compose` route — Docker is not installed here and standalone
 is sufficient.
 
-**Project build/test commands: TODO(Mulaydm10) — pending stack selection**
-(`design/decisions/ADR-0002-stack-selection.md`, `Q-0002`; its options are now narrowed by
-TrueForge being Node/TS). This repo intentionally has no `package.json` or `pyproject.toml`
-yet — do not add one outside of finalizing that ADR. **Whoever resolves ADR-0002 must, in the
-same change: fill in this section with the real setup/test/lint commands, AND land a green
-smoke test.** Until then there is no runnable test baseline — see `tests/README.md`.
+**Project setup and tests** (stack settled in `ADR-0002`: Node runs the agent, Python computes
+the numbers):
+
+```sh
+uv venv --python 3.12 .venv     # project-local; never a global install
+uv sync --group dev             # pytest, pytest-cov, ruff
+uv run pytest                   # 43 tests, green
+uv run ruff check .             # lint
+```
+
+**Configure the harness and check the data path** — both idempotent, safe to re-run:
+
+```sh
+cp .env.example .env            # then fill in the keys; .env is gitignored
+./scripts/setup_trueforge.sh    # model provider, Daytona sandbox, MCP servers, skills
+./scripts/setup_trueforge.sh --dry-run   # show what it would do, change nothing
+./scripts/verify_apis.sh        # every external source, hit for real
+```
+
+`scripts/verify_apis.sh` is the pre-demo check: it calls each API and asserts on the response,
+so green means the data path works *now*, not that it worked when the README was written.
 
 **Qodo review loop (mandatory — see `COMPETITION.md`):**
 
@@ -80,7 +106,9 @@ comment `/agentic_review` on it.
 
 - **Python → `uv`, in a project-local virtual environment.** `uv venv` + `uv add` / `uv run`.
   Never `pip install` globally or into the system/homebrew interpreter. One-off tools: `uvx`.
-- **Node → project-local.** `npx` or a devDependency; never `npm install -g`.
+- **Node → project-local.** `npx` or a devDependency; never `npm install -g`. There is no
+  `package.json` and that is deliberate (see `ADR-0002`) — TrueForge is consumed via `npx` and
+  configured over HTTP.
 - If a command in this file ever needs a global install to work, the command is wrong.
 
 ## Hard rules

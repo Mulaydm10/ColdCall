@@ -118,3 +118,64 @@ dismissed**:
 Worth recording: three of the four were *staleness* bugs — docs describing a world that changed
 while the PR was open. That is the failure mode this repo's STATE-vs-worklog split exists to
 prevent, and Qodo caught it in the one place the split doesn't reach: a table inside a PR.
+
+---
+
+### 2026-08-27 07:20 CEST — Mulaydm10 + Claude (stack installed, configured, verified)
+
+The required tech stack was supplied and is now installed, configured and — the part that
+matters — **verified by use rather than by reading documentation**. Two research agents ran in
+parallel against the live APIs and the running harness's own OpenAPI spec while the Python
+side was built inline.
+
+**Three things in the plan turned out not to be true.** Finding them now cost an afternoon;
+finding them on submission day would have cost the submission.
+
+1. **The VCC-CPLD dataset (Zenodo, "445K real cold-chain records") does not exist.** Zero hits
+   for the exact identifier on Zenodo's API; broader searches surface only market reports and
+   electronics documentation where CPLD means Complex Programmable Logic Device. Substituted
+   Zenodo 7907515 "Shipments Sensors readings" (DOI 10.5281/zenodo.7907515, CC-BY-4.0, ~402 MB
+   of real per-reading telemetry), verified resolving and verified parsing. `ADR-0003`.
+   We do **not** claim 445 000 records, because we have not counted them.
+2. **TrueForge has no named-subagent registry.** `AgentSpec` has no such field; the only
+   mechanism is `config.dynamic_sub_agents`, where the root agent writes each subagent's
+   instructions at runtime. Subagents also share the root's tools and **cannot nest**. So the
+   four specialists become a pattern in the instructions rather than four config objects —
+   which is the harness working as designed, and using it as designed is what the rubric
+   rewards. `ADR-0004`.
+3. **There is no configurable local sandbox.** The boot log's "Local sandbox fallback is
+   available" line is misleading: `SandboxProviderManifest.type` is the single-value enum
+   `["daytona"]`, and `GET /settings/sandbox-providers` 404s until one is configured. Since
+   **skills require a sandbox**, a Daytona key now blocks two judged features at once.
+
+Two smaller corrections worth recording because they cost real time: `require_approval_for_tools`
+lives on each `mcp_servers[]` entry, not at the top level of `agent.json`; and `PUT` goes to the
+**collection** route (`/api/v1/settings/skills`), not `/settings/skills/{name}` — the per-name
+route is read-only and 404s on a write, which the published docs get wrong. Everything scripted
+here is written against the live OpenAPI spec, never the docs.
+
+**What was built.** `ADR-0002` is Accepted: Node runs the harness because it must, Python
+computes the regulated numbers because a verdict a model reasoned its way to cannot be audited.
+`src/coldcall/` has zero required dependencies on purpose — it is uploaded into a sandbox and
+must import against a stock interpreter. `mkt.py` implements mean kinetic temperature with
+log-sum-exp rather than naive summation, because the exponentials involved are around 1e-16 and
+precision matters exactly where a borderline shipment gets decided. `replay.py` streams the
+402 MB array instead of loading it, and tolerates the truncated tail a range request always
+produces. 43 tests, green, with the maths cross-checked against an independently written naive
+implementation so that an optimisation cannot silently break it.
+
+One test failed honestly and got fixed honestly: a docstring claimed ΔH/R comes out to *exactly*
+10 000 K. It is 9 999.91 with the CODATA gas constant. The claim was wrong, not the constant,
+so the claim changed.
+
+**`EXP-0004`, the finding that shapes the demo.** Running the real telemetry through the real
+maths against a 2–8 °C biologic label quarantines every leg immediately — the cargo is ambient
+(~22–30 °C), so that comparison is trivially true and tells a judge nothing. Against a real USP
+controlled-room-temperature label (15–25 °C), which is what the goods actually are and which
+openFDA supplies for real products, the same data gives a genuine spread: two legs need review,
+four quarantine. The borderline verdict is the one worth showing. Raised as `Q-0007`.
+
+Harness state right now: TrueForge v0.1.4 on :8790, the `coldchain-sop` skill registered and
+reading back, `agents/coldcall.agent.json` validated by the API up to the unconfigured model
+provider, and `scripts/verify_apis.sh` passing 7 of 7 sources. Missing: the keys
+(`Q-0003`, `Q-0004`, `Q-0008`) and the idea (`Q-0001`).

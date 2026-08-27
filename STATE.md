@@ -5,75 +5,78 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-27 06:55 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
-Qodo installed and reviewing; PR #1's first review resolved.
+Last updated: 2026-08-27 07:20 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
+full stack installed, configured and verified; three plan assumptions corrected.
 
 ## Deadline
 
 Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event facts).
-**Time remaining: ~3 days 14 hours** as of 2026-08-27 06:20 CEST / 04:20 UTC.
-Event window opened 2026-08-24 — we are entering **day 4 of 7**.
+**Time remaining: ~3 days 12 hours** as of 2026-08-27 07:20 CEST / 05:20 UTC.
 
 ## Done
 
-- Repo scaffold created.
-- **Event facts researched and written into `COMPETITION.md`** (LOCKED; logged in
-  `GOVERNANCE.md` audit table) from the official overview/rules/schedule/resources pages and
-  the kick-off guide.
-- **TrueForge v0.1.4 verified running locally** — `npx @truefoundry/trueforge`, standalone,
-  SQLite, serving http://localhost:8790 (HTTP 200), API docs at `/api/v1/docs`.
-  Node 26.5.0 on this machine satisfies the Node 22+ requirement.
-  Log: `<scratchpad>/trueforge.log`. It also reports a **local sandbox fallback** available
-  on darwin, in addition to the documented Daytona provider.
-- Judging rubric mirrored into `notes/judging_alignment.md` (6 equally weighted criteria).
-- **Project named `ColdCall`.** Public repo created and pushed:
-  **https://github.com/Mulaydm10/ColdCall** (MIT) — satisfies the open-source submission
-  requirement. `main` is the merge target.
-- **PR #1 open** — https://github.com/Mulaydm10/ColdCall/pull/1 (branch `docs/event-facts`).
-  This starts the Qodo review trail. Nothing has been pushed directly to `main` since the
-  remote existed.
-- README now carries the two mandatory sections: `## Qodo Code Review Evidence` (merged-PR link
-  pending PR #1 merging) and the AI assistance disclosure required by rule 12.
-- **Qodo installed and connected** to `Mulaydm10/ColdCall` — installation Healthy, code-review
-  toggle on. It reviewed PR #1 and raised **4 findings, all Medium, no High**; all four were
-  valid staleness/accuracy bugs in the docs and **all four are fixed**, not dismissed.
-- Qodo Agent Skills installed (`qodo-pr-resolver`, `qodo-get-rules`); only `skills-lock.json`
-  is committed.
+**Process (all mandatory gates cleared)**
+
+- Public repo https://github.com/Mulaydm10/ColdCall (MIT); Qodo installed, Healthy, reviewing.
+- **PRs #1 and #2 merged**, each with a completed review, recorded decisions, and a clean
+  follow-up review against the final code. Zero direct pushes to `main`.
+- README carries the `## Qodo Code Review Evidence` section and the AI-assistance disclosure.
+
+**Stack — installed and verified, not merely declared**
+
+- `ADR-0002` **Accepted**: Node runs the harness (mandatory), Python computes the regulated
+  numbers. Python is `uv`-managed in a project-local `.venv` (3.12; floor 3.11). No global
+  installs anywhere.
+- `src/coldcall/` — **zero required dependencies**, because it is uploaded into a sandbox and
+  runs against a stock interpreter:
+  - `mkt.py` — mean kinetic temperature (log-sum-exp, not naive summation) + excursion
+    accounting + a release/review/quarantine verdict carrying every input needed to re-derive it.
+  - `replay.py` — streaming parser for the 402 MB telemetry array; never loads it into memory,
+    and tolerates the truncated tail a range request always produces.
+- **43 tests green** (`uv run pytest`), ruff clean. The maths is cross-checked against an
+  independently written naive implementation, so an optimisation cannot silently break it.
+- `agents/coldcall.agent.json` — validated against the live API (accepted up to the
+  unconfigured model provider). Approval gates on every MCP server; Stripe gated at `@all`.
+- `skills/coldchain-sop/SKILL.md` — **registered on the running harness and reads back**.
+- `scripts/setup_trueforge.sh` — idempotent (PUT throughout), `--dry-run`, names exactly which
+  keys are missing. `scripts/verify_apis.sh` — **7/7 sources pass right now**.
+- TrueForge v0.1.4 running on :8790.
+
+**Three plan assumptions corrected** (see Blocked/`worklog.md` for what this changes)
+
+1. The **VCC-CPLD dataset does not exist** on Zenodo — substituted, `ADR-0003`.
+2. **Named specialist subagents are not a TrueForge feature** — `ADR-0004`.
+3. There is **no configurable local sandbox** — Daytona is the only provider, and skills need it.
 
 ## In flight
 
-- Nothing being actively edited. Awaiting the project idea from Mulaydm10 to fill `VISION.md`.
+- Nothing being actively edited. PR open with all of the above; awaiting the idea.
 
 ## Blocked
 
-Ordered by what unblocks the most:
-
-1. **The project idea / thesis** (`Q-0001`, `VISION.md`) — Mulaydm10 is supplying it. Blocks
-   `DEMO.md`, `research/prior_art.md`, and the final shape of `ADR-0002`.
-2. **PR #1 not merged yet** — fixes for the first review are pushed; awaiting the follow-up
-   review, then a human merge. The README's `## Qodo Code Review Evidence` section cannot name a
-   merged PR until that lands.
-4. **No model provider API key configured in TrueForge** (`Q-0003`) — the harness runs but
-   cannot think without one. BYO key; the SF OpenAI credits do not apply to us.
-5. **No Daytona sandbox key** (`Q-0004`) — sandboxed code execution is one of the three beats
-   judges must see. Local fallback may cover the demo; unverified.
-6. **Stack not formally decided** (`Q-0002`, `ADR-0002`) — largely constrained now by TrueForge
-   being Node/TS with `agent.json` agents; final call waits on the idea.
+1. **The ColdCall idea itself** (`Q-0001`, `VISION.md`) — Mulaydm10 is supplying it. The stack
+   implies a cold-chain excursion responder and the scaffolding assumes that shape, but
+   `VISION.md` stays empty until the real thesis lands. `DEMO-0001` waits on it.
+2. **OpenAI API key** (`Q-0003`) — the harness runs but cannot think. One line in `.env`.
+3. **Daytona API key** (`Q-0004`) — blocks *two* judged features at once: sandboxed execution
+   is a scored criterion, and skills refuse to load without a sandbox. Highest-value key.
+4. **Supabase / Stripe test-mode / GitHub tokens** (`Q-0008`) — the three real integrations.
+   None can be created by an agent.
+5. **Which product label to judge against** (`Q-0007`) — the verified dataset is ambient
+   (~22–30 °C), so a 2–8 °C label quarantines everything trivially while a real 15–25 °C
+   controlled-room-temperature label gives a genuine spread. Decision shapes the demo.
 
 ## Next intended step
 
-1. Land PR #1: follow-up Qodo review, then merge, then fill the README's evidence section with
-   the merged link and a line on what Qodo surfaced.
-2. Mulaydm10: supply the ColdCall idea → `VISION.md` gets drafted and applied, `DEMO-0001`
-   becomes writable, `ADR-0002` can close.
-3. Mulaydm10: model provider key (`Q-0003`) so the harness can actually think.
-4. Optional but time-boxed: the San Francisco day is **2026-08-29** and still upcoming — decide
-   whether to attend (separate Luma registration, attendee-only OpenAI credits).
+1. Mulaydm10: drop `OPENAI_API_KEY` and `DAYTONA_API_KEY` into `.env`, then
+   `./scripts/setup_trueforge.sh`. That converts the harness from configured to *working*.
+2. Mulaydm10: supply the idea → `VISION.md`, then `DEMO-0001`.
+3. Then: first end-to-end run of the agent against the replayed telemetry, filmed.
 
 ## Latest experiment
 
-`EXP-0001` — booted TrueForge v0.1.4 standalone; serves on :8790, HTTP 200. See
-`experiments/experiment_log.md`.
+`EXP-0004` — full pipeline on real telemetry: 3 818 readings, 6 devices, a genuine
+release/review/quarantine spread against a real label. See `experiments/experiment_log.md`.
 
 ## Work claims
 

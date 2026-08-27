@@ -44,3 +44,9 @@ build/
 # install is reproducible; the expanded skills and editor symlinks are not.
 .agents/
 .claude/
+
+# Large re-fetchable data. The sample is one range request away (see scripts/verify_apis.sh);
+# the full 402 MB Zenodo file must never enter git history.
+data/samples/
+data/raw/
+*.json.gz
