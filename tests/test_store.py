@@ -320,3 +320,60 @@ class TestIncidentLifecycle:
 
     def test_incident_unknown_id_is_none(self, seeded_store: IncidentStore) -> None:
         assert seeded_store.incident("NO-SUCH-INCIDENT") is None
+
+
+class TestIdempotenceAndAtomicity:
+    """Three bugs Qodo found, each pinned so it cannot come back."""
+
+    def test_replaying_the_same_leg_twice_does_not_duplicate_readings(
+        self, seeded_store: IncidentStore
+    ) -> None:
+        """The store preserves telemetry across re-seeds, so ingestion must be idempotent.
+
+        Duplicated readings silently inflate time-at-temperature, which is the number the
+        verdict turns on — a re-run of the documented demo would have quietly corrupted it.
+        """
+        leg = [
+            TelemetryTick(SHIPMENT_ID, "2026-01-01T00:00:00Z", 22.0),
+            TelemetryTick(SHIPMENT_ID, "2026-01-01T00:10:00Z", 27.0),
+        ]
+        assert seeded_store.record_ticks(leg) == 2
+        assert seeded_store.record_ticks(leg) == 0
+        assert len(seeded_store.telemetry_for(SHIPMENT_ID)) == 2
+
+    def test_a_different_reading_at_the_same_instant_is_still_one_row(
+        self, seeded_store: IncidentStore
+    ) -> None:
+        """Uniqueness is on (shipment, ts). A second value for one instant is a duplicate
+        record, not a second measurement."""
+        seeded_store.record_ticks([TelemetryTick(SHIPMENT_ID, "2026-01-01T00:00:00Z", 22.0)])
+        seeded_store.record_ticks([TelemetryTick(SHIPMENT_ID, "2026-01-01T00:00:00Z", 40.0)])
+        rows = seeded_store.telemetry_for(SHIPMENT_ID)
+        assert len(rows) == 1
+        assert rows[0]["temp_c"] == 22.0
+
+    def test_quarantine_with_no_receipt_changes_nothing(
+        self, seeded_store: IncidentStore
+    ) -> None:
+        """Atomicity. The status change and the audit row share one transaction, and the
+        receipt is checked before either runs — so a rejected quarantine must leave the
+        shipment exactly as it was, not quarantined-and-unlogged.
+        """
+        seeded_store.open_incident("INC-1", SHIPMENT_ID)
+        before = seeded_store.shipment(SHIPMENT_ID)["status"]
+        with pytest.raises(ValueError, match="receipt"):
+            seeded_store.quarantine(SHIPMENT_ID, "INC-1", "")
+        assert seeded_store.shipment(SHIPMENT_ID)["status"] == before
+        kinds = [e["kind"] for e in seeded_store.incident("INC-1")["events"]]
+        assert "quarantine" not in kinds
+
+    def test_a_successful_quarantine_logs_its_receipt(
+        self, seeded_store: IncidentStore
+    ) -> None:
+        seeded_store.open_incident("INC-1", SHIPMENT_ID)
+        seeded_store.quarantine(SHIPMENT_ID, "INC-1", "sha:1c859fc")
+        assert seeded_store.shipment(SHIPMENT_ID)["status"] == "quarantined"
+        events = seeded_store.incident("INC-1")["events"]
+        quarantines = [e for e in events if e["kind"] == "quarantine"]
+        assert len(quarantines) == 1
+        assert quarantines[0]["receipt"] == "sha:1c859fc"

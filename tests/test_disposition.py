@@ -154,6 +154,75 @@ class TestVerdictBoundaries:
         assert result.verdict == DESTROY
 
 
+class TestPermittedExcursionEnvelope:
+    """The label states two bands, and conflating them gets the verdict wrong both ways.
+
+    Amoxicillin's real label: "Store at 20 to 25 C; excursions permitted to 15 to 30 C."
+    Time outside 20-25 spends the budget. Time outside 15-30 is a condition the label makes
+    no stability claim about at all.
+    """
+
+    ENVELOPE = {"excursion_lower_c": 15.0, "excursion_upper_c": 30.0}
+
+    def test_a_labelled_permitted_low_is_not_a_freeze(self):
+        """18 C is below the storage minimum but explicitly permitted by the label.
+
+        Before the envelope was passed through, this quarantined as a "freeze event" - the
+        module treating a condition the label expressly allows as a product-integrity
+        failure.
+        """
+        readings = [Reading(22.0, 60.0)] * 20 + [Reading(18.0, 60.0)]
+        result = disposition(
+            readings, CRT_LOWER, CRT_UPPER, policy(hours=6.0), **self.ENVELOPE
+        )
+        assert result.verdict == RELEASE
+        assert not any("Freeze" in r for r in result.rationale)
+
+    def test_below_the_permitted_low_is_still_a_freeze(self):
+        """14 C is beneath even the excursion allowance, so the freeze rule fires."""
+        readings = [Reading(22.0, 60.0)] * 20 + [Reading(14.0, 30.0)]
+        result = disposition(
+            readings, CRT_LOWER, CRT_UPPER, policy(hours=6.0), **self.ENVELOPE
+        )
+        assert result.verdict == QUARANTINE_RETEST
+        assert any("Freeze event" in r for r in result.rationale)
+
+    def test_beyond_the_envelope_quarantines_on_a_tiny_time_budget(self):
+        """A brief 35 C spike must not release just because the clock and MKT stay low.
+
+        6 minutes of a 6 h allowance is 1.7% consumed, and MKT stays under 25 C. Only the
+        beyond-envelope rule catches this.
+        """
+        readings = [Reading(22.0, 60.0)] * 40 + [Reading(35.0, 6.0)]
+        result = disposition(
+            readings, CRT_LOWER, CRT_UPPER, policy(hours=6.0), **self.ENVELOPE
+        )
+        assert result.budget_consumed_pct < 5.0
+        assert result.mkt_c < CRT_UPPER
+        assert result.verdict == QUARANTINE_RETEST
+        assert any("Beyond the permitted excursion envelope" in r for r in result.rationale)
+
+    def test_the_envelope_is_reported_when_stated(self):
+        result = disposition(
+            [Reading(22.0, 60.0)] * 5, CRT_LOWER, CRT_UPPER, policy(), **self.ENVELOPE
+        )
+        label = result.to_dict()["label"]
+        assert label["excursion_permitted_lower_c"] == 15.0
+        assert label["excursion_permitted_upper_c"] == 30.0
+
+    def test_an_envelope_narrower_than_the_label_is_incoherent(self):
+        """A permitted excursion range must contain the storage range it excuses."""
+        with pytest.raises(ValueError, match="must contain"):
+            disposition(
+                [Reading(22.0, 60.0)],
+                CRT_LOWER,
+                CRT_UPPER,
+                policy(),
+                excursion_lower_c=21.0,
+                excursion_upper_c=24.0,
+            )
+
+
 class TestIrreversibility:
     """What the approval gate keys off. Getting this backwards would gate the wrong action."""
 
@@ -183,6 +252,10 @@ class TestPolicyValidation:
             {"allowed_excursion_hours": -1.0},
             {"allowed_excursion_hours": 6.0, "retest_at_pct": 0.0},
             {"allowed_excursion_hours": 6.0, "retest_at_pct": 80.0, "destroy_at_pct": 50.0},
+            # `inf <= inf` passes an ordering-only check, then never fires either threshold -
+            # so arbitrarily over-budget material would release.
+            {"allowed_excursion_hours": 6.0, "retest_at_pct": float("inf")},
+            {"allowed_excursion_hours": 6.0, "destroy_at_pct": float("inf")},
         ],
     )
     def test_an_incoherent_policy_is_refused_at_construction(self, kwargs):
@@ -203,7 +276,14 @@ class TestSerialisedOutput:
         document = result.to_dict()
 
         assert document["verdict"] == QUARANTINE_RETEST
-        assert document["label"] == {"lower_c": 20.0, "upper_c": 25.0}
+        assert document["label"] == {
+            "lower_c": 20.0,
+            "upper_c": 25.0,
+            # None, not 20/25: the label in this fixture states no separate excursion range,
+            # and claiming one equal to the storage band would be inventing label text.
+            "excursion_permitted_lower_c": None,
+            "excursion_permitted_upper_c": None,
+        }
         assert document["requires_human_approval"] is False
         assert document["policy"]["allowed_excursion_hours"] == 6.0
         # The two claims we must never let a reader mistake for regulation.

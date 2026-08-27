@@ -68,7 +68,9 @@ CREATE TABLE IF NOT EXISTS telemetry (
   door_open INTEGER DEFAULT 0,
   route_stage TEXT
 );
-CREATE INDEX IF NOT EXISTS telemetry_shipment_ts ON telemetry(shipment_id, ts);
+-- UNIQUE, not merely indexed: one shipment cannot have two readings at the same
+-- instant, and this is what makes record_ticks idempotent across demo re-runs.
+CREATE UNIQUE INDEX IF NOT EXISTS telemetry_shipment_ts ON telemetry(shipment_id, ts);
 
 CREATE TABLE IF NOT EXISTS consignees (
   id TEXT PRIMARY KEY,
@@ -223,12 +225,16 @@ class IncidentStore:
         if not rows:
             return 0
         with self._conn() as conn:
-            conn.executemany(
-                "INSERT INTO telemetry (shipment_id, ts, internal_temp_c, ambient_temp_c,"
-                " door_open, route_stage) VALUES (?, ?, ?, ?, ?, ?)",
+            # Idempotent on (shipment, ts): re-running the demo must not double-insert a leg.
+            # The store deliberately preserves telemetry across re-seeds, so without this a
+            # second replay duplicated every reading — and duplicated readings silently
+            # inflate time-at-temperature, which is exactly the number the verdict turns on.
+            cursor = conn.executemany(
+                "INSERT OR IGNORE INTO telemetry (shipment_id, ts, internal_temp_c,"
+                " ambient_temp_c, door_open, route_stage) VALUES (?, ?, ?, ?, ?, ?)",
                 rows,
             )
-        return len(rows)
+            return cursor.rowcount if cursor.rowcount >= 0 else len(rows)
 
     def telemetry_for(self, shipment_id: str) -> list[dict[str, Any]]:
         with self._conn() as conn:
@@ -351,9 +357,28 @@ class IncidentStore:
             )
 
     def quarantine(self, shipment_id: str, incident_id: str, receipt: str) -> None:
+        """Quarantine a shipment and log the action, atomically.
+
+        Both statements share one transaction, and the receipt is validated *before* either
+        runs. The previous version committed the status change and only then validated and
+        inserted the audit row, so an empty receipt or a bad incident id left a shipment
+        quarantined with no corresponding audit event — breaking the one invariant this store
+        exists to hold: an action without a receipt did not happen.
+        """
+        if not receipt:
+            raise ValueError(
+                "refusing to quarantine with no receipt: an action without a receipt "
+                "did not happen"
+            )
         with self._conn() as conn:
-            conn.execute("UPDATE shipments SET status = 'quarantined' WHERE id = ?", (shipment_id,))
-        self.record_action(incident_id, "quarantine", f"{shipment_id} -> quarantined", receipt)
+            conn.execute(
+                "INSERT INTO incident_events (incident_id, ts, kind, detail, receipt)"
+                " VALUES (?, ?, 'quarantine', ?, ?)",
+                (incident_id, _now(), f"{shipment_id} -> quarantined", receipt),
+            )
+            conn.execute(
+                "UPDATE shipments SET status = 'quarantined' WHERE id = ?", (shipment_id,)
+            )
 
     def close_incident(self, incident_id: str, approved_by: str) -> None:
         with self._conn() as conn:
