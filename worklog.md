@@ -415,3 +415,58 @@ comes next. `Q-0009` closes as discarded. `Q-0001` is now the only real blocker.
 
 `tests/README.md` is LOCKED and its layout table still names the deleted test files. Proposed to
 Main Agent, not applied.
+
+### 2026-08-27 12:30 CEST — the thesis arrived, and it is cold-chain after all
+
+Mulaydm10 supplied `coldchain-build-spec.md` (fetched from the omen box). It specifies a
+pharmaceutical cold-chain **disposition** agent: MKT per USP <1079>, stability-budget
+consumption, a release / quarantine-retest / destroy verdict, a human approval gate before any
+irreversible action, and real executed downstream actions.
+
+So `ADR-0006` was a false alarm — the inferred mission was close to the real one. It cost one
+command to undo (`git checkout 3e01090 -- src/coldcall tests skills/coldchain-sop`) and it
+bought something real: the spec settles which parts were Mulaydm10's and which were invented,
+and the reset is why the restored code was reconciled against the spec rather than the spec
+being bent to fit code that happened to already exist.
+
+**What the restore brought back, and what changed on top.** `mkt.py` survives as the primitives
+layer and is deliberately *not* replaced by the spec's Appendix C reference implementation: the
+restored version is time-weighted, uses log-sum-exp, and validates its inputs, where Appendix C
+is unweighted and sums exponentials directly. What Appendix C had that we lacked is the
+decision layer, and that is now `disposition.py`: the three-way verdict vocabulary the incident
+record and the demo script both speak, plus the Arrhenius potency estimate.
+
+**Three deliberate deviations from the spec, each with a reason:**
+
+1. **Chart is stdlib SVG, not matplotlib.** `src/coldcall` must import against a stock
+   interpreter because it is uploaded into the sandbox (`ADR-0002`); matplotlib means a pip
+   install inside a jail with a 60 s exec timeout and a network the harness docs warn about.
+   SVG is text, embeds in the generative-UI board, and survives the file-download endpoint.
+2. **No `docker-compose.yml`.** Docker is not installed here, so shipping one would mean
+   shipping an untested one-command quickstart. `npx` standalone is the verified route.
+3. **Replay engine in Python under `uv`, not TypeScript.** `ADR-0002` settled that there is no
+   `package.json`; Node runs the harness and nothing else.
+
+**The verdict fell out of real data rather than being tuned to it.** The allowance policy (6 h)
+was fixed before the leg was scored. Device `DD:33:04:13:34:CD` from Zenodo 7907515, 20.3 h,
+64 readings, one contiguous 231.7 min excursion peaking at 27 °C, judged against amoxicillin's
+real openFDA label (set_id `e13cafe2-…`, 20–25 °C, excursions permitted 15–30 °C): MKT
+24.54 °C, 64.35% of budget consumed, verdict **`quarantine_retest`**. That is the spec's own
+demo verdict, arrived at independently.
+
+**One thing the spec assumed that is not true, now verified rather than suspected.** No real
+openFDA label states a permitted excursion *duration* — labels that pair an excursion range
+with a number of hours are describing post-reconstitution in-use stability, a different
+allowance entirely. USP <659> defines CRT by temperature and MKT, not by a time ceiling. So the
+"hours out of range" figure is ours. `disposition.py` surfaces it as a policy input, stamps
+`ColdCall demo policy — not a regulatory limit` into every emitted record, and the README and
+narration must keep saying so.
+
+`tests/test_package.py`'s `ADR-0006` guard is retired here, exactly as its own docstring
+instructed: the thesis arrived, so the tripwire has done its job. What replaces it is the
+constraint that outlives the reset — a subprocess test with `-I` that proves the sandbox
+payload imports against a stock interpreter, so an accidental `httpx` import fails here rather
+than mid-demo.
+
+72 tests green, ruff clean. `VISION.md` is LOCKED, so the thesis is proposed in
+`proposals/VISION.md` rather than written directly.

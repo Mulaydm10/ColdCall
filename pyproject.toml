@@ -35,6 +35,8 @@ pythonpath = ["src"]
 addopts = "-q --strict-markers"
 markers = [
   "smoke: the minimal green-baseline test required by ADR-0002",
+  "usp: known-answer tests reproducing a worked example from USP <1079> or ICH Q1A",
+  "policy: asserts a ColdCall policy threshold rather than a regulatory value (see disposition.py)",
 ]
 
 [tool.ruff]

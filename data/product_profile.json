@@ -1,0 +1,24 @@
+{
+  "source": "openFDA drug/label API (https://api.fda.gov/drug/label.json)",
+  "set_id": "e13cafe2-f226-4021-81d8-7bd1f98b5582",
+  "id": "0061b41b-511d-4a65-affb-80988a0602d8",
+  "brand_name": "Amoxicillin",
+  "generic_name": "AMOXICILLIN",
+  "manufacturer_name": "A-S Medication Solutions",
+  "route": "ORAL",
+  "product_type": "HUMAN PRESCRIPTION DRUG",
+  "storage_min_c": 20,
+  "storage_max_c": 25,
+  "excursion_min_c": 15,
+  "excursion_max_c": 30,
+  "storage_and_handling_verbatim": "Storage Store at 20° to 25°C (68° to 77°F); excursions permitted to 15° to 30°C (59° to 86°F) [see USP Controlled Room Temperature].",
+  "retrieval_url": "https://api.fda.gov/drug/label.json?search=set_id:\"e13cafe2-f226-4021-81d8-7bd1f98b5582\"&limit=1",
+  "verified": true,
+  "verified_note": "Re-queried by id and by set_id on 2026-08-27; both return this record and confirm set_id e13cafe2-f226-4021-81d8-7bd1f98b5582.",
+  "provenance": "Retrieved live from the public, keyless openFDA drug label API on 2026-08-27. Chosen because: (1) storage_and_handling states an explicit 20-25 C band plus the 15-30 C USP Controlled Room Temperature excursion allowance, satisfying both required parts; (2) amoxicillin oral capsules/tablets are a common, non-controlled, non-refrigerated solid oral product, plausible as ordinary pharmacy-distribution freight; (3) full openfda metadata (brand/generic/manufacturer) is populated on this record, unlike many repackager entries in the same search which had empty storage_and_handling or null openfda blocks.",
+  "excursion_duration_finding": {
+    "question": "Do any real openFDA drug labels state a permitted TIME DURATION for a controlled-room-temperature excursion (e.g. 'excursions permitted to 15-30C for up to N hours')?",
+    "answer": "No. Searched openFDA storage_and_handling text broadly (queries combining 'excursions permitted', 'hours', 'not to exceed', 'cumulative'+'excursion', etc.). Every label that pairs an excursion range with a stated number of hours is describing a DIFFERENT, unrelated allowance: in-use / post-reconstitution stability of a solution once prepared (e.g. Tigecycline/TYGACIL: 'reconstituted solution ... may be stored at room temperature (not to exceed 25C/77F) for up to 24 hours'; lyophilized vaccine diluents: 'reconstituted solutions may be stored ... at room temperature 20-30C for 24 hours'). None of the labels found state a permitted DURATION for how long the original, unopened/unreconstituted product may sit outside its labeled storage band during the 15-30C excursion itself. This is consistent with USP General Chapter <659> (Packaging and Storage Requirements), which defines USP Controlled Room Temperature by a TEMPERATURE band (and a mean kinetic temperature not exceeding 25C) but does not itself impose a maximum TIME for an excursion -- that is left to manufacturer stability data, which is not disclosed in these labels.",
+    "conclusion": "Any 'total allowed hours out of range' figure used in this project's stability math is NOT sourced from a real regulatory label and must be documented in the demo/product as our own configurable demo policy assumption, not as a cited regulatory value."
+  }
+}
