@@ -35,8 +35,9 @@ openFDA amoxicillin label, 20–25 °C, excursions permitted 15–30 °C.
 
 **Process**
 
-- Public repo (MIT); Qodo installed and reviewing. **PRs #1–#5 merged, zero direct pushes to
+- Public repo (MIT); Qodo installed and reviewing. **PRs #1–#6 merged, zero direct pushes to
   `main`.** Every merge carried a completed review with findings fixed or dismissed in-thread.
+  #6 carried four rounds of review before it landed.
 
 **Platform, proven not asserted** (`EXP-0008`)
 
@@ -75,12 +76,14 @@ into every emitted record.
 
 ## In flight
 
-**Four milestone PRs open, all Qodo-reviewed, all awaiting merge.**
-**Merge order: #6 → #7 → #8 → #9.** Each is based on its predecessor's branch rather than
-`main`, so every diff stays scoped to its own milestone and retargets automatically as its
-parent lands.
+**PR #6 (M1, the disposition core) is MERGED** — Devin merged it at 11:43 UTC after Qodo
+cleared. `main` now carries the deterministic maths, and PR #7 has auto-retargeted to `main`.
 
-Qodo raised **26 findings across three rounds**; 23 fixed, 3 dismissed in-thread with reasons.
+**Three still open: #7 → #8 → #9, in that order.** Each is based on its predecessor's branch,
+so every diff stays scoped to its own milestone and retargets automatically as its parent
+lands.
+
+Qodo raised **36 findings across four rounds**; 33 fixed, 3 dismissed in-thread with reasons.
 The dismissals are all the same rule firing on a false premise — "the thesis is fabricated" —
 which is correct on the diff but wrong on the facts: the thesis was supplied, and `VISION.md`
 reads `TODO` only because it is LOCKED. It will keep re-reporting until a human applies

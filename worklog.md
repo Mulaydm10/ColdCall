@@ -583,3 +583,43 @@ running sandbox); setup now sets 15-minute archive / 2-hour delete; and `replay/
 retries once past the genuine cold-start race and **refuses to present a run whose skill never
 loaded**. Clearing the existing 45 GiB backlog needs Mulaydm10 — the DELETE was blocked by the
 local permission classifier as a destructive external action, which is the correct call.
+
+### 2026-08-27 14:10 CEST — M1 merged; the fourth review round, and what it caught
+
+**PR #6 merged at 11:43 UTC** by Devin, after Qodo cleared it. `main` now carries the
+deterministic disposition maths. #7 auto-retargeted to `main`; the rest of the stack follows.
+
+The fourth round produced the two findings I would least like to have shipped, and neither was
+in code I would have re-read.
+
+**A retry that could repeat an irreversible action.** I added a single retry to `incident.py`
+so the cold-start skill-fetch race would not eat a take. It keyed only on "did a sandbox
+fail" — but a run can report one strand's sandbox failure *and* still reach an approval gate.
+So under `--auto allow`, a retry would create the branch again, commit again, notify again. I
+added reliability to a demo and handed it the power to double-execute the exact class of
+action this entire project exists to gate. Retry is now conditional on nothing having been
+approved, and a run that is untrustworthy exits non-zero instead of contradicting its own
+warning.
+
+**A predictable temp file in a destructive path.** `daytona_gc.sh` wrote sandbox ids through a
+fixed `/tmp` path before reading them back to issue `DELETE`s — a symlink there truncates
+someone else's file, and replaced contents feed attacker-chosen ids into irreversible deletes.
+Ids now live in a shell array.
+
+**Two failures-become-successes in the same script, one hiding the other.** The GC parser
+rejected only a body whose `statusCode` was exactly 401, so a 403 or a 500 read as "no
+sandboxes" and the script reported success. Fixing that to assert on HTTP status exposed the
+same shape one scope up: `die` inside a command substitution exits only the *subshell*, so the
+new guard fired, printed, and the script sailed on with an empty list. Both verified from the
+failure side now.
+
+**And the leg loader turned out to be three findings wearing one hat.** Validating readings in
+isolation was never enough, because `replay` reads the series *in file order*: timestamps have
+to parse, be strictly increasing, and not repeat. The duplicate case is the subtle one — the
+store keeps only the first reading at an instant while `replay` evaluated every raw
+temperature, so an incident's peak could rest on a reading absent from the audit telemetry its
+own verdict is computed from.
+
+Rejected rather than sorted or deduplicated, both times. Silently reordering or picking a
+winner among someone's telemetry is its own integrity question, and the caller knows which of
+the two records is real.
