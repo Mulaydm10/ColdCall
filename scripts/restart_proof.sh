@@ -29,26 +29,6 @@ command -v jq >/dev/null 2>&1 || die "jq is required (brew install jq)"
 curl -sf --max-time 5 "$API/capabilities" >/dev/null \
   || die "TrueForge is not reachable at $TF — start it with: npx @truefoundry/trueforge"
 
-# ---- before -----------------------------------------------------------------------------
-
-if [[ -n "$SESSION_ARG" ]]; then
-  SESSION="$SESSION_ARG"
-else
-  SESSION=$(curl -s "$API/sessions" | jq -r '.data[0].id // empty')
-  [[ -n "$SESSION" ]] || die "no sessions exist yet — run: uv run python replay/incident.py"
-fi
-
-echo
-echo "Restart proof for session $SESSION"
-dim "  the session IS the incident record; if it does not survive, nothing else matters"
-echo
-
-BEFORE_TURNS=$(curl -s "$API/sessions/$SESSION/turns" | jq '.data | length')
-[[ "$BEFORE_TURNS" -gt 0 ]] 2>/dev/null || die "session $SESSION has no turns to lose"
-
-# Count across EVERY turn, not just the last one. The last turn in an incident is usually a
-# short approval resume; checking only that would compare 0 against 0 and call it a pass —
-# the same empty-pass this script exists to rule out.
 # Every read goes through here. A failed curl or a non-JSON body must NOT become the
 # SHA-256 of an empty string: if the same read fails before and after the restart, equal
 # hashes of nothing would report PASS while verifying nothing at all. Third time this script
@@ -57,8 +37,13 @@ fetch() {
   local url="$1" body
   body=$(curl -sS --fail-with-body -m 30 "$url" 2>/dev/null) \
     || die "read failed: $url (cannot verify persistence against a read we did not get)"
-  printf '%s' "$body" | jq -e 'has("data")' >/dev/null 2>&1 \
-    || die "unexpected response from $url (no .data) — refusing to hash a partial read"
+  # Not merely "has a .data key": it must be a NON-EMPTY ARRAY. A 200 carrying
+  # `{"data": []}` or `{"data": null}` hashes to a perfectly stable digest of nothing, and
+  # two stable digests of nothing compare equal — which is the vacuous pass this whole
+  # script exists to rule out, arriving through the front door instead of an error path.
+  printf '%s' "$body" | jq -e '(.data | type) == "array" and (.data | length) > 0' \
+      >/dev/null 2>&1 \
+    || die "empty or malformed payload from $url — refusing to hash a read with no records"
   printf '%s' "$body"
 }
 
@@ -94,8 +79,36 @@ digest() {
   done | shasum -a 256 | awk '{print $1}'
 }
 
-read -r BEFORE_EVENTS BEFORE_VERDICT <<<"$(tally)"
-BEFORE_DIGEST=$(digest)
+
+# ---- before -----------------------------------------------------------------------------
+
+if [[ -n "$SESSION_ARG" ]]; then
+  SESSION="$SESSION_ARG"
+else
+  SESSION=$(curl -s "$API/sessions" | jq -r '.data[0].id // empty')
+  [[ -n "$SESSION" ]] || die "no sessions exist yet — run: uv run python replay/incident.py"
+fi
+
+echo
+echo "Restart proof for session $SESSION"
+dim "  the session IS the incident record; if it does not survive, nothing else matters"
+echo
+
+BEFORE_TURNS=$(fetch "$API/sessions/$SESSION/turns" | jq '.data | length') || exit 1
+[[ "$BEFORE_TURNS" -gt 0 ]] 2>/dev/null || die "session $SESSION has no turns to lose"
+
+# Count across EVERY turn, not just the last one. The last turn in an incident is usually a
+# short approval resume; checking only that would compare 0 against 0 and call it a pass —
+# the same empty-pass this script exists to rule out.
+# `|| exit 1` on every one of these is load-bearing. `die` inside a $(command substitution)
+# exits only the SUBSHELL, so without it a failed read prints its error, the assignment
+# quietly receives an empty string, and the script carries on. If the same read fails before
+# AND after the restart, two empty digests compare equal and it reports PASS having verified
+# nothing. The identical bug was found and fixed in scripts/daytona_gc.sh; it was still here.
+TALLY_BEFORE=$(tally) || exit 1
+read -r BEFORE_EVENTS BEFORE_VERDICT <<<"$TALLY_BEFORE"
+BEFORE_DIGEST=$(digest) || exit 1
+[[ -n "$BEFORE_DIGEST" ]] || die "the pre-restart digest came back empty; refusing to compare"
 
 echo "  before:  $BEFORE_TURNS turn(s), $BEFORE_EVENTS events, $BEFORE_VERDICT verdict-bearing response(s)"
 echo "           content digest ${BEFORE_DIGEST:0:16}…"
@@ -164,9 +177,11 @@ green "  harness is back up"
 # ---- after ------------------------------------------------------------------------------
 
 echo
-AFTER_TURNS=$(curl -s "$API/sessions/$SESSION/turns" | jq '.data | length')
-read -r AFTER_EVENTS AFTER_VERDICT <<<"$(tally)"
-AFTER_DIGEST=$(digest)
+AFTER_TURNS=$(fetch "$API/sessions/$SESSION/turns" | jq '.data | length') || exit 1
+TALLY_AFTER=$(tally) || exit 1
+read -r AFTER_EVENTS AFTER_VERDICT <<<"$TALLY_AFTER"
+AFTER_DIGEST=$(digest) || exit 1
+[[ -n "$AFTER_DIGEST" ]] || die "the post-restart digest came back empty; refusing to compare"
 
 echo "  after:   $AFTER_TURNS turn(s), $AFTER_EVENTS events, $AFTER_VERDICT verdict-bearing response(s)"
 echo "           content digest ${AFTER_DIGEST:0:16}…"
@@ -184,8 +199,8 @@ FAILED=0
 
 # Configuration has to survive too. An incident record with no model provider is a museum
 # piece — you could read it, but you could not continue the investigation.
-MODELS=$(curl -s "$API/models" | jq '.data | length')
-SKILLS=$(curl -s "$API/settings/skills" | jq '.data | length')
+MODELS=$(fetch "$API/models" | jq '.data | length') || exit 1
+SKILLS=$(fetch "$API/settings/skills" | jq '.data | length') || exit 1
 echo "  config:  $MODELS model(s), $SKILLS skill(s) still registered"
 [[ "$MODELS" -gt 0 ]] || { red "  model provider lost"; FAILED=1; }
 [[ "$SKILLS" -gt 0 ]] || { red "  skills lost"; FAILED=1; }
