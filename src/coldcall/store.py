@@ -31,7 +31,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-__all__ = ["SCHEMA_INDEXES", "SCHEMA_TABLES", "IncidentStore", "TelemetryTick"]
+__all__ = [
+    "SCHEMA_INDEXES",
+    "SCHEMA_TABLES",
+    "IncidentStore",
+    "TelemetryTick",
+    "canonical_ts",
+]
 
 #: Appendix B of the build spec, in portable SQL. Deliberately free of Postgres-only syntax
 #: (no ``generated always as identity``, no ``timestamptz``) so the same DDL seeds SQLite
@@ -127,6 +133,28 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def canonical_ts(raw: str) -> str:
+    """The one spelling of an instant this store will accept.
+
+    Uniqueness on ``(shipment_id, ts)`` is a TEXT comparison and ``telemetry_for`` orders by
+    that same column, so two spellings of one instant are two rows in a different order than
+    they happened. Normalising here — at the single write path rather than at each caller —
+    means no future caller can forget to.
+
+    A naive stamp is assumed UTC. An unparseable one is returned untouched rather than
+    rejected: this is a normaliser, not a validator, and the leg loader already refuses
+    unparseable timestamps before they reach the store. Silently mangling something we do not
+    understand would be worse than storing it as given.
+    """
+    try:
+        parsed = datetime.fromisoformat(raw.strip().replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return raw
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc).isoformat()
+
+
 @dataclass(frozen=True, slots=True)
 class TelemetryTick:
     """One reading as the replay engine emits it."""
@@ -198,9 +226,9 @@ class IncidentStore:
                     )
             # CREATE TABLE IF NOT EXISTS will not add a column to a table that already
             # exists, so a database written before route context would fail every seed with
-            # "no such column: route_lat". Same class as the duplicate-telemetry migration
-            # above, and the same reason it matters: telemetry is preserved across runs, so
-            # people keep their databases.
+            # "no such column: route_lat". Same class as the migrations either side of it,
+            # and the same reason it matters: telemetry is preserved across runs, so people
+            # keep their databases.
             existing_columns = {
                 row["name"] for row in conn.execute("PRAGMA table_info(shipments)")
             }
@@ -208,7 +236,56 @@ class IncidentStore:
                 if column not in existing_columns:
                     conn.execute(f"ALTER TABLE shipments ADD COLUMN {column} REAL")
 
+            # Schema first, then data: this rewrites rows, so the columns it may touch must
+            # already exist. And it must run BEFORE SCHEMA_INDEXES, because it is what
+            # collapses the duplicate instants that would otherwise fail the unique index.
+            self._canonicalise_timestamps(conn)
             conn.executescript(SCHEMA_INDEXES)
+
+    @staticmethod
+    def _canonicalise_timestamps(conn: sqlite3.Connection) -> None:
+        """Rewrite stored timestamps into the canonical instant spelling, once, idempotently.
+
+        Telemetry is deliberately preserved across runs, so a database written before this
+        normalisation holds raw ``…Z`` spellings while every new write produces ``…+00:00``.
+        The uniqueness constraint is a TEXT comparison, so it sees two different rows for one
+        instant — and the first replay after the change re-inserts the whole leg, **doubling
+        time-at-temperature, the exact number the verdict turns on**. The machine most likely
+        to be carrying such a database is the demo machine.
+
+        On collision the earliest row wins, matching the promise `record_ticks` already makes.
+        """
+        rows = conn.execute("SELECT id, shipment_id, ts FROM telemetry ORDER BY id").fetchall()
+        seen: dict[tuple[str, str], int] = {}
+        rewrites: list[tuple[str, int]] = []
+        drops: list[int] = []
+
+        for row in rows:
+            canonical = canonical_ts(row["ts"])
+            key = (row["shipment_id"], canonical)
+            if key in seen:
+                # A second spelling of an instant already stored. Keeping both is what the
+                # constraint exists to prevent, so the later row goes.
+                drops.append(row["id"])
+                continue
+            seen[key] = row["id"]
+            if canonical != row["ts"]:
+                rewrites.append((canonical, row["id"]))
+
+        if drops:
+            conn.executemany("DELETE FROM telemetry WHERE id = ?", [(i,) for i in drops])
+        if rewrites:
+            conn.executemany("UPDATE telemetry SET ts = ? WHERE id = ?", rewrites)
+        if drops or rewrites:
+            conn.execute(
+                "INSERT INTO incident_events (incident_id, ts, kind, detail, receipt)"
+                " SELECT DISTINCT i.id, ?, 'migration', ?, 'schema-migration' FROM incidents i",
+                (
+                    _now(),
+                    f"canonicalised {len(rewrites)} telemetry timestamp(s) and removed "
+                    f"{len(drops)} duplicate instant(s) left by a pre-normalisation engine",
+                ),
+            )
 
     # ---- seeding -----------------------------------------------------------------
 
@@ -267,7 +344,7 @@ class IncidentStore:
         rows = [
             (
                 t.shipment_id,
-                t.ts,
+                canonical_ts(t.ts),
                 t.internal_temp_c,
                 t.ambient_temp_c,
                 int(t.door_open),

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,40 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from coldcall.report import deviation_report  # noqa: E402
+
+
+def _value_at_risk(units: Any, unit_value: Any) -> float | None:
+    """Units x unit value, or ``None`` when the inputs cannot support a currency figure.
+
+    Stricter than "is it a number", because the output is a **regulated deviation record**.
+    A `$nan`, `$inf`, or negative value-at-risk rendered as factual currency is worse than
+    the `?` the renderer prints for absent data: unusable context is supposed to degrade
+    *visibly*, and a bool, a NaN, or a negative slipping through multiplication degrades
+    invisibly. `True * 12.5` is `$12.50` and looks perfectly ordinary.
+
+    ``bool`` is excluded explicitly — it is a subclass of ``int``, so an `isinstance` check
+    for numbers accepts it. And the product is re-checked after multiplying, because two
+    finite operands can still overflow to infinity.
+    """
+    for candidate in (units, unit_value):
+        if isinstance(candidate, bool) or not isinstance(candidate, (int, float)):
+            return None
+        try:
+            # `math.isfinite` on an int too large for a float raises rather than returning
+            # False, so the guard itself needs guarding — an int literal in a JSON seed has
+            # no width limit.
+            if not math.isfinite(candidate) or candidate < 0:
+                return None
+        except OverflowError:
+            return None
+    try:
+        product = float(units) * float(unit_value)
+    except (OverflowError, ValueError):
+        # Two finite ints can exceed float range on conversion. Losing the figure is
+        # correct; losing the whole report to an OverflowError raised through a helper whose
+        # docstring promises it never raises is not.
+        return None
+    return product if math.isfinite(product) else None
 
 
 def context_from_seed(seed: Any, shipment_id: str) -> dict[str, Any]:
@@ -56,11 +91,7 @@ def context_from_seed(seed: Any, shipment_id: str) -> dict[str, Any]:
     )
     consignees = [c for c in rows("consignees") if c.get("shipment_id") == shipment_id]
 
-    value: float | None = None
-    units, unit_value = shipment.get("units"), product.get("unit_value_usd")
-    if isinstance(units, (int, float)) and isinstance(unit_value, (int, float)):
-        # A non-numeric units or price is a bad row, not a reason to lose the report.
-        value = float(units) * float(unit_value)
+    value = _value_at_risk(shipment.get("units"), product.get("unit_value_usd"))
 
     return {
         "shipment": shipment,
