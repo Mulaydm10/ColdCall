@@ -49,11 +49,27 @@ BEFORE_TURNS=$(curl -s "$API/sessions/$SESSION/turns" | jq '.data | length')
 # Count across EVERY turn, not just the last one. The last turn in an incident is usually a
 # short approval resume; checking only that would compare 0 against 0 and call it a pass —
 # the same empty-pass this script exists to rule out.
+# Every read goes through here. A failed curl or a non-JSON body must NOT become the
+# SHA-256 of an empty string: if the same read fails before and after the restart, equal
+# hashes of nothing would report PASS while verifying nothing at all. Third time this script
+# has had a check that could pass vacuously, so this one aborts instead of returning.
+fetch() {
+  local url="$1" body
+  body=$(curl -sS --fail-with-body -m 30 "$url" 2>/dev/null) \
+    || die "read failed: $url (cannot verify persistence against a read we did not get)"
+  printf '%s' "$body" | jq -e 'has("data")' >/dev/null 2>&1 \
+    || die "unexpected response from $url (no .data) — refusing to hash a partial read"
+  printf '%s' "$body"
+}
+
+turn_ids() {
+  fetch "$API/sessions/$SESSION/turns" | jq -r '.data[].id'
+}
+
 tally() {
-  local events=0 verdicts=0 turn
-  for turn in $(curl -s "$API/sessions/$SESSION/turns" | jq -r '.data[].id'); do
-    local body
-    body=$(curl -s "$API/sessions/$SESSION/turns/$turn/events")
+  local events=0 verdicts=0 turn body
+  for turn in $(turn_ids); do
+    body=$(fetch "$API/sessions/$SESSION/turns/$turn/events")
     events=$(( events + $(printf '%s' "$body" | jq '.data | length') ))
     # `tostring` because .content is not always a string, and a plain `verdict` match
     # because escaping quotes through the shell into jq silently produced a regex that
@@ -66,16 +82,15 @@ tally() {
   printf '%s %s\n' "$events" "$verdicts"
 }
 
-# Counts alone do not prove anything survived: an event stream with the same cardinality but
-# replaced content would pass. So the real assertion is over a digest of the ordered content
-# of every event in every turn — id, type, thread and payload. `sort` on the turn list keeps
-# the digest stable if the API ever returns turns in a different order.
+# Hash the WHOLE event object, every field, rather than a hand-picked subset. The previous
+# version listed five fields by name and so could not see a change to any other — `error`
+# among them, which the incident renderer treats as meaningful record data. Enumerating what
+# matters is the wrong shape for an integrity check: the only safe list is "all of it".
+# `jq -S` sorts keys so a re-serialisation with different ordering is not a false alarm.
 digest() {
   local turn
-  for turn in $(curl -s "$API/sessions/$SESSION/turns" | jq -r '.data[].id' | sort); do
-    curl -s "$API/sessions/$SESSION/turns/$turn/events" \
-      | jq -S -c '[.data[] | {id, type, thread_id, content: (.content|tostring),
-                              tool_calls: (.tool_calls // [] | tostring)}]'
+  for turn in $(turn_ids | sort); do
+    fetch "$API/sessions/$SESSION/turns/$turn/events" | jq -S -c '.data'
   done | shasum -a 256 | awk '{print $1}'
 }
 
@@ -100,13 +115,19 @@ PORT=${PORT%%/*}
 PIDS=$(lsof -nP -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | sort -u || true)
 [[ -n "$PIDS" ]] || die "nothing is listening on port $PORT — cannot identify the harness to kill"
 
-# Refuse to kill something that is not the harness. `npx` runs it under node, and killing an
-# unrelated service that happens to hold this port would be a genuinely destructive surprise.
+# Refuse to kill anything that is not demonstrably TrueForge. A bare `node` match was too
+# loose — any other Node service or dev proxy holding this port would have been classified as
+# the harness and SIGKILLed by a script someone ran for reassurance. Two independent checks
+# now have to agree: the port must answer TrueForge's own API, and the process command line
+# must actually name trueforge.
+curl -sf -m 5 "$API/capabilities" | jq -e 'has("data")' >/dev/null 2>&1 \
+  || die "whatever is on port $PORT does not answer TrueForge's API — refusing to kill it"
+
 for pid in $PIDS; do
   cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
   case "$cmd" in
-    *trueforge*|*node*) ;;
-    *) die "pid $pid on port $PORT does not look like TrueForge (\`$cmd\`) — refusing to kill it" ;;
+    *trueforge*|*truefoundry*) ;;
+    *) die "pid $pid on port $PORT does not name trueforge (\`${cmd:0:80}\`) — refusing to kill it" ;;
   esac
 done
 

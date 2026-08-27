@@ -51,11 +51,23 @@ npx @truefoundry/trueforge                 # up on :8790, Node 22+
 ```
 
 ```sh
-# Terminal 2 — the checks
-uv sync --group dev && uv run pytest       # 118 green — the maths, before you trust it
+# Terminal 2 — credentials first, then the checks
+cp .env.example .env                       # then fill in OPENAI_API_KEY and DAYTONA_API_KEY
+uv sync --group dev && uv run pytest       # 127 green — the maths, before you trust it
 ./scripts/verify_apis.sh                   # every external source, hit for real
-./scripts/setup_trueforge.sh               # 5 configured, 0 failed
+./scripts/setup_trueforge.sh               # expect: 5 configured, 0 failed
 ```
+
+**Both keys are required for this scenario**, and `setup_trueforge.sh` *skips* rather than
+fails when one is missing — so a clean checkout reports fewer than 5 configured and the
+rehearsed path silently does not exist. Read its output rather than assuming:
+
+- **`OPENAI_API_KEY`** — without it there is no model and no session at all.
+- **`DAYTONA_API_KEY`** — without it there is no remote sandbox, so the maths never runs
+  off-host and the demo's central claim is unshowable. Needs the **`write:snapshots`** scope
+  (`EXP-0005`: a key lacking it is rejected with a misleading "check the credentials").
+
+If the script says `skip` next to either, stop and fix that before going further.
 
 **Reap Daytona first.** This is the single most likely thing to eat a take:
 

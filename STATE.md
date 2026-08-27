@@ -59,7 +59,7 @@ openFDA amoxicillin label, 20–25 °C, excursions permitted 15–30 °C.
   payload must import against a stock sandbox interpreter.
 - `src/coldcall/cli.py` — the sandbox entry point. Derives reading durations from timestamps
   rather than assuming a flat interval.
-- **118 tests green**, ruff clean. Sandbox-payload import is proven by subprocess under `-I`.
+- **127 tests green**, ruff clean. Sandbox-payload import is proven by subprocess under `-I`.
 
 **The demo case is real and was not tuned**
 
