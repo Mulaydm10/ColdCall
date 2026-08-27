@@ -36,6 +36,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BASE_URL = "http://localhost:8790/api/v1"
 PUBLIC_REPO = "https://github.com/Mulaydm10/ColdCall"
 
+#: The demo leg's own recorded coordinates (Valencia, Spain), read from the dataset's GPS
+#: measurements rather than assumed — see replay/SHIPMENT.md. Route context is only honest if
+#: the weather is fetched for where the shipment actually was.
+ROUTE_LAT, ROUTE_LON = 39.4565, -0.3465
+
 #: Substring identifying the one failure that is reliably transient. The harness fetches
 #: git-backed skills when a sandbox starts, each strand gets its own sandbox, and Daytona's
 #: network occasionally resets the connection on a cold VM. It clears on retry every time we
@@ -176,7 +181,13 @@ Write the readings below to `/work/leg.json`, then from `/work/coldcall`:
       --product data/product_profile.json \\
       --allowed-excursion-hours 6 \\
       --shipment-id {payload.get('shipment_id', '')} --lot-id {payload.get('lot_id', '')} \\
+      --route-lat {payload.get('route_lat', '')} --route-lon {payload.get('route_lon', '')} \\
       --svg-out /work/excursion.svg --json-out /work/verdict.json
+
+`--route-lat/--route-lon` add a `route_context` block answering **why** the load warmed, from
+real recorded weather at those coordinates. Report its `attribution` verbatim. It is the
+difference between a CAPA about the lane and a CAPA about the packaging, and you must not
+infer a cause from the temperature alone.
 
 Report its JSON verbatim. Do not restate the verdict in your own words and do not round it.
 If it fails to run, that is the finding — report the error rather than estimating.
@@ -580,6 +591,10 @@ def main(argv: list[str] | None = None) -> int:
         "excursion_permitted_range_c": [15.0, 30.0],
         "readings_in_window": len(readings),
         "readings_out_of_labelled_range": len(out_of_range),
+        # The leg's own recorded GPS, so the weather lookup is about where the shipment
+        # actually was rather than about a plausible-sounding city. See replay/SHIPMENT.md.
+        "route_lat": ROUTE_LAT,
+        "route_lon": ROUTE_LON,
         "peak_temp_c": max((float(r["temp_c"]) for r in readings), default=None),
         "telemetry_provenance": (
             "real recorded shipment leg from Zenodo 10.5281/zenodo.7907515, replayed — "

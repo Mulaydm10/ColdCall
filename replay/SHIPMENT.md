@@ -184,3 +184,33 @@ directly without re-parsing the big file or handling truncation. First and last 
   { "ts": "2021-11-10T04:42:10Z", "temp_c": 23.0 }
 ]
 ```
+
+## Route coordinates, and why they are in the dataset rather than assumed
+
+The chosen leg's raw records carry `measurements.gps`. For device `DD:33:04:13:34:CD` the
+sample holds 15 fixes, all clustered at **39.456 N, −0.347 E — Valencia, Spain**:
+
+```
+{'lat': 39.4564, 'long': -0.3467} @ 2021-11-08T17:59:37Z
+{'lat': 39.4568, 'long': -0.3461} @ 2021-11-08T17:59:06Z
+{'lat': 39.4565, 'long': -0.3465} @ 2021-11-08T17:48:04Z
+```
+
+`39.4565, −0.3465` is used as the route point. It matters that this is **the leg's own
+recorded position** and not a plausible-sounding city: `src/coldcall/weather.py` fetches real
+historical weather for that coordinate and compares it against the internal temperature, so an
+invented location would produce an invented root cause.
+
+**What it shows.** Open-Meteo's archive (ERA5) for 2021-11-09 at that point gives an ambient
+peak of **17.7 °C**, and 13–17 °C across the excursion window. The consignment reached
+**27 °C** — a median of **12.6 °C above outside air**, across 14 of 14 matched excursion
+readings.
+
+So the excursion is **not** explained by the weather. That is a materially different finding
+from "it was a hot day": it points the investigation at packaging, the reefer unit and loading
+procedure rather than at the lane or the schedule. See `EXP-0013`.
+
+**Honest limits**, which belong in any report quoting this: the archive gives point weather at
+hourly granularity for shade temperature, while the cargo moved and sat inside a vehicle. Some
+positive gap is expected; the 5 °C threshold that separates "containment failure" from
+"environmental exposure" is ColdCall policy, not a regulatory value.

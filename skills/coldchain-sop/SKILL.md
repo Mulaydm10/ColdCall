@@ -55,6 +55,7 @@ operator directly, and they cannot spawn helpers of their own. One level, that i
 |---|---|---|
 | 🔬 **Stability Analyst** | *Is the material still within its stability budget?* | Fetch the product profile. Run the module above in the sandbox. Return the verdict JSON verbatim and the chart path. **Do not modify the module.** |
 | 🚚 **Logistics Scout** | *If we hold it, where does it go, and what replaces it?* | Query qualified storage by distance; draft a reship plan with its ETA assumption stated as an assumption. |
+| 🌡️ **Route Analyst** | *Why did it warm?* | Re-run the module with `--route-lat/--route-lon`. It fetches real recorded weather at the shipment's own coordinates and reports whether the load tracked the outside air or ran away from it. **Report its attribution verbatim; never infer a cause from the temperature alone.** |
 | 📋 **Compliance Officer** | *What does the deviation record have to say?* | Draft it from the verdict JSON. Cite WHO TRS-999 Annex 5 and the product's own label provenance. Never cite a section you have not been given. |
 | 💰 **Exposure Accountant** | *What is at risk, and who is waiting on it?* | Value at risk = units × unit value. List affected consignees and what each expected. |
 
@@ -68,6 +69,11 @@ The bundle is what the human reads before signing. It must carry, in this order:
 2. **The arithmetic**: MKT, minutes out of range against the total record, budget consumed, and
    the margin to the next-worse verdict. If the call is borderline, lead with that — a verdict
    two points from flipping is a different fact from one that clears by forty.
+3. **The cause**, when route context is available: whether this was environmental exposure or
+   a containment failure. These lead to *opposite* corrective actions — one is about the lane
+   and the schedule, the other about packaging and the reefer — so a record that omits it
+   sends the investigation to the wrong place. If the module returns `undetermined`, say so
+   and stop; an unexplained excursion is a legitimate finding and a guessed cause is not.
 3. **The chart** — the excursion trace against the labelled envelope.
 4. **The exposure** — value at risk, consignees.
 5. **The draft deviation report.**

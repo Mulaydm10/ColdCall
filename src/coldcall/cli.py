@@ -28,6 +28,7 @@ from typing import Any
 from coldcall.disposition import DispositionPolicy, disposition
 from coldcall.mkt import Reading
 from coldcall.plot import excursion_svg
+from coldcall.weather import CONTAINMENT_GAP_C, attribute_excursion, fetch_ambient
 
 __all__ = ["main", "load_readings"]
 
@@ -205,6 +206,34 @@ def load_readings(payload: Any, default_interval_minutes: float = 1.0) -> list[R
     ]
 
 
+def _reading_stamps(path: Path, default_interval_minutes: float) -> list[datetime | None]:
+    """Re-read the telemetry for its timestamps alone.
+
+    ``load_readings`` deliberately returns ``Reading`` objects, which carry a duration and no
+    absolute time — that is the right shape for the maths, which only cares about how long a
+    temperature was held. Route context needs the wall-clock instant to line a reading up
+    against an hourly weather series, so it comes from a second pass rather than by widening
+    ``Reading`` with a field nothing else uses.
+    """
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if isinstance(payload, dict):
+        for key in ("readings", "telemetry", "points", "data"):
+            if isinstance(payload.get(key), list):
+                payload = payload[key]
+                break
+    if not isinstance(payload, list):
+        return []
+    return [
+        next((_parse_iso(item.get(k)) for k in _TS_KEYS if k in item), None)
+        if isinstance(item, dict)
+        else None
+        for item in payload
+    ]
+
+
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="python -m coldcall.cli",
@@ -237,6 +266,21 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json-out", type=Path, help="also write the verdict JSON here")
     p.add_argument("--shipment-id", default="", help="echoed into the output for traceability")
     p.add_argument("--lot-id", default="")
+    p.add_argument(
+        "--route-lat",
+        type=float,
+        help="latitude of the shipment's route. With --route-lon, adds route context: real "
+        "recorded weather at that point, used to say whether the excursion tracked the "
+        "outside air or ran away from it. Requires network; omit to skip.",
+    )
+    p.add_argument("--route-lon", type=float)
+    p.add_argument(
+        "--containment-gap-c",
+        type=float,
+        default=CONTAINMENT_GAP_C,
+        help="median °C above outside air that marks a containment failure rather than "
+        "environmental exposure. ColdCall policy, not a regulatory value.",
+    )
     return p
 
 
@@ -320,6 +364,37 @@ def main(argv: list[str] | None = None) -> int:
             )
             if product.get(key) is not None
         }
+
+    # Route context is opt-in and never fatal. It explains *why* the load warmed, which the
+    # disposition maths cannot; but a weather lookup failing must not cost us a verdict we
+    # already computed, so the failure is reported inside the document rather than raised.
+    if args.route_lat is not None and args.route_lon is not None:
+        stamps = [
+            (stamp, reading.celsius)
+            for stamp, reading in zip(
+                (s for s in _reading_stamps(args.telemetry, args.interval_minutes)),
+                readings,
+                strict=False,
+            )
+            if stamp is not None
+        ]
+        if not stamps:
+            document["route_context"] = {
+                "error": "no usable timestamps in the telemetry, so weather cannot be matched"
+            }
+        else:
+            try:
+                ambient = fetch_ambient(
+                    args.route_lat, args.route_lon, stamps[0][0], stamps[-1][0]
+                )
+                context = attribute_excursion(
+                    stamps, ambient, float(upper), threshold_c=args.containment_gap_c
+                )
+                document["route_context"] = context.to_dict()
+                document["route_context"]["ambient_source"] = ambient.source
+            except (RuntimeError, ValueError) as exc:
+                print(f"warning: no route context ({exc})", file=sys.stderr)
+                document["route_context"] = {"error": str(exc)}
 
     if args.svg_out:
         try:

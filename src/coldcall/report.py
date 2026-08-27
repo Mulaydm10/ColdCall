@@ -142,11 +142,51 @@ def deviation_report(
             "",
         ]
 
-    lines += ["## 5. Basis for the disposition", ""]
+    route = verdict.get("route_context")
+    if isinstance(route, dict) and not route.get("error"):
+        attribution = str(route.get("attribution", "undetermined")).replace("_", " ")
+        lines += [
+            "## 5. Route context — why the load warmed",
+            "",
+            "The disposition arithmetic says what happens to the pallet. This says what to "
+            "investigate, which is a different question with a different corrective action.",
+            "",
+            "| Measure | Value |",
+            "|---|---|",
+            f"| Attribution | **{attribution.upper()}** |",
+            f"| Median load temperature above outside air | "
+            f"{_fmt(route.get('median_gap_c'), ' °C', 1)} |",
+            f"| Peak inside the consignment | {_fmt(route.get('peak_internal_c'), ' °C', 1)} |",
+            f"| Peak outside air on the route | {_fmt(route.get('peak_ambient_c'), ' °C', 1)} |",
+            f"| Excursion readings matched to weather | {route.get('matched_readings', '?')} of "
+            f"{route.get('total_excursion_readings', '?')} |",
+            "",
+        ]
+        lines += [f"{i}. {note}" for i, note in enumerate(route.get("notes", []), 1)]
+        if route.get("ambient_source"):
+            lines += ["", f"> Weather provenance: {route['ambient_source']}"]
+        lines += [
+            "",
+            f"> The {_fmt(route.get('containment_gap_threshold_c'), ' °C', 1)} gap threshold "
+            f"separating a containment failure from environmental exposure is **ColdCall "
+            f"policy, not a regulatory value.** A closed vehicle in sun runs warmer than the "
+            f"shade temperature the archive reports, so some positive gap is expected.",
+            "",
+        ]
+    elif isinstance(route, dict) and route.get("error"):
+        lines += [
+            "## 5. Route context — why the load warmed",
+            "",
+            f"_Not available: {route['error']}_ — the cause of the excursion is therefore "
+            "**not established** in this record. Do not infer one from the temperature alone.",
+            "",
+        ]
+
+    lines += ["## 6. Basis for the disposition", ""]
     lines += [f"{i}. {reason}" for i, reason in enumerate(verdict.get("rationale", []), 1)]
     lines += [
         "",
-        "## 6. What is regulation and what is ColdCall policy",
+        "## 7. What is regulation and what is ColdCall policy",
         "",
         "| Regulation-anchored | ColdCall policy |",
         "|---|---|",
@@ -165,7 +205,7 @@ def deviation_report(
 
     if consignees:
         lines += [
-            "## 7. Affected consignees",
+            "## 8. Affected consignees",
             "",
             "| Consignee | Units expected |",
             "|---|---|",
@@ -175,7 +215,7 @@ def deviation_report(
         ]
         lines.append("")
 
-    lines += ["## 8. Sections to be completed", ""]
+    lines += ["## 9. Sections to be completed", ""]
     for section in _AGENT_SECTIONS:
         lines += [
             f"### {section}",
@@ -186,7 +226,7 @@ def deviation_report(
         ]
 
     lines += [
-        "## 9. Signature",
+        "## 10. Signature",
         "",
         "| | |",
         "|---|---|",

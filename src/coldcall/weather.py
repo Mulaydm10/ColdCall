@@ -1,0 +1,326 @@
+"""Route context: was the excursion explained by the weather, or by the shipment?
+
+Why this earns its place
+------------------------
+The disposition maths answers *what happens to the pallet*. It cannot answer *why the pallet
+warmed*, and those are different questions with different consequences:
+
+* If the load simply tracked a hot day, the finding is **environmental exposure** — the CAPA is
+  about routing, scheduling, or the shipping lane.
+* If the load ran well above the outside air, the finding is a **containment failure** — the
+  CAPA is about the packaging, the reefer unit, or the loading procedure. Nothing about the
+  route would have prevented it.
+
+A deviation record that says "the shipment reached 27 °C" and stops has skipped the only part
+an investigator can act on. This module supplies the missing half from real recorded weather at
+the shipment's own coordinates, so the answer is evidence rather than narration.
+
+The data
+--------
+Open-Meteo's **archive** (ERA5 reanalysis), keyless and free for non-commercial use. It is
+*historical measurement*, not forecast, which is what a retrospective investigation needs.
+
+Honest limits, which belong in any report that quotes this
+----------------------------------------------------------
+* **Point weather, moving cargo.** We query one coordinate. A multi-drop road leg covers
+  ground; the ambient series is representative of the region, not of the truck's exact position
+  minute by minute.
+* **Hourly granularity** against telemetry that samples every ~12 minutes. Readings are matched
+  to the nearest hour, so a sharp local swing between samples is invisible here.
+* **Outside air, not the trailer.** A closed vehicle in sun runs hotter than the shade
+  temperature ERA5 reports. So a *positive* gap is expected to some degree; it is the **size**
+  of the gap that carries the signal, and the threshold for "large" is our policy, stated as
+  such, not a regulatory value.
+
+Stdlib only, like the rest of this package — it is uploaded into the sandbox and must import
+against a stock interpreter.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import urllib.error
+import urllib.parse
+import urllib.request
+from bisect import bisect_left
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+
+__all__ = [
+    "AMBIENT_ARCHIVE_URL",
+    "CONTAINMENT_GAP_C",
+    "AmbientSeries",
+    "RouteContext",
+    "attribute_excursion",
+    "fetch_ambient",
+]
+
+#: Open-Meteo's historical reanalysis endpoint. Keyless; no signup.
+AMBIENT_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
+
+#: Median °C by which the load must exceed outside air during the excursion before we call it
+#: a containment failure rather than environmental exposure. **ColdCall policy, not a
+#: regulatory value** — a closed vehicle in sun genuinely runs warmer than shade temperature,
+#: so some positive gap is expected. Stated in every record that quotes an attribution.
+CONTAINMENT_GAP_C = 5.0
+
+#: Attribution vocabulary. Deliberately includes an "undetermined" option: an investigation
+#: that cannot tell is a legitimate outcome, and forcing a cause is how bad CAPAs get written.
+ENVIRONMENTAL = "environmental_exposure"
+CONTAINMENT = "containment_failure"
+UNDETERMINED = "undetermined"
+
+
+@dataclass(frozen=True, slots=True)
+class AmbientSeries:
+    """Hourly outside-air temperatures at one coordinate, with their provenance."""
+
+    latitude: float
+    longitude: float
+    times: tuple[datetime, ...]
+    celsius: tuple[float, ...]
+    source: str
+
+    def at(self, when: datetime) -> float | None:
+        """Outside air at the hour nearest ``when``, or None if it falls outside the series.
+
+        Nearest rather than preceding: an excursion reading at 14:58 is better represented by
+        the 15:00 observation than the 14:00 one, and rounding down would systematically lag
+        the ambient curve behind the telemetry.
+        """
+        if not self.times:
+            return None
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        if when < self.times[0] - timedelta(hours=1) or when > self.times[-1] + timedelta(hours=1):
+            return None
+
+        index = bisect_left(self.times, when)
+        candidates = [i for i in (index - 1, index) if 0 <= i < len(self.times)]
+        if not candidates:
+            return None
+        best = min(candidates, key=lambda i: abs((self.times[i] - when).total_seconds()))
+        value = self.celsius[best]
+        return None if value is None or not math.isfinite(value) else value
+
+
+@dataclass(frozen=True, slots=True)
+class RouteContext:
+    """What the weather says about an excursion, and how confident that is."""
+
+    attribution: str
+    median_gap_c: float | None
+    """Median (internal − ambient) across the excursion readings. None if unmatched."""
+    peak_internal_c: float
+    peak_ambient_c: float | None
+    matched_readings: int
+    total_excursion_readings: int
+    threshold_c: float
+    notes: tuple[str, ...]
+
+    @property
+    def coverage(self) -> float:
+        if self.total_excursion_readings == 0:
+            return 0.0
+        return self.matched_readings / self.total_excursion_readings
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "attribution": self.attribution,
+            "median_gap_c": None if self.median_gap_c is None else round(self.median_gap_c, 2),
+            "peak_internal_c": self.peak_internal_c,
+            "peak_ambient_c": self.peak_ambient_c,
+            "matched_readings": self.matched_readings,
+            "total_excursion_readings": self.total_excursion_readings,
+            "coverage": round(self.coverage, 3),
+            "containment_gap_threshold_c": self.threshold_c,
+            "threshold_note": (
+                "The gap threshold is ColdCall policy, not a regulatory value. A closed "
+                "vehicle in sun runs warmer than the shade temperature the archive reports, "
+                "so some positive gap is expected."
+            ),
+            "notes": list(self.notes),
+        }
+
+
+def fetch_ambient(
+    latitude: float,
+    longitude: float,
+    start: datetime,
+    end: datetime,
+    timeout: float = 30.0,
+) -> AmbientSeries:
+    """Fetch hourly outside-air temperature for a coordinate and window.
+
+    Raises:
+        ValueError: on impossible coordinates or an inverted window.
+        RuntimeError: if the archive is unreachable or answers in an unexpected shape. It
+            raises rather than returning an empty series on purpose — an empty series would
+            silently become "no weather context available", which reads like a finding rather
+            than like the failed lookup it is.
+    """
+    if not (-90.0 <= latitude <= 90.0) or not (-180.0 <= longitude <= 180.0):
+        raise ValueError(f"impossible coordinate: {latitude}, {longitude}")
+    if end < start:
+        raise ValueError("the window ends before it starts")
+
+    query = urllib.parse.urlencode(
+        {
+            "latitude": f"{latitude:.4f}",
+            "longitude": f"{longitude:.4f}",
+            # Pad by a day either side: the archive works in whole local days, and an
+            # excursion that straddles midnight would otherwise lose its tail.
+            "start_date": (start - timedelta(days=1)).date().isoformat(),
+            "end_date": (end + timedelta(days=1)).date().isoformat(),
+            "hourly": "temperature_2m",
+            "timezone": "UTC",
+        }
+    )
+    url = f"{AMBIENT_ARCHIVE_URL}?{query}"
+
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
+        raise RuntimeError(f"could not reach the weather archive: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"the weather archive returned non-JSON: {exc}") from exc
+
+    hourly = payload.get("hourly")
+    if not isinstance(hourly, dict) or "time" not in hourly or "temperature_2m" not in hourly:
+        raise RuntimeError(f"unexpected archive response shape: {str(payload)[:200]}")
+
+    times: list[datetime] = []
+    temps: list[float] = []
+    for raw_time, raw_temp in zip(hourly["time"], hourly["temperature_2m"], strict=False):
+        try:
+            stamp = datetime.fromisoformat(str(raw_time))
+        except ValueError:
+            continue
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=timezone.utc)
+        times.append(stamp)
+        temps.append(float(raw_temp) if isinstance(raw_temp, (int, float)) else float("nan"))
+
+    if not times:
+        raise RuntimeError("the weather archive returned no hourly observations")
+
+    return AmbientSeries(
+        latitude=latitude,
+        longitude=longitude,
+        times=tuple(times),
+        celsius=tuple(temps),
+        source=(
+            f"Open-Meteo historical archive (ERA5 reanalysis), {latitude:.4f},{longitude:.4f}, "
+            f"hourly temperature_2m — retrieved from {AMBIENT_ARCHIVE_URL}"
+        ),
+    )
+
+
+def attribute_excursion(
+    readings: list[tuple[datetime, float]],
+    ambient: AmbientSeries,
+    label_upper_c: float,
+    threshold_c: float = CONTAINMENT_GAP_C,
+) -> RouteContext:
+    """Decide whether the excursion tracked the weather or ran away from it.
+
+    Args:
+        readings: ``(timestamp, internal °C)`` for the whole record. Only readings above
+            ``label_upper_c`` are attributed — the question is about the *excursion*, and
+            including in-band time would dilute the gap toward the ambient baseline.
+        ambient: outside air from :func:`fetch_ambient`.
+        label_upper_c: the labelled maximum, which defines what counts as an excursion here.
+        threshold_c: median gap above which this is a containment failure. Ours, not a
+            regulation.
+
+    Returns:
+        A :class:`RouteContext`. Returns ``undetermined`` — never a guess — when too few
+        excursion readings could be matched to an ambient observation to support a claim.
+    """
+    hot = [(when, temp) for when, temp in readings if temp > label_upper_c]
+    if not hot:
+        return RouteContext(
+            attribution=UNDETERMINED,
+            median_gap_c=None,
+            peak_internal_c=max((t for _, t in readings), default=float("nan")),
+            peak_ambient_c=None,
+            matched_readings=0,
+            total_excursion_readings=0,
+            threshold_c=threshold_c,
+            notes=("No reading exceeded the labelled maximum, so there is nothing to explain.",),
+        )
+
+    gaps: list[float] = []
+    matched_ambient: list[float] = []
+    for when, temp in hot:
+        outside = ambient.at(when)
+        if outside is None:
+            continue
+        gaps.append(temp - outside)
+        matched_ambient.append(outside)
+
+    peak_internal = max(t for _, t in hot)
+    notes: list[str] = []
+
+    # A claim needs enough matched readings to stand on. Half is a judgement call, stated
+    # rather than hidden: below it the median is being carried by a minority of the excursion.
+    if not gaps or len(gaps) < max(1, len(hot) // 2):
+        notes.append(
+            f"Only {len(gaps)} of {len(hot)} excursion readings could be matched to an "
+            f"ambient observation — too few to attribute a cause."
+        )
+        return RouteContext(
+            attribution=UNDETERMINED,
+            median_gap_c=None,
+            peak_internal_c=peak_internal,
+            peak_ambient_c=max(matched_ambient) if matched_ambient else None,
+            matched_readings=len(gaps),
+            total_excursion_readings=len(hot),
+            threshold_c=threshold_c,
+            notes=tuple(notes),
+        )
+
+    ordered = sorted(gaps)
+    middle = len(ordered) // 2
+    median_gap = (
+        ordered[middle]
+        if len(ordered) % 2
+        else (ordered[middle - 1] + ordered[middle]) / 2.0
+    )
+    peak_ambient = max(matched_ambient)
+
+    if median_gap >= threshold_c:
+        attribution = CONTAINMENT
+        notes.append(
+            f"The load ran a median {median_gap:.1f} °C above outside air across the "
+            f"excursion (peak internal {peak_internal:g} °C against a peak ambient of "
+            f"{peak_ambient:g} °C). The weather does not account for this: heat was retained "
+            f"or generated inside the consignment. Investigate packaging, the reefer unit, "
+            f"and loading procedure — routing changes would not have prevented it."
+        )
+    else:
+        attribution = ENVIRONMENTAL
+        notes.append(
+            f"The load tracked outside air closely (median gap {median_gap:.1f} °C, peak "
+            f"ambient {peak_ambient:g} °C against peak internal {peak_internal:g} °C). This "
+            f"reads as environmental exposure rather than a containment failure — the "
+            f"consignment was in conditions it could not have been protected from by "
+            f"packaging alone. Investigate lane, schedule and dwell time."
+        )
+
+    notes.append(
+        "Ambient is point weather from a reanalysis archive, hourly, in shade. The cargo "
+        "moved and the trailer was not the open air, so treat the gap as indicative."
+    )
+    return RouteContext(
+        attribution=attribution,
+        median_gap_c=median_gap,
+        peak_internal_c=peak_internal,
+        peak_ambient_c=peak_ambient,
+        matched_readings=len(gaps),
+        total_excursion_readings=len(hot),
+        threshold_c=threshold_c,
+        notes=tuple(notes),
+    )
