@@ -39,6 +39,44 @@ def seeded_store(store: IncidentStore, seed_fixture: dict) -> IncidentStore:
     return store
 
 
+def build_legacy_db(path, seed_fixture: dict, rows: list[tuple[str, float]]) -> None:
+    """Create a database the way code predating the migrations would have.
+
+    Deliberately does NOT call `initialise()` first: that stamps `PRAGMA user_version`, and a
+    database written by older code never was. Building it any other way would test the gate
+    rather than the migration.
+    """
+    from coldcall.store import SCHEMA_TABLES
+
+    with sqlite3.connect(path) as conn:
+        conn.executescript(SCHEMA_TABLES)
+        product = seed_fixture["products"][0]
+        conn.execute(
+            "INSERT INTO products (id, name, storage_min_c, storage_max_c,"
+            " excursion_allowance_hours, allowance_source, unit_value_usd)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                product["id"],
+                product["name"],
+                product["storage_min_c"],
+                product["storage_max_c"],
+                product["excursion_allowance_hours"],
+                product["allowance_source"],
+                product["unit_value_usd"],
+            ),
+        )
+        conn.execute(
+            "INSERT INTO shipments (id, product_id, lot_id, units) VALUES (?, ?, ?, ?)",
+            (SHIPMENT_ID, product["id"], "A2231", 4000),
+        )
+        for ts, temp in rows:
+            conn.execute(
+                "INSERT INTO telemetry (shipment_id, ts, internal_temp_c) VALUES (?, ?, ?)",
+                (SHIPMENT_ID, ts, temp),
+            )
+        conn.commit()
+
+
 class TestInitialise:
     def test_creates_the_schema(self, tmp_path, seed_fixture: dict) -> None:
         """A fresh path gets every table the schema declares, ready for first writes."""
@@ -475,21 +513,14 @@ class TestTimestampCanonicalisation:
         DOUBLES. The machine most likely to be carrying such a database is the demo machine.
         """
         path = tmp_path / "legacy.db"
+        build_legacy_db(
+            path,
+            seed_fixture,
+            [("2026-01-01T00:00:00Z", 22.0), ("2026-01-01T00:01:00Z", 23.0)],
+        )
+
         store = IncidentStore(path)
-        store.initialise()
-        store.seed(seed_fixture)
-
-        # Write raw `Z` rows the way the pre-fix engine did, bypassing canonicalisation.
-        with sqlite3.connect(path) as conn:
-            for minute, temp in ((0, 22.0), (1, 23.0)):
-                conn.execute(
-                    "INSERT INTO telemetry (shipment_id, ts, internal_temp_c)"
-                    f" VALUES (?, '2026-01-01T00:0{minute}:00Z', ?)",
-                    (SHIPMENT_ID, temp),
-                )
-            conn.commit()
-
-        IncidentStore(path).initialise()  # the migration runs here
+        store.initialise()  # the migration runs here
 
         rows = store.telemetry_for(SHIPMENT_ID)
         assert [r["ts"] for r in rows] == [
@@ -520,23 +551,92 @@ class TestTimestampCanonicalisation:
     ) -> None:
         """`record_ticks` promises the first reading at an instant wins; the migration agrees."""
         path = tmp_path / "dupes.db"
-        store = IncidentStore(path)
-        store.initialise()
-        store.seed(seed_fixture)
-        with sqlite3.connect(path) as conn:
-            conn.execute(
-                "INSERT INTO telemetry (shipment_id, ts, internal_temp_c)"
-                " VALUES (?, '2026-01-01T09:00:00Z', 22.0)",
-                (SHIPMENT_ID,),
-            )
-            conn.execute(
-                "INSERT INTO telemetry (shipment_id, ts, internal_temp_c)"
-                " VALUES (?, '2026-01-01T11:00:00+02:00', 40.0)",
-                (SHIPMENT_ID,),
-            )
-            conn.commit()
+        build_legacy_db(
+            path,
+            seed_fixture,
+            [("2026-01-01T09:00:00Z", 22.0), ("2026-01-01T11:00:00+02:00", 40.0)],
+        )
 
         IncidentStore(path).initialise()
-        rows = store.telemetry_for(SHIPMENT_ID)
+        rows = IncidentStore(path).telemetry_for(SHIPMENT_ID)
         assert len(rows) == 1
         assert rows[0]["temp_c"] == 22.0
+
+
+class TestMigrationAuditScoping:
+    """A migration event belongs to the incidents it touched, and to no others."""
+
+    def test_an_untouched_incident_is_not_told_its_telemetry_was_rewritten(
+        self, tmp_path, seed_fixture: dict
+    ) -> None:
+        """Broadcasting the event to every incident is the same lie as a duplicate `opened`
+        event, one table over — and worse, because whoever re-derives a decision months later
+        has no way to tell a real entry from a broadcast one.
+        """
+        path = tmp_path / "two-shipments.db"
+        build_legacy_db(path, seed_fixture, [("2026-01-01T09:00:00Z", 22.0)])
+
+        # A second shipment with clean, already-canonical telemetry and its own incident.
+        with sqlite3.connect(path) as conn:
+            conn.execute(
+                "INSERT INTO shipments (id, product_id, lot_id, units)"
+                " VALUES ('VCC-999', ?, 'B1', 10)",
+                (seed_fixture["products"][0]["id"],),
+            )
+            conn.execute(
+                "INSERT INTO telemetry (shipment_id, ts, internal_temp_c)"
+                " VALUES ('VCC-999', '2026-01-01T09:00:00+00:00', 21.0)"
+            )
+            for incident, shipment in (("INC-DIRTY", SHIPMENT_ID), ("INC-CLEAN", "VCC-999")):
+                conn.execute(
+                    "INSERT INTO incidents (id, shipment_id, opened_at) VALUES (?, ?, ?)",
+                    (incident, shipment, "2026-01-01T00:00:00+00:00"),
+                )
+            conn.commit()
+
+        store = IncidentStore(path)
+        store.initialise()
+
+        dirty = [e["kind"] for e in store.incident("INC-DIRTY")["events"]]
+        clean = [e["kind"] for e in store.incident("INC-CLEAN")["events"]]
+        assert "migration" in dirty, "the shipment that was rewritten should say so"
+        assert "migration" not in clean, "the untouched shipment must not claim it was"
+
+    def test_a_migration_touching_nothing_writes_no_event(
+        self, tmp_path, seed_fixture: dict
+    ) -> None:
+        """A migration with nobody to tell is not an event."""
+        store = IncidentStore(tmp_path / "already-clean.db")
+        store.initialise()
+        store.seed(seed_fixture)
+        store.open_incident("INC-1", SHIPMENT_ID)
+        store.record_ticks([TelemetryTick(SHIPMENT_ID, "2026-01-01T09:00:00Z", 22.0)])
+
+        IncidentStore(tmp_path / "already-clean.db").initialise()
+        kinds = [e["kind"] for e in store.incident("INC-1")["events"]]
+        assert "migration" not in kinds
+
+
+class TestMigrationRunsOnce:
+    def test_the_version_gate_stops_a_full_rescan_on_every_open(
+        self, tmp_path, seed_fixture: dict
+    ) -> None:
+        """Telemetry is kept forever and initialise() runs on every replay, so an ungated
+        rescan grows with history for the life of the deployment."""
+        path = tmp_path / "gated.db"
+        build_legacy_db(path, seed_fixture, [("2026-01-01T09:00:00Z", 22.0)])
+
+        with sqlite3.connect(path) as conn:
+            assert conn.execute("PRAGMA user_version").fetchone()[0] == 0
+
+        IncidentStore(path).initialise()
+        with sqlite3.connect(path) as conn:
+            assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
+
+    def test_a_clean_database_is_stamped_too(self, tmp_path) -> None:
+        """Already-canonical is just as migrated. Re-scanning to rediscover that every run
+        would defeat the gate."""
+        path = tmp_path / "fresh.db"
+        IncidentStore(path).initialise()
+        with sqlite3.connect(path) as conn:
+            assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
