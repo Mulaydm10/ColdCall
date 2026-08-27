@@ -1,15 +1,15 @@
 [project]
 name = "coldcall"
 version = "0.1.0"
-description = "Deterministic cold-chain stability math and telemetry replay for the ColdCall agent."
+description = "The ColdCall agent's sandbox-uploaded Python payload. Domain logic awaits the thesis (ADR-0006)."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = []
 
 [project.optional-dependencies]
-# Kept separate so the sandbox payload stays dependency-free: the math module must be
-# importable inside a Daytona sandbox with nothing but a stdlib Python.
+# Kept separate so the sandbox payload stays dependency-free: whatever lands in src/coldcall
+# must import inside a Daytona sandbox with nothing but a stdlib Python.
 data = [
   "httpx>=0.27",
   "pandas>=2.2",
@@ -34,7 +34,6 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-q --strict-markers"
 markers = [
-  "usp: fixtures derived from USP <1079> worked examples",
   "smoke: the minimal green-baseline test required by ADR-0002",
 ]
 
@@ -44,8 +43,9 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
-# UP017 wants datetime.UTC over timezone.utc. Declining deliberately: replay.py is uploaded
+# UP017 wants datetime.UTC over timezone.utc. Declining deliberately: this package is uploaded
 # into a sandbox whose image Python we do not control, and timezone.utc works on every Python 3
 # while datetime.UTC needs 3.11+. The lint is right about our declared floor and wrong about
-# where this code actually runs.
+# where this code actually runs. Kept through the ADR-0006 reset because it is a property of
+# the sandbox, not of any idea.
 ignore = ["UP017"]

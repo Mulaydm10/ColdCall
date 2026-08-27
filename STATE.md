@@ -5,9 +5,9 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-27 10:05 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
-full stack installed, configured and verified; three plan assumptions corrected; PR #3 merged;
-PR #4's Qodo review resolved (2 bugs fixed, 2 rule violations dismissed with reasons).
+Last updated: 2026-08-27 10:40 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
+**the inferred cold-chain mission was cleared** (`ADR-0006`) so it cannot bias the real thesis;
+PR #4's Qodo review resolved (0 bugs on re-review) and awaiting merge.
 
 ## Deadline
 
@@ -53,19 +53,29 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
   numbers. Python is `uv`-managed in a project-local `.venv` (3.12; floor 3.11). No global
   installs anywhere.
 - `src/coldcall/` — **zero required dependencies**, because it is uploaded into a sandbox and
-  runs against a stock interpreter:
-  - `mkt.py` — mean kinetic temperature (log-sum-exp, not naive summation) + excursion
-    accounting + a release/review/quarantine verdict carrying every input needed to re-derive it.
-  - `replay.py` — streaming parser for the 402 MB telemetry array; never loads it into memory,
-    and tolerates the truncated tail a range request always produces.
-- **47 tests green** (`uv run pytest`), ruff clean. The maths is cross-checked against an
-  independently written naive implementation, so an optimisation cannot silently break it.
-- `agents/coldcall.agent.json` — validated against the live API (accepted up to the
-  unconfigured model provider). Approval gates on every MCP server; Stripe gated at `@all`.
-- `skills/coldchain-sop/SKILL.md` — **registered on the running harness and reads back**.
+  runs against a stock interpreter. **Empty of domain logic as of `ADR-0006`** — see the reset
+  below.
+- **2 tests green** (`uv run pytest`), ruff clean. Down from 47: 45 of those tested the inferred
+  mission and went with it. The two that remain prove the toolchain and guard the reset.
+- `agents/coldcall.agent.json` — platform wiring only. Approval gates on every MCP server;
+  Stripe gated at `@all`. Its `instructions` are deliberately mission-free.
+- `skills/repo-evidence/SKILL.md` — replaces `coldchain-sop`. Domain-neutral, so the proven
+  git-backed skill mount survives the reset. **Must be re-registered against `main` after the
+  reset PR merges** — TrueForge fetches skills from GitHub at the registered ref, never from
+  the working tree.
 - `scripts/setup_trueforge.sh` — idempotent (PUT throughout), `--dry-run`, names exactly which
   keys are missing. `scripts/verify_apis.sh` — **7/7 sources pass right now**.
 - TrueForge v0.1.4 running on :8790.
+
+**The inferred mission was cleared** (`ADR-0006`)
+
+Before supplying the idea, Mulaydm10 asked whether the repo carried assumptions about it. It
+carried them in twenty files, so they were removed: the MKT/stability maths, the telemetry
+replay, their 45 tests, the `coldchain-sop` skill, and the agent's instructions. The platform —
+harness, sandbox, connectors, Qodo loop, scripts, toolchain — is domain-neutral and untouched.
+`ADR-0006` records what went, what stayed, and the one command that restores it all. Honest
+caveat recorded there: "cold-chain" was traceable to the tech stack Mulaydm10 themselves
+supplied, not purely to the project name; what was invented on top of it was the *mission*.
 
 **Three plan assumptions corrected** (see Blocked/`worklog.md` for what this changes)
 
@@ -80,18 +90,15 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
 
 ## Blocked
 
-1. **The ColdCall idea itself** (`Q-0001`, `VISION.md`) — Mulaydm10 is supplying it.
-   **Read this before trusting anything cold-chain-shaped in the repo:** the supplied tech stack
-   named cold-chain telemetry, MKT maths and a quarantine write, so a working mission was
-   inferred from it in order to verify the setup against something concrete. That mission is
-   **provisional, not agreed** — `VISION.md` is deliberately still `TODO`, and the two places
-   that encode the assumption (`skills/coldchain-sop/SKILL.md` and `agents/coldcall.agent.json`)
-   both carry a banner saying so. Confirm, amend or discard it when the thesis lands; tracked as
-   `Q-0009`. `DEMO-0001` waits on the same answer.
+1. **The ColdCall idea itself** (`Q-0001`, `VISION.md`) — Mulaydm10 is supplying it. This is now
+   the **only** thing blocking product work. The repo no longer encodes a guess at it: the
+   inferred cold-chain mission was removed under `ADR-0006`, and `Q-0009` is closed as discarded.
+   Do not re-derive a mission from the tools, APIs or dataset that are wired up — they say what
+   is possible, never what is wanted. `DEMO-0001` waits on the same answer.
 2. **Which product label to judge against** (`Q-0007`) — the verified dataset is ambient
-   (~22–30 °C), so a 2–8 °C label quarantines everything trivially while a real 15–25 °C
-   controlled-room-temperature label gives a genuine spread. Decision shapes the demo. Cannot be
-   settled ahead of the idea — the label follows from what the agent is for.
+   (~22–30 °C), so a tight refrigerated threshold flags every leg trivially while a realistic
+   ambient one gives a genuine spread. **Only live if the real thesis turns
+   out to use that dataset** — it was carried over with `ADR-0003` and may well be moot.
 
 **Not on this list, deliberately:** the Supabase and Stripe connector logins (`Q-0008`).
 Mulaydm10 parked them — see the Deferred backlog below. They gate creating the *full* `coldcall`
@@ -117,14 +124,17 @@ The harness is already configured and working — `OPENAI_API_KEY` and `DAYTONA_
 run on a Daytona microVM. **Do not repeat that setup.** Re-run the script only to re-verify after
 a machine restart; it is idempotent.
 
-1. Mulaydm10: supply the idea → `VISION.md`, then `DEMO-0001`.
-2. With the idea in hand, settle the product label (`Q-0007`) — it decides what the demo shows.
-3. Then: first end-to-end run of the agent against the replayed telemetry, filmed.
+1. Merge PR #4 (re-review: **0 bugs**) and the mission-reset PR.
+2. Mulaydm10: supply the idea → `VISION.md`, then `DEMO-0001`.
+3. Re-register the `repo-evidence` skill against `main`, and write the agent's real
+   instructions once the thesis exists.
+4. Then: first end-to-end run of the agent, filmed.
 
 ## Latest experiment
 
 `EXP-0008` — the whole judged path verified end to end on Daytona: remote Linux microVM,
-sandboxed execution, git skill mounted from GitHub. See `experiments/experiment_log.md`.
+sandboxed execution, git skill mounted from GitHub. See `experiments/experiment_log.md`. Still
+valid after the reset: every capability it proved is platform, not mission.
 
 ## Work claims
 

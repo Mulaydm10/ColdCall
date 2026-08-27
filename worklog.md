@@ -372,3 +372,46 @@ may be *mentioned*, and citing IDs from anywhere is the entire point of the sche
 confined mentions would make `grep -rn ADR-0003 .` return one file and destroy the traceability
 the IDs exist for. Dismissed in-thread with that reason. It will re-report while the learned rule
 persists; the clarifying paragraph landed in PR #3 and has not yet retrained it.
+
+### 2026-08-27 10:40 CEST — the inferred mission was cleared (`ADR-0006`)
+
+Mulaydm10 asked, before handing over the idea, whether the repo carried assumptions about it —
+explicitly so that neither the repo nor the agent reading it would bias the real thesis. It did,
+in twenty files. They directed that the idea-derived ones be removed.
+
+**The origin matters, and the first answer given was too simple.** It was not purely a guess from
+the project name. The tech stack Mulaydm10 supplied named a *"VCC-CPLD dataset (445K real
+cold-chain records)"* and openFDA drug labels, so "cold-chain" traces back to their own input.
+What was invented on top of it was the **mission**: mean kinetic temperature, USP <1079> stability
+budgets, a release/review/quarantine verdict, a quality team signing a deviation record. None of
+that was asked for. The same stack also named Stripe test-mode — which a pharmaceutical QA agent
+has almost no use for, and which should have been read much earlier as a signal that the real idea
+was something else.
+
+Removed: `mkt.py`, `replay.py`, their 45 tests, `skills/coldchain-sop/SKILL.md`, and the agent's
+`instructions`. Kept: the harness, the Daytona sandbox, the connectors and their approval gates,
+the Qodo loop, both scripts, the `uv` toolchain, and the dependency-free constraint on the sandbox
+payload — none of which depends on what ColdCall turns out to be.
+
+Two judgement calls worth recording. **`ADR-0003` and the verified dataset stay**, even though the
+ADR says "cold chain": it was Mulaydm10's input, the substitution was real work, and rewriting a
+historical ADR to match a later reset would falsify the trail. And **`coldchain-sop` was replaced
+rather than deleted** — the git-backed skill mount is a judged capability proven in `EXP-0008`,
+and deleting the only skill would break the registration. `skills/repo-evidence/SKILL.md` carries
+the repo's actual evidence rule instead, which holds whatever the idea is.
+
+The test count drops 47 → 2, and that is the honest number rather than a regression: 45 of them
+tested a mission nobody agreed to. `tests/test_package.py` keeps the canonical command green and
+fails if domain logic reappears before `VISION.md` is real.
+
+Also fixed while in the manifest: `model.name` was `openai/gpt-5-6-sol`, TrueForge's catalog
+preset, which does not exist on this account's key (`EXP-0008` recorded that and the manifest was
+never updated). It would have failed on agent creation. Now `openai/gpt-5`.
+
+Restoring is one command if the thesis turns out to be cold-chain after all —
+`git checkout 3e01090 -- src/coldcall tests skills/coldchain-sop` — which is why removal was
+preferred to an `attic/` directory. Equally recoverable; only removal stops it pulling on what
+comes next. `Q-0009` closes as discarded. `Q-0001` is now the only real blocker.
+
+`tests/README.md` is LOCKED and its layout table still names the deleted test files. Proposed to
+Main Agent, not applied.
