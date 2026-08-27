@@ -79,6 +79,10 @@ fi
 
 echo
 echo "Sandbox provider"
+# Deliberately opt-in. With no Daytona record stored, standalone TrueForge falls back to its
+# built-in local sandbox — so an unset key is a working configuration, not a missing one. A
+# broken Daytona record would be worse than none, since the fallback is skipped whenever a
+# record exists.
 if ! is_placeholder "${DAYTONA_API_KEY:-}"; then
   # Singleton resource: PUT only, no POST. All four timers are required by the schema.
   put "daytona" /api/v1/settings/sandbox-providers "$(cat <<JSON
@@ -88,7 +92,7 @@ if ! is_placeholder "${DAYTONA_API_KEY:-}"; then
 JSON
 )"
 else
-  skip "daytona" "DAYTONA_API_KEY unset — no sandbox means no skills and no code execution"
+  skip "daytona" "unset — standalone falls back to the built-in local sandbox (this is fine)"
 fi
 
 echo
