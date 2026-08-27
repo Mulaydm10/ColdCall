@@ -40,6 +40,13 @@ PUBLIC_REPO = "https://github.com/Mulaydm10/ColdCall"
 #: measurements rather than assumed — see replay/SHIPMENT.md. Route context is only honest if
 #: the weather is fetched for where the shipment actually was.
 ROUTE_LAT, ROUTE_LON = 39.4565, -0.3465
+#: When those fixes were taken, how many there were, and how far apart. All 15 predate the
+#: leg by 12.3 h, so this is a LAST-KNOWN POSITION — the module marks the attribution
+#: `qualified` on the strength of exactly these numbers. See replay/SHIPMENT.md.
+ROUTE_FIX_EARLIEST = "2021-11-08T17:48:04Z"
+ROUTE_FIX_LATEST = "2021-11-08T20:06:41Z"
+ROUTE_FIX_COUNT = 15
+ROUTE_FIX_SPREAD_M = 366.8
 
 #: Substring identifying the one failure that is reliably transient. The harness fetches
 #: git-backed skills when a sandbox starts, each strand gets its own sandbox, and Daytona's
@@ -182,12 +189,21 @@ Write the readings below to `/work/leg.json`, then from `/work/coldcall`:
       --allowed-excursion-hours 6 \\
       --shipment-id {payload.get('shipment_id', '')} --lot-id {payload.get('lot_id', '')} \\
       --route-lat {payload.get('route_lat', '')} --route-lon {payload.get('route_lon', '')} \\
+      --route-fix-latest {ROUTE_FIX_LATEST} --route-fix-earliest {ROUTE_FIX_EARLIEST} \\
+      --route-fix-count {ROUTE_FIX_COUNT} --route-fix-spread-m {ROUTE_FIX_SPREAD_M} \\
       --svg-out /work/excursion.svg --json-out /work/verdict.json
 
-`--route-lat/--route-lon` add a `route_context` block answering **why** the load warmed, from
-real recorded weather at those coordinates. Report its `attribution` verbatim. It is the
-difference between a CAPA about the lane and a CAPA about the packaging, and you must not
-infer a cause from the temperature alone.
+`--route-lat/--route-lon` add a `route_context` block answering **why** the load warmed, from a
+historical weather archive at those coordinates. Report its `attribution` verbatim. It is the
+difference between a CAPA about the lane and a CAPA about the packaging, and you must not infer
+a cause from the temperature alone.
+
+The `--route-fix-*` flags tell the module *when* that position was recorded. For this shipment
+the fixes predate the excursion, so the coordinate is a **last-known position** and the module
+sets `qualified: true` with a `location_evidence` block. **When `qualified` is true you must say
+so** alongside the attribution — the weather is real, but which weather applies rests on an
+assumption about where the consignment was, and a reader who sees only `attribution` would
+never know.
 
 Report its JSON verbatim. Do not restate the verdict in your own words and do not round it.
 If it fails to run, that is the finding — report the error rather than estimating.
@@ -595,6 +611,10 @@ def main(argv: list[str] | None = None) -> int:
         # actually was rather than about a plausible-sounding city. See replay/SHIPMENT.md.
         "route_lat": ROUTE_LAT,
         "route_lon": ROUTE_LON,
+        "route_position_provenance": (
+            f"last-known position: {ROUTE_FIX_COUNT} fixes {ROUTE_FIX_EARLIEST}"
+            f"..{ROUTE_FIX_LATEST}, spanning {ROUTE_FIX_SPREAD_M:.0f} m, all before this leg"
+        ),
         "peak_temp_c": max((float(r["temp_c"]) for r in readings), default=None),
         "telemetry_provenance": (
             "real recorded shipment leg from Zenodo 10.5281/zenodo.7907515, replayed — "

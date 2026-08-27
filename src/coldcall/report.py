@@ -171,6 +171,32 @@ def deviation_report(
             f"{route.get('total_excursion_readings', '?')} |",
             "",
         ]
+        evidence = route.get("location_evidence")
+        if isinstance(evidence, dict):
+            lines += [
+                "",
+                "**Where the consignment was, and how that is known**",
+                "",
+                "| | |",
+                "|---|---|",
+                f"| Coordinate | {evidence.get('latitude')}, {evidence.get('longitude')} |",
+                f"| Provenance | **{evidence.get('provenance')}** |",
+                f"| Fixes available | {evidence.get('fix_count')}, "
+                f"{evidence.get('earliest_fix')} to {evidence.get('latest_fix')} |",
+                f"| Spread of those fixes | {_fmt(evidence.get('fix_spread_m'), ' m', 0)} |",
+                f"| Gap to the excursion window | "
+                f"{_fmt(evidence.get('gap_hours_to_window'), ' h', 1)} |",
+                "",
+            ]
+            if route.get("qualified"):
+                lines += [
+                    "> **This attribution is QUALIFIED.** The weather is real and the "
+                    "arithmetic is real, but *which* weather applies rests on the assumption "
+                    "that the consignment stayed in conditions comparable to its last recorded "
+                    "position. That is an assumption, not an observation, and a reader acting "
+                    "on this section should weigh it as one.",
+                    "",
+                ]
         lines += [f"{i}. {note}" for i, note in enumerate(route.get("notes", []), 1)]
         if route.get("ambient_source"):
             lines += ["", f"> Weather provenance: {route['ambient_source']}"]

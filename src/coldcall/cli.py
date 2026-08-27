@@ -32,7 +32,12 @@ from coldcall.crosscheck import cross_check
 from coldcall.disposition import DispositionPolicy, disposition
 from coldcall.mkt import Reading
 from coldcall.plot import excursion_svg
-from coldcall.weather import CONTAINMENT_GAP_C, attribute_excursion, fetch_ambient
+from coldcall.weather import (
+    CONTAINMENT_GAP_C,
+    LocationEvidence,
+    attribute_excursion,
+    fetch_ambient,
+)
 
 __all__ = ["main", "load_readings"]
 
@@ -210,6 +215,33 @@ def load_readings(payload: Any, default_interval_minutes: float = 1.0) -> list[R
     ]
 
 
+def _location_evidence(args: argparse.Namespace, stamps: list[datetime]) -> Any:
+    """Assemble what is known about the coordinate, or nothing if the caller said nothing.
+
+    Absent fix metadata yields ``None`` rather than a fabricated "observed" claim: a caller
+    that does not tell us when the position was taken has not told us it was current, and
+    inventing that is the overclaim this whole block exists to prevent.
+    """
+    if not args.route_fix_latest:
+        return None
+    latest = _parse_iso(args.route_fix_latest)
+    if latest is None or not stamps:
+        return None
+    window_start, window_end = min(stamps), max(stamps)
+    covers = window_start <= latest <= window_end
+    gap = 0.0 if covers else (window_start - latest).total_seconds() / 3600.0
+    return LocationEvidence(
+        latitude=args.route_lat,
+        longitude=args.route_lon,
+        fix_count=args.route_fix_count,
+        earliest_fix=args.route_fix_earliest or args.route_fix_latest,
+        latest_fix=args.route_fix_latest,
+        spread_m=args.route_fix_spread_m,
+        covers_window=covers,
+        gap_hours=abs(gap),
+    )
+
+
 def _reading_stamps(path: Path, default_interval_minutes: float) -> list[datetime | None]:
     """Re-read the telemetry for its timestamps alone.
 
@@ -278,6 +310,20 @@ def _build_parser() -> argparse.ArgumentParser:
         "outside air or ran away from it. Requires network; omit to skip.",
     )
     p.add_argument("--route-lon", type=float)
+    p.add_argument(
+        "--route-fix-latest",
+        help="ISO timestamp of the most recent GPS fix behind --route-lat/--route-lon. Given "
+        "this, the record states whether the coordinate was observed during the excursion or "
+        "is a last-known position, and qualifies the attribution when it is the latter.",
+    )
+    p.add_argument("--route-fix-earliest")
+    p.add_argument("--route-fix-count", type=int, default=0)
+    p.add_argument(
+        "--route-fix-spread-m",
+        type=float,
+        default=0.0,
+        help="how far apart the fixes are — the radius of what 'here' actually means",
+    )
     p.add_argument(
         "--containment-gap-c",
         type=float,
@@ -399,7 +445,11 @@ def main(argv: list[str] | None = None) -> int:
                     args.route_lat, args.route_lon, min(known), max(known)
                 )
                 context = attribute_excursion(
-                    stamps, ambient, float(upper), threshold_c=args.containment_gap_c
+                    stamps,
+                    ambient,
+                    float(upper),
+                    threshold_c=args.containment_gap_c,
+                    location=_location_evidence(args, known),
                 )
                 document["route_context"] = context.to_dict()
                 document["route_context"]["ambient_source"] = ambient.source

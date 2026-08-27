@@ -185,32 +185,48 @@ directly without re-parsing the big file or handling truncation. First and last 
 ]
 ```
 
-## Route coordinates, and why they are in the dataset rather than assumed
+## Route coordinates — a last-known position, not a position during the excursion
 
-The chosen leg's raw records carry `measurements.gps`. For device `DD:33:04:13:34:CD` the
-sample holds 15 fixes, all clustered at **39.456 N, −0.347 E — Valencia, Spain**:
+The chosen leg's raw records carry `measurements.gps`. Device `DD:33:04:13:34:CD` has **15
+fixes**, and this is the part that matters:
 
-```
-{'lat': 39.4564, 'long': -0.3467} @ 2021-11-08T17:59:37Z
-{'lat': 39.4568, 'long': -0.3461} @ 2021-11-08T17:59:06Z
-{'lat': 39.4565, 'long': -0.3465} @ 2021-11-08T17:48:04Z
-```
+| | |
+|---|---|
+| Fixes | 15 |
+| All taken between | **2021-11-08 17:48:04Z and 20:06:41Z** |
+| Spread of those fixes | **367 m** from their centroid |
+| The leg begins | **2021-11-09 08:23:09Z** |
+| Gap from the last fix to the leg | **12.3 hours** |
+| The excursion runs | 2021-11-09 14:58 → 18:49Z |
 
-`39.4565, −0.3465` is used as the route point. It matters that this is **the leg's own
-recorded position** and not a plausible-sounding city: `src/coldcall/weather.py` fetches real
-historical weather for that coordinate and compares it against the internal temperature, so an
-invented location would produce an invented root cause.
+So `39.4565, −0.3465` (Valencia, Spain) is the consignment's **last known position, twelve
+hours before the leg started**. No fix falls inside the excursion window. It is not established
+where the consignment was while it was warming.
 
-**What it shows.** Open-Meteo's archive (ERA5) for 2021-11-09 at that point gives an ambient
-peak of **17.7 °C**, and 13–17 °C across the excursion window. The consignment reached
-**27 °C** — a median of **12.6 °C above outside air**, across 14 of 14 matched excursion
+That distinction was not made when this section was first written — it said "the leg's own
+recorded GPS", which reads as a position *during* the leg. It is not, and the correction
+matters more here than most, because `src/coldcall/weather.py` fetches weather **for this
+coordinate** and attributes a root cause from the comparison.
+
+**What the code does about it.** When the fixes do not temporally cover the correlated window,
+the emitted `route_context` carries `qualified: true` and a `location_evidence` block with the
+fix count, the timestamps, the spread and the gap — and the attribution's own notes say the
+finding assumes the consignment stayed in comparable conditions. The limit lives in the record,
+not only in this file.
+
+**What it shows anyway.** ERA5 for that coordinate on 2021-11-09 gives an ambient peak of
+17.7 °C over the whole day and **17.3 °C across the matched excursion readings**, while the
+consignment reached **27 °C** — a median **12.6 °C above outside air**, over 14 of 14 matched
 readings.
 
-So the excursion is **not** explained by the weather. That is a materially different finding
-from "it was a hot day": it points the investigation at packaging, the reefer unit and loading
-procedure rather than at the lane or the schedule. See `EXP-0013`.
+The attribution is `containment_failure` rather than `environmental_exposure`, and the location
+gap does not overturn it: regional November ambient in eastern Spain does not reach 27 °C, so no
+plausible alternative position within a day's travel makes the weather the explanation. But that
+is **an argument, not an observation**, which is exactly why the record ships the evidence for a
+reader to weigh instead of asserting the conclusion. See `EXP-0013`.
 
-**Honest limits**, which belong in any report quoting this: the archive gives point weather at
-hourly granularity for shade temperature, while the cargo moved and sat inside a vehicle. Some
-positive gap is expected; the 5 °C threshold that separates "containment failure" from
-"environmental exposure" is ColdCall policy, not a regulatory value.
+**The other honest limits**, which belong in any report quoting this: the archive gives point
+weather at hourly granularity for shade temperature, while the cargo moved and sat inside a
+vehicle. ERA5 is a **reanalysis** — an observation-constrained model, not a thermometer at that
+spot. And the 5 °C threshold separating "containment failure" from "environmental exposure" is
+ColdCall policy, not a regulatory value.

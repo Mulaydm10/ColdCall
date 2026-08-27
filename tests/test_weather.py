@@ -16,6 +16,7 @@ from coldcall.weather import (
     ENVIRONMENTAL,
     UNDETERMINED,
     AmbientSeries,
+    LocationEvidence,
     attribute_excursion,
     fetch_ambient,
 )
@@ -153,3 +154,84 @@ class TestFetchValidation:
     def test_an_inverted_window_is_refused(self):
         with pytest.raises(ValueError, match="ends before it starts"):
             fetch_ambient(39.0, -0.3, START, START - timedelta(hours=1))
+
+
+class TestLocationEvidence:
+    """A weather lookup is only as good as the coordinate, and a coordinate has a timestamp.
+
+    Treating a last-known position as an established location during a later excursion is the
+    same class of overclaim as calling a reanalysis a measurement. The number may still be
+    right; the record has to say what it rests on.
+    """
+
+    def stale(self) -> LocationEvidence:
+        """The demo leg's real situation: 15 fixes ending 12.3 h before the window."""
+        return LocationEvidence(
+            latitude=39.4565,
+            longitude=-0.3465,
+            fix_count=15,
+            earliest_fix="2021-11-08T17:48:04Z",
+            latest_fix="2021-11-08T20:06:41Z",
+            spread_m=366.8,
+            covers_window=False,
+            gap_hours=12.3,
+        )
+
+    def current(self) -> LocationEvidence:
+        return LocationEvidence(
+            latitude=39.4565,
+            longitude=-0.3465,
+            fix_count=15,
+            earliest_fix="2021-11-09T14:00:00Z",
+            latest_fix="2021-11-09T18:00:00Z",
+            spread_m=40.0,
+            covers_window=True,
+            gap_hours=0.0,
+        )
+
+    def containment_case(self, location):
+        series = ambient(START, [15.0, 15.0, 16.0, 15.0])
+        readings = [(at(START, m), 27.0) for m in (10, 70, 130, 190)]
+        return attribute_excursion(readings, series, LABEL_UPPER, location=location)
+
+    def test_a_stale_coordinate_qualifies_the_attribution_without_withdrawing_it(self):
+        """A 12 °C gap against a regional November ambient is not explained by having been a
+        few hundred metres away — so the finding stands. But `qualified` has to be
+        machine-readable: a reader that checks only `attribution` would otherwise treat an
+        assumed location exactly like an observed one.
+        """
+        result = self.containment_case(self.stale())
+        assert result.attribution == CONTAINMENT
+        assert result.qualified is True
+        assert any("LAST-KNOWN POSITION" in n for n in result.notes)
+        assert any("an assumption, not an observation" in n for n in result.notes)
+
+    def test_a_coordinate_observed_during_the_window_is_not_qualified(self):
+        result = self.containment_case(self.current())
+        assert result.attribution == CONTAINMENT
+        assert result.qualified is False
+        assert not any("LAST-KNOWN POSITION" in n for n in result.notes)
+
+    def test_no_location_evidence_never_claims_the_position_was_current(self):
+        """Saying nothing about when a fix was taken is not the same as saying it was current."""
+        result = self.containment_case(None)
+        assert result.qualified is False
+        assert result.to_dict()["location_evidence"] is None
+
+    def test_the_emitted_record_carries_the_gap_and_the_spread(self):
+        """The honest limit has to live in the record, not only in the prose around it."""
+        document = self.containment_case(self.stale()).to_dict()
+        evidence = document["location_evidence"]
+        assert document["qualified"] is True
+        assert evidence["covers_window"] is False
+        assert evidence["gap_hours_to_window"] == 12.3
+        assert evidence["fix_spread_m"] == 366.8
+        assert "LAST-KNOWN POSITION" in evidence["provenance"]
+
+    def test_an_undetermined_attribution_still_reports_its_location_evidence(self):
+        """Whichever way the attribution lands, the reader gets the same provenance."""
+        series = ambient(START, [15.0])
+        readings = [(at(START, m), 27.0) for m in (10, 200, 260, 320, 380)]
+        result = attribute_excursion(readings, series, LABEL_UPPER, location=self.stale())
+        assert result.attribution == UNDETERMINED
+        assert result.to_dict()["location_evidence"]["covers_window"] is False

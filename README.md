@@ -35,11 +35,17 @@ different routes — and the agent is forbidden from presenting a bundle whose t
 disagree. Not flagged: stopped. A labelled verdict is still one someone may act on.
 
 It also answers the question the arithmetic cannot: **why did it warm?** ColdCall pulls a
-historical weather archive for the shipment's own GPS and compares it against the load. On the demo leg
-the outside air peaked at **17.7 °C** while the consignment reached **27 °C** — a median
-**12.6 °C gap**. That is not a hot day; it is a containment failure, and it sends the
-investigation to the packaging rather than to the lane. Two public datasets, correlated,
-producing a finding neither gives alone.
+historical weather archive for the shipment's last-known GPS position and compares it against
+the load. On the demo leg the outside air peaked at **17.3 °C** across the matched readings
+while the consignment reached **27 °C** — a median **12.6 °C gap**. That is not a hot day; it
+is a containment failure, and it sends the investigation to the packaging rather than to the
+lane. Two public datasets, correlated, producing a finding neither gives alone.
+
+The record says what that rests on: those GPS fixes predate the excursion by **12.3 hours**, so
+the attribution is emitted as `qualified` with the gap, the fix count and their 367 m spread
+attached. The gap is large enough that a few hundred metres could not explain it — but that is
+an argument, and the record carries the evidence for a reader to weigh rather than asserting
+the conclusion.
 
 That is a checkable claim, not a slogan. The same leg scored on a laptop and inside a remote
 Daytona microVM returns the same numbers to the digit: **MKT 24.54 °C, 64.35 % of budget
@@ -184,7 +190,7 @@ Every claim below is checkable, and the honest limits are stated rather than bur
 |---|---|---|
 | Shipment telemetry | Zenodo [`10.5281/zenodo.7907515`](https://doi.org/10.5281/zenodo.7907515), CC-BY-4.0 | **Real recorded data, replayed.** Never live. One leg, chosen and documented in [`replay/SHIPMENT.md`](replay/SHIPMENT.md) with its runners-up so the choice is auditable. |
 | Product label | openFDA drug label API, set_id `e13cafe2-f226-4021-81d8-7bd1f98b5582` | **Real, keyless, re-fetchable.** "Store at 20° to 25°C; excursions permitted to 15° to 30°C." |
-| Weather on route | Open-Meteo ERA5 archive at the leg's **own recorded GPS** (39.456 N, −0.347 E — Valencia) | **ERA5 reanalysis** — an observation-constrained model, not a direct measurement — keyless and re-fetchable. Point weather, hourly, shade temperature, while the cargo moved inside a vehicle. Every limit is repeated wherever the number appears. |
+| Weather on route | Open-Meteo ERA5 archive at the leg's **last-known GPS position** (39.456 N, −0.347 E — Valencia) | **ERA5 reanalysis** — an observation-constrained model, not a direct measurement — keyless and re-fetchable. **The coordinate is a last-known position:** all 15 GPS fixes fall on 2021-11-08 17:48–20:06Z, spanning 367 m, and the leg begins **12.3 h later**. Point weather, hourly, shade temperature, while the cargo moved inside a vehicle. Every limit is repeated wherever the number appears, and the emitted record marks the attribution `qualified`. |
 | Stability method | USP &lt;1079&gt; (MKT), WHO TRS-999 Annex 5 | Cited in the code and in every emitted record |
 | Excursion allowance (hours) | **Nobody's label** | **Ours.** Labelled as policy everywhere it appears. |
 | Potency figure | First-order Arrhenius model | **An estimate, not an assay.** Says so in the code, the JSON, the report and the SOP. |
@@ -216,7 +222,7 @@ cargo, so the product label was chosen to match what the goods actually are.
 | The gate actually stops the agent | **Deny** → it reported the denial and stopped, no retry. **Allow** → branch `incident/INC-VCC-118-A2231-…`, deviation record committed as `1c859fc` |
 | The record survives a crash | `./scripts/restart_proof.sh` — `kill -9`, restart, and a **SHA-256 digest of every event's content** unchanged: `3c470830…` before and after, over **every field of every event** |
 | The data sources work *now* | `./scripts/verify_apis.sh` calls each one and asserts on the response — 8/8, and the weather check runs `fetch_ambient` itself rather than pinging a URL |
-| The root cause is evidence, not narration | 14 of 14 excursion readings matched to ERA5 reanalysis at the leg's own coordinates → `containment_failure` (`EXP-0013`) |
+| The root cause is evidence, not narration | 14 of 14 excursion readings matched to ERA5 reanalysis at the leg's last-known position → `containment_failure`, marked **qualified** because that position predates the window by 12.3 h (`EXP-0013`) |
 
 Full trail in [`experiments/experiment_log.md`](experiments/experiment_log.md) (`EXP-0001`–`EXP-0012`),
 including the bugs that had to be fixed on the way and the ones still open.

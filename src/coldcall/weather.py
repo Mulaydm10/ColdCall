@@ -53,6 +53,7 @@ __all__ = [
     "AMBIENT_ARCHIVE_URL",
     "CONTAINMENT_GAP_C",
     "AmbientSeries",
+    "LocationEvidence",
     "RouteContext",
     "attribute_excursion",
     "fetch_ambient",
@@ -108,6 +109,53 @@ class AmbientSeries:
 
 
 @dataclass(frozen=True, slots=True)
+class LocationEvidence:
+    """What is actually known about *where* the consignment was, and when it was known.
+
+    A weather lookup is only as good as the coordinate it is given, and a coordinate has a
+    timestamp. Treating a last-known position as an established location during a later
+    excursion is the same class of overclaim as calling a reanalysis a measurement — the
+    number may still be right, but the record must say what it rests on.
+    """
+
+    latitude: float
+    longitude: float
+    fix_count: int
+    earliest_fix: str
+    latest_fix: str
+    spread_m: float
+    """How far apart the fixes are — the radius of what "here" actually means."""
+    covers_window: bool
+    """Whether any fix falls inside the correlated window. When False the coordinate is a
+    last-known position and the attribution rests on an assumption, not an observation."""
+    gap_hours: float
+    """Hours from the latest fix to the start of the correlated window. Zero when covered."""
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "provenance": (
+                "position observed during the correlated window"
+                if self.covers_window
+                else "LAST-KNOWN POSITION — no fix falls inside the correlated window"
+            ),
+            "fix_count": self.fix_count,
+            "earliest_fix": self.earliest_fix,
+            "latest_fix": self.latest_fix,
+            "gap_hours_to_window": round(self.gap_hours, 1),
+            "fix_spread_m": round(self.spread_m, 1),
+            "covers_window": self.covers_window,
+            "limit": (
+                "Weather was fetched for this coordinate. Where the consignment actually was "
+                "during the window is not established by these fixes."
+                if not self.covers_window
+                else "Fixes fall inside the correlated window."
+            ),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class RouteContext:
     """What the weather says about an excursion, and how confident that is."""
 
@@ -120,6 +168,18 @@ class RouteContext:
     total_excursion_readings: int
     threshold_c: float
     notes: tuple[str, ...]
+    location: LocationEvidence | None = None
+
+    @property
+    def qualified(self) -> bool:
+        """True when the attribution rests on an assumption about location, not an observation.
+
+        The attribution is not withdrawn — a 12 °C gap against a regional November ambient is
+        not explained by having been a few hundred metres away. But "qualified" has to be
+        machine-readable, because a downstream reader that only checks `attribution` would
+        otherwise treat an assumed location exactly like an observed one.
+        """
+        return self.location is not None and not self.location.covers_window
 
     @property
     def coverage(self) -> float:
@@ -142,6 +202,8 @@ class RouteContext:
                 "vehicle in sun runs warmer than the shade temperature the archive reports, "
                 "so some positive gap is expected."
             ),
+            "qualified": self.qualified,
+            "location_evidence": None if self.location is None else self.location.to_dict(),
             "notes": list(self.notes),
         }
 
@@ -237,6 +299,7 @@ def attribute_excursion(
     ambient: AmbientSeries,
     label_upper_c: float,
     threshold_c: float = CONTAINMENT_GAP_C,
+    location: LocationEvidence | None = None,
 ) -> RouteContext:
     """Decide whether the excursion tracked the weather or ran away from it.
 
@@ -254,6 +317,10 @@ def attribute_excursion(
         label_upper_c: the labelled maximum, which defines what counts as an excursion here.
         threshold_c: median gap above which this is a containment failure. Ours, not a
             regulation.
+        location: what is known about where the consignment was. When the fixes do not
+            temporally cover the correlated window, the attribution is marked ``qualified``
+            and says so in its own notes — the weather is real, but which weather applies
+            rests on an assumption.
 
     Returns:
         A :class:`RouteContext`. Returns ``undetermined`` — never a guess — when too few
@@ -278,6 +345,7 @@ def attribute_excursion(
             total_excursion_readings=0,
             threshold_c=threshold_c,
             notes=("No reading exceeded the labelled maximum, so there is nothing to explain.",),
+            location=location,
         )
 
     gaps: list[float] = []
@@ -312,6 +380,7 @@ def attribute_excursion(
             total_excursion_readings=len(hot),
             threshold_c=threshold_c,
             notes=tuple(notes),
+            location=location,
         )
 
     ordered = sorted(gaps)
@@ -346,6 +415,18 @@ def attribute_excursion(
         "Ambient is point weather from a reanalysis archive, hourly, in shade. The cargo "
         "moved and the trailer was not the open air, so treat the gap as indicative."
     )
+
+    if location is not None and not location.covers_window:
+        # State the assumption in the record, not only in prose. A reader who checks
+        # `attribution` and stops must still be able to find this by checking `qualified`.
+        notes.append(
+            f"QUALIFIED: the coordinate is a LAST-KNOWN POSITION from {location.latest_fix}, "
+            f"{location.gap_hours:.1f} h before this window began, and the {location.fix_count} "
+            f"available fixes span {location.spread_m:.0f} m. Where the consignment actually "
+            f"was during the excursion is not established. This attribution assumes it "
+            f"remained in weather comparable to that coordinate's — plausible for a gap this "
+            f"size against a regional ambient, but an assumption, not an observation."
+        )
     return RouteContext(
         attribution=attribution,
         median_gap_c=median_gap,
@@ -355,4 +436,5 @@ def attribute_excursion(
         total_excursion_readings=len(hot),
         threshold_c=threshold_c,
         notes=tuple(notes),
+        location=location,
     )

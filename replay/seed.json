@@ -26,7 +26,11 @@
       "status": "in_transit",
       "route_lat": 39.4565,
       "route_lon": -0.3465,
-      "route_note": "Coordinates are the leg's own recorded GPS from the dataset (measurements.gps), not an assumed city. Valencia, Spain. Used to fetch real recorded weather for the excursion window - see replay/SHIPMENT.md and src/coldcall/weather.py."
+      "route_note": "LAST-KNOWN POSITION, not a position during the excursion. The dataset's 15 GPS fixes for this device all fall on 2021-11-08 17:48-20:06Z, spanning 367 m; the leg begins 2021-11-09T08:23:09Z, 12.3 h after the final fix. Weather is fetched for this coordinate, so the attribution assumes the consignment remained in comparable conditions - an assumption, not an observation. See replay/SHIPMENT.md and src/coldcall/weather.py.",
+      "route_fix_count": 15,
+      "route_earliest_fix": "2021-11-08T17:48:04Z",
+      "route_latest_fix": "2021-11-08T20:06:41Z",
+      "route_spread_m": 366.8
     }
   ],
   "consignees": [
