@@ -243,22 +243,42 @@ review → follow-up review → human merge. Direct pushes to `main` do not coun
 
 **Status:** Qodo is installed on this repository and reviewing pull requests as of 2026-08-27.
 
-- **Representative merged PR:** [#1 — real event facts, harness bring-up, and the two hard
-  gates](https://github.com/Mulaydm10/ColdCall/pull/1) (5 commits, merged 2026-08-27).
-- **What Qodo surfaced, and what we did:** Qodo raised **4 findings, all Medium severity, no
-  High**, and **all four were fixed rather than dismissed**. One was a genuine factual error —
-  `COMPETITION.md` described the hackathon's San Francisco day as already past when it was still
-  two days away, which would have quietly cost us an in-person option. The other three were
-  *staleness* bugs: checklist rows still marked "missing" for gates that this very PR had just
-  satisfied (the public repo, the AI-assistance disclosure), and a README claim that Qodo
-  reviewed every PR while `STATE.md` still said it was not installed. That last one we fixed
-  more thoroughly than the finding asked, splitting the section into **Policy** (the rule we
-  always hold to) and **Status** (what is true today, dated) — a status line that has to be
-  rewritten every time reality moves is the same bug the other findings were.
+- **Representative merged PR:** [#6 — the disposition core, the regulated maths that decides
+  a shipment's fate](https://github.com/Mulaydm10/ColdCall/pull/6) (merged 2026-08-27).
+- **What Qodo surfaced, and what we did.** Across the four milestone PRs Qodo raised **36
+  findings over four review rounds**; **33 were fixed** and 3 dismissed in-thread with reasons.
+  These were not lint. The most valuable ones:
+
+  - **A regulatory bug in the core maths.** `disposition()` was reading only the label's
+    *storage* range and ignoring its *permitted excursion* range. A real label states both —
+    "store at 20–25 °C" **and** "excursions permitted to 15–30 °C" — so an 18 °C reading, which
+    the label explicitly permits, was quarantining as a **freeze event**, while a brief 35 °C
+    spike could release whenever the time budget and MKT stayed low. Wrong in both directions,
+    in the arithmetic the whole project rests on.
+  - **A safety gate that could authorise what nobody could read.** When the driver failed to
+    resolve a pending tool call, it still offered the operator an `allow` — a gate that *looks*
+    like oversight while manufacturing consent. It now fails closed.
+  - **A retry that could repeat an irreversible action.** We added one retry to survive a flaky
+    sandbox cold start; Qodo pointed out that a run can hit that failure *and* still reach an
+    approval gate, so the retry could commit, notify and mutate inventory a second time.
+  - **A predictable `/tmp` path feeding a destructive `DELETE`.**
+
+  Three of the findings were **regressions from our own earlier fixes** — an `INSERT OR IGNORE`
+  added for idempotence that silently swallowed constraint violations, a timestamp rule that
+  rejected a legitimate input shape, an error handler that validated syntax but not structure.
+  And one script needed three rounds for one underlying mistake: *enumerating what matters*. Its
+  persistence check compared `0` against `0`, then equal cardinalities, then five hand-picked
+  fields. It now hashes whole objects.
+
+- **Dismissed, with reasons in-thread:** one rule fired repeatedly claiming the thesis was
+  fabricated. Correct on the diff, wrong on the facts — the thesis was supplied by the Main
+  Agent, and `VISION.md` reads `TODO` only because it is a LOCKED governing file an agent may
+  not edit. The thesis is proposed in `proposals/VISION.md` for a human to apply, which is
+  exactly what that rule should enforce.
 - **PR history:** [all pull requests](https://github.com/Mulaydm10/ColdCall/pulls?q=is%3Apr) ·
-  [PR #1's review trail](https://github.com/Mulaydm10/ColdCall/pull/1) shows the completed
-  review, our decisions in the Fix Summary, and the **follow-up review against the final code
-  returning 0 bugs / 0 rule violations** before a human merged.
+  [PR #6's trail](https://github.com/Mulaydm10/ColdCall/pull/6) shows four rounds of review,
+  our reasoning on each finding, and the follow-up review against the final code before a
+  human merged.
 
 ## AI assistance disclosure
 
