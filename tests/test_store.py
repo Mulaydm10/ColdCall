@@ -157,11 +157,15 @@ class TestTelemetry:
             ]
         )
         rows = seeded_store.telemetry_for(SHIPMENT_ID)
+        # Stored in the canonical instant spelling, not as written. Uniqueness on
+        # (shipment_id, ts) is a TEXT comparison and this column is what orders the timeline,
+        # so the store owns the spelling — see `canonical_ts`.
         assert [r["ts"] for r in rows] == [
-            "2026-01-01T00:00:00Z",
-            "2026-01-01T00:01:00Z",
-            "2026-01-01T00:02:00Z",
+            "2026-01-01T00:00:00+00:00",
+            "2026-01-01T00:01:00+00:00",
+            "2026-01-01T00:02:00+00:00",
         ]
+        assert [r["temp_c"] for r in rows] == [22.0, 23.0, 24.0]
 
 
 class TestReferenceReads:
@@ -432,3 +436,107 @@ class TestSchemaMigration:
                     " ON CONFLICT (shipment_id, ts) DO NOTHING",
                     (SHIPMENT_ID,),
                 )
+
+
+class TestTimestampCanonicalisation:
+    """One instant is one row, however it was spelled. Devin's finding on PR #7."""
+
+    def test_two_spellings_of_one_instant_are_one_row(
+        self, seeded_store: IncidentStore
+    ) -> None:
+        """The uniqueness constraint is a TEXT comparison, so it can only work if the store
+        owns the spelling. Normalising at each caller instead would leave the next caller
+        free to forget.
+        """
+        seeded_store.record_ticks(
+            [TelemetryTick(SHIPMENT_ID, "2026-01-01T09:00:00Z", 22.0)]
+        )
+        written = seeded_store.record_ticks(
+            [TelemetryTick(SHIPMENT_ID, "2026-01-01T11:00:00+02:00", 40.0)]
+        )
+        assert written == 0
+        rows = seeded_store.telemetry_for(SHIPMENT_ID)
+        assert len(rows) == 1
+        assert rows[0]["temp_c"] == 22.0
+
+    def test_a_naive_timestamp_is_assumed_utc(self, seeded_store: IncidentStore) -> None:
+        seeded_store.record_ticks([TelemetryTick(SHIPMENT_ID, "2026-01-01T09:00:00", 22.0)])
+        assert seeded_store.telemetry_for(SHIPMENT_ID)[0]["ts"] == "2026-01-01T09:00:00+00:00"
+
+    def test_a_pre_normalisation_database_is_migrated_rather_than_doubled(
+        self, tmp_path, seed_fixture: dict
+    ) -> None:
+        """The bug this migration exists for, end to end.
+
+        Telemetry is preserved across runs by design, so a database written by the old engine
+        holds raw `...Z` rows while every new write produces `...+00:00`. Without the
+        migration the constraint sees two different rows for one instant, the next replay
+        re-inserts the whole leg, and time-at-temperature — the number the verdict turns on —
+        DOUBLES. The machine most likely to be carrying such a database is the demo machine.
+        """
+        path = tmp_path / "legacy.db"
+        store = IncidentStore(path)
+        store.initialise()
+        store.seed(seed_fixture)
+
+        # Write raw `Z` rows the way the pre-fix engine did, bypassing canonicalisation.
+        with sqlite3.connect(path) as conn:
+            for minute, temp in ((0, 22.0), (1, 23.0)):
+                conn.execute(
+                    "INSERT INTO telemetry (shipment_id, ts, internal_temp_c)"
+                    f" VALUES (?, '2026-01-01T00:0{minute}:00Z', ?)",
+                    (SHIPMENT_ID, temp),
+                )
+            conn.commit()
+
+        IncidentStore(path).initialise()  # the migration runs here
+
+        rows = store.telemetry_for(SHIPMENT_ID)
+        assert [r["ts"] for r in rows] == [
+            "2026-01-01T00:00:00+00:00",
+            "2026-01-01T00:01:00+00:00",
+        ]
+
+        # Now replay the same instants through the fixed path. Nothing may be added.
+        assert store.record_ticks(
+            [
+                TelemetryTick(SHIPMENT_ID, "2026-01-01T00:00:00Z", 22.0),
+                TelemetryTick(SHIPMENT_ID, "2026-01-01T00:01:00Z", 23.0),
+            ]
+        ) == 0
+        assert len(store.telemetry_for(SHIPMENT_ID)) == 2
+
+    def test_the_migration_is_idempotent(self, tmp_path, seed_fixture: dict) -> None:
+        store = IncidentStore(tmp_path / "twice.db")
+        store.initialise()
+        store.seed(seed_fixture)
+        store.record_ticks([TelemetryTick(SHIPMENT_ID, "2026-01-01T00:00:00Z", 22.0)])
+        for _ in range(3):
+            store.initialise()
+        assert len(store.telemetry_for(SHIPMENT_ID)) == 1
+
+    def test_a_duplicate_instant_in_a_legacy_db_keeps_the_earliest_row(
+        self, tmp_path, seed_fixture: dict
+    ) -> None:
+        """`record_ticks` promises the first reading at an instant wins; the migration agrees."""
+        path = tmp_path / "dupes.db"
+        store = IncidentStore(path)
+        store.initialise()
+        store.seed(seed_fixture)
+        with sqlite3.connect(path) as conn:
+            conn.execute(
+                "INSERT INTO telemetry (shipment_id, ts, internal_temp_c)"
+                " VALUES (?, '2026-01-01T09:00:00Z', 22.0)",
+                (SHIPMENT_ID,),
+            )
+            conn.execute(
+                "INSERT INTO telemetry (shipment_id, ts, internal_temp_c)"
+                " VALUES (?, '2026-01-01T11:00:00+02:00', 40.0)",
+                (SHIPMENT_ID,),
+            )
+            conn.commit()
+
+        IncidentStore(path).initialise()
+        rows = store.telemetry_for(SHIPMENT_ID)
+        assert len(rows) == 1
+        assert rows[0]["temp_c"] == 22.0
