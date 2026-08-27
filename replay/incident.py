@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -34,7 +35,16 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BASE_URL = "http://localhost:8790/api/v1"
-PUBLIC_REPO = "https://github.com/Mulaydm10/ColdCall"
+#: The repository the incident actually WRITES to — the audit branch and the committed
+#: deviation record. Also what the sandbox clones, so the demo has a single-repo story.
+#:
+#: This is deliberately NOT `COLDCALL_SKILL_REPO`. That one controls where TrueForge fetches
+#: skills from, which is a different question: borrowing it here let a preflight green-light a
+#: token that could push to a fork configured for skill loading while the incident wrote
+#: somewhere else entirely. `scripts/verify_apis.sh` reads this same variable, so the thing
+#: checked and the thing written to cannot drift apart.
+DEFAULT_ACTION_REPO = "https://github.com/Mulaydm10/ColdCall"
+PUBLIC_REPO = os.environ.get("COLDCALL_ACTION_REPO") or DEFAULT_ACTION_REPO
 
 #: The demo leg's own recorded coordinates (Valencia, Spain), read from the dataset's GPS
 #: measurements rather than assumed — see replay/SHIPMENT.md. Route context is only honest if

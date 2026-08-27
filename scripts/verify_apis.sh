@@ -133,7 +133,11 @@ else
   # `.permissions` is only present on an authenticated response, and works for both classic
   # and fine-grained tokens — unlike the X-OAuth-Scopes header, which fine-grained PATs do
   # not send at all.
-  GH_REPO_SLUG=${COLDCALL_SKILL_REPO:-https://github.com/Mulaydm10/ColdCall}
+  # COLDCALL_ACTION_REPO, not COLDCALL_SKILL_REPO. Skill source and audit target are
+  # different questions, and borrowing the former for this check was a bug: point
+  # COLDCALL_SKILL_REPO at a fork and the preflight green-lit a token that could push there
+  # while replay/incident.py wrote to the canonical repo. Both now read this one variable.
+  GH_REPO_SLUG=${COLDCALL_ACTION_REPO:-https://github.com/Mulaydm10/ColdCall}
   GH_REPO_SLUG=${GH_REPO_SLUG#https://github.com/}
   GH_REPO_SLUG=${GH_REPO_SLUG%.git}
   GH_BODY=$(curl -sS -m 20 -H "Authorization: Bearer $GH_TOKEN_VALUE" \
