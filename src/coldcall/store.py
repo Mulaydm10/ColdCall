@@ -39,6 +39,11 @@ __all__ = [
     "canonical_ts",
 ]
 
+#: Bumped when a migration in ``initialise`` must run once and then never again. Stored in
+#: the database's own ``PRAGMA user_version``, so the gate travels with the file rather than
+#: with the code that opened it.
+_SCHEMA_VERSION = 1
+
 #: Appendix B of the build spec, in portable SQL. Deliberately free of Postgres-only syntax
 #: (no ``generated always as identity``, no ``timestamptz``) so the same DDL seeds SQLite
 #: today and Supabase the moment its connector is authorised.
@@ -189,6 +194,30 @@ class IncidentStore:
         finally:
             conn.close()
 
+    @staticmethod
+    def _log_migration(
+        conn: sqlite3.Connection, shipment_ids: set[str], detail: str
+    ) -> None:
+        """Record a migration against the incidents it actually touched, and no others.
+
+        Writing it to every incident makes an unrelated incident's audit trail claim its
+        telemetry was rewritten when it was not. That is the same lie as a duplicate `opened`
+        event, one table over — and this record exists to be trusted by someone re-deriving a
+        decision months later, who has no way to tell a real entry from a broadcast one.
+
+        Silent when nothing was touched, and silent when the touched shipments have no
+        incidents: a migration with nobody to tell is not an event.
+        """
+        if not shipment_ids:
+            return
+        placeholders = ",".join("?" for _ in shipment_ids)
+        conn.execute(
+            "INSERT INTO incident_events (incident_id, ts, kind, detail, receipt)"
+            " SELECT DISTINCT i.id, ?, 'migration', ?, 'schema-migration' FROM incidents i"
+            f" WHERE i.shipment_id IN ({placeholders})",
+            (_now(), detail, *sorted(shipment_ids)),
+        )
+
     def initialise(self) -> None:
         """Create the schema, migrating a database written before telemetry was idempotent.
 
@@ -205,20 +234,25 @@ class IncidentStore:
                 " AND name='telemetry_shipment_ts'"
             ).fetchone()
             if existing is None:
+                # Read which shipments are affected before the DELETE, not after — afterwards
+                # the evidence of what was touched is exactly what has been removed.
+                affected = {
+                    row["shipment_id"]
+                    for row in conn.execute(
+                        "SELECT DISTINCT shipment_id FROM telemetry WHERE id NOT IN ("
+                        "  SELECT MIN(id) FROM telemetry GROUP BY shipment_id, ts)"
+                    )
+                }
                 removed = conn.execute(
                     "DELETE FROM telemetry WHERE id NOT IN ("
                     "  SELECT MIN(id) FROM telemetry GROUP BY shipment_id, ts)"
                 ).rowcount
                 if removed > 0:
-                    conn.execute(
-                        "INSERT INTO incident_events (incident_id, ts, kind, detail, receipt)"
-                        " SELECT DISTINCT i.id, ?, 'migration', ?, 'schema-migration'"
-                        " FROM incidents i",
-                        (
-                            _now(),
-                            f"collapsed {removed} duplicate telemetry row(s) left by a "
-                            f"pre-idempotent replay before adding the uniqueness constraint",
-                        ),
+                    self._log_migration(
+                        conn,
+                        affected,
+                        f"collapsed {removed} duplicate telemetry row(s) left by a "
+                        f"pre-idempotent replay before adding the uniqueness constraint",
                     )
             self._canonicalise_timestamps(conn)
             conn.executescript(SCHEMA_INDEXES)
@@ -235,11 +269,20 @@ class IncidentStore:
         to be carrying such a database is the demo machine.
 
         On collision the earliest row wins, matching the promise `record_ticks` already makes.
+
+        Gated behind ``PRAGMA user_version`` so it is genuinely one-time. Telemetry is kept
+        forever and ``initialise()`` runs on every replay, so an ungated full-table rescan
+        grows with history for the life of the deployment.
         """
+        if conn.execute("PRAGMA user_version").fetchone()[0] >= _SCHEMA_VERSION:
+            return
         rows = conn.execute("SELECT id, shipment_id, ts FROM telemetry ORDER BY id").fetchall()
         seen: dict[tuple[str, str], int] = {}
         rewrites: list[tuple[str, int]] = []
         drops: list[int] = []
+        # Only the shipments actually rewritten or deduped. An audit event on an incident
+        # whose telemetry was untouched is a false claim about that incident.
+        affected: set[str] = set()
 
         for row in rows:
             canonical = canonical_ts(row["ts"])
@@ -248,24 +291,28 @@ class IncidentStore:
                 # A second spelling of an instant already stored. Keeping both is what the
                 # constraint exists to prevent, so the later row goes.
                 drops.append(row["id"])
+                affected.add(row["shipment_id"])
                 continue
             seen[key] = row["id"]
             if canonical != row["ts"]:
                 rewrites.append((canonical, row["id"]))
+                affected.add(row["shipment_id"])
 
         if drops:
             conn.executemany("DELETE FROM telemetry WHERE id = ?", [(i,) for i in drops])
         if rewrites:
             conn.executemany("UPDATE telemetry SET ts = ? WHERE id = ?", rewrites)
+        # Stamp the version whether or not anything needed changing: a database that was
+        # already canonical is just as migrated as one that had to be rewritten, and
+        # re-scanning it every run to rediscover that would defeat the gate.
+        conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
+
         if drops or rewrites:
-            conn.execute(
-                "INSERT INTO incident_events (incident_id, ts, kind, detail, receipt)"
-                " SELECT DISTINCT i.id, ?, 'migration', ?, 'schema-migration' FROM incidents i",
-                (
-                    _now(),
-                    f"canonicalised {len(rewrites)} telemetry timestamp(s) and removed "
-                    f"{len(drops)} duplicate instant(s) left by a pre-normalisation engine",
-                ),
+            IncidentStore._log_migration(
+                conn,
+                affected,
+                f"canonicalised {len(rewrites)} telemetry timestamp(s) and removed "
+                f"{len(drops)} duplicate instant(s) left by a pre-normalisation engine",
             )
 
     # ---- seeding -----------------------------------------------------------------
