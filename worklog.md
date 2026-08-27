@@ -245,3 +245,45 @@ automation, and the dashboard reports 44 passed / 0 detected violations, so the 
 editable from there. Not worth more time — dismissing in-thread is the documented compliant
 path, it is done, and the `CLAUDE.md` clarification landed in this PR may well cause the rule to
 be re-learned correctly on the next one. Noting it here so nobody re-treads the same ground.
+
+---
+
+### 2026-08-27 08:20 CEST — Daytona: required after all (`ADR-0005`)
+
+Reversing the conclusion of the previous entry, on Mulaydm10's direction and on evidence that
+supports it.
+
+`EXP-0007` was technically correct — standalone TrueForge does fall back to a built-in
+`LocalSandboxProvider`, and with zero providers configured the harness reports both
+`sandbox.enabled: true` and `skill.enabled: true`. What that finding missed is that **being
+technically satisfied is not the same as being credited**. Checked against the sources a judge
+will actually read:
+
+- `trueforge.dev` states *"Daytona is the only sandbox provider supported today."* The local
+  fallback appears nowhere in the documentation — it exists in the bundle only.
+- The event's own kick-off guide makes "Add a sandbox" Step 5, and that step is Daytona.
+- No hackathon rule names Daytona, so this is not a literal requirement. But "Control and
+  safety" is one of six equally weighted criteria, and with no sandbox provider configured the
+  reasonable outside conclusion is that we skipped the sandbox. Relying on a judge reading
+  TrueForge's source to award that mark is not a plan.
+- On the merits too: the local provider runs on the host under a sandbox root. Real isolation,
+  but not a remote microVM, and the criterion asks whether generated code runs *somewhere safe*.
+
+So: **demo on Daytona; keep the local fallback as undocumented continuity only.** `ADR-0005`
+records this, and `.env.example` plus the setup script now treat `DAYTONA_API_KEY` as required
+rather than opt-in.
+
+The operational trap from `EXP-0007` survives the reversal and gets louder, because it is
+counter-intuitive: the fallback applies **only when no Daytona record is stored**. A
+configured-but-broken provider is strictly worse than none — the harness uses it and fails
+instead of falling back — and TrueForge exposes no DELETE for sandbox providers, so recovering
+means stopping the harness and clearing the row from the SQLite store. That needs rehearsing
+before demo day, not discovering during one.
+
+What the key needs: **`write:snapshots`**. The key supplied today is valid and created a real
+sandbox when called directly; it fails only because `buildImage()` registers TrueForge's sandbox
+image as a Daytona snapshot and the key lacks that scope. Daytona maps this to 403 and
+TrueForge maps any 401/403 to "Daytona rejected the API key", which sends you looking at the
+wrong thing. Daytona key permissions are fixed at creation, so the key has to be recreated. The
+kick-off guide's Step 5 does say *"Create a Daytona API key with the required permissions"* —
+easy to read past, and the only place the requirement is hinted at.

@@ -69,8 +69,13 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
    both carry a banner saying so. Confirm, amend or discard it when the thesis lands; tracked as
    `Q-0009`. `DEMO-0001` waits on the same answer.
 2. **OpenAI API key** (`Q-0003`) — the harness runs but cannot think. One line in `.env`.
-3. **Daytona API key** (`Q-0004`) — blocks *two* judged features at once: sandboxed execution
-   is a scored criterion, and skills refuse to load without a sandbox. Highest-value key.
+3. **Daytona API key with the `write:snapshots` scope** (`Q-0004`, `ADR-0005`). The key supplied
+   on 2026-08-27 is valid — it created a real sandbox in Daytona directly — but lacks that one
+   scope, so TrueForge's `buildImage()` gets a 403 and reports it as "rejected the API key".
+   Daytona key permissions cannot be edited after creation, so it must be recreated with the
+   scope ticked. A local sandbox fallback covers us technically, but `ADR-0005` decides we demo
+   on Daytona: the fallback is undocumented, and a judge checking our sandbox claim reads the
+   docs, not the bundle.
 4. **Supabase / Stripe test-mode / GitHub tokens** (`Q-0008`) — the three real integrations.
    None can be created by an agent.
 5. **Which product label to judge against** (`Q-0007`) — the verified dataset is ambient
