@@ -232,3 +232,16 @@ rather than by arguing it away — `skills/coldchain-sop/SKILL.md` and
 assumption pending the real thesis, `STATE.md` says the same in its blockers, and `Q-0009`
 tracks confirming, amending or discarding it. `VISION.md` remains untouched and empty, which was
 the rule the finding was defending.
+
+### 2026-08-27 07:55 CEST — follow-up review on PR #3
+
+**0 bugs.** All four fixes confirmed against the final code. The six rule violations re-report
+unchanged, which is expected: they were dismissed in-thread with reasons rather than fixed,
+and the learned rule that produced four of them still exists in Qodo.
+
+Briefly attempted to correct that learned rule at source, in Qodo's Review standards, so it
+stops firing on every future PR. Abandoned it: the rules table does not expose its contents to
+automation, and the dashboard reports 44 passed / 0 detected violations, so the rule is not
+editable from there. Not worth more time — dismissing in-thread is the documented compliant
+path, it is done, and the `CLAUDE.md` clarification landed in this PR may well cause the rule to
+be re-learned correctly on the next one. Noting it here so nobody re-treads the same ground.

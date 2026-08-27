@@ -21,6 +21,11 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
 - Public repo https://github.com/Mulaydm10/ColdCall (MIT); Qodo installed, Healthy, reviewing.
 - **PRs #1 and #2 merged**, each with a completed review, recorded decisions, and a clean
   follow-up review against the final code. Zero direct pushes to `main`.
+- **PR #3 reviewed and resolved, awaiting a human merge.** Qodo raised 4 bugs and 6 rule
+  violations; all 4 bugs fixed, follow-up review confirms **0 bugs**. The 6 rule violations are
+  dismissed in-thread with reasons and re-report because the learned rule persists — two of
+  them still produced repo changes, because the finding pointed at genuinely ambiguous wording
+  even where its conclusion was wrong. See the worklog entry for the full reasoning.
 - README carries the `## Qodo Code Review Evidence` section and the AI-assistance disclosure.
 
 **Stack — installed and verified, not merely declared**
