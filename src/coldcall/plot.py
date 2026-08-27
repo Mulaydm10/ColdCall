@@ -161,7 +161,15 @@ def excursion_svg(
 
     for colour, width, is_breach in ((t.trace, 1.6, False), (t.breach, 2.6, True)):
         for run in segments(is_breach):
-            if len(run) < 2:
+            if len(run) == 1:
+                # A polyline of one point renders nothing, which silently hid the single
+                # most demo-relevant case: one isolated reading outside the envelope. Draw
+                # it as a dot so a spike between two in-range samples is visible.
+                x, y = run[0]
+                out.append(
+                    f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{width + 0.6:.1f}" '
+                    f'fill="{colour}"/>'
+                )
                 continue
             pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in run)
             out.append(

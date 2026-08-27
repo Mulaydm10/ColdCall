@@ -87,8 +87,19 @@ def _durations_from_timestamps(
             hours of excursion into minutes and could release a shipment that should not
             have been. Rejecting is the safe direction to be wrong in; the caller can sort.
     """
-    if any(s is None for s in stamps) or len(stamps) < 2:
+    # No timestamps anywhere is a legitimate shape — bare numbers, or records carrying only
+    # an explicit duration. SOME timestamps missing or unparseable is corruption, and the old
+    # behaviour of falling back for the WHOLE series then turned hours of measured excursion
+    # into minutes. Same failure as the out-of-order case, so it gets the same answer.
+    if all(s is None for s in stamps) or len(stamps) < 2:
         return [fallback] * len(stamps)
+    missing = [i for i, s in enumerate(stamps) if s is None]
+    if missing:
+        raise ValueError(
+            f"{len(missing)} of {len(stamps)} readings have a missing or unparseable "
+            f"timestamp (first at index {missing[0]}), while others have one. Guessing "
+            f"durations for those would misstate the excursion — fix or drop them."
+        )
 
     ordered = [s for s in stamps if s is not None]
     gaps = [(b - a).total_seconds() / 60.0 for a, b in zip(ordered, ordered[1:], strict=False)]
@@ -103,7 +114,16 @@ def _durations_from_timestamps(
             )
 
     capped = [min(gap, max_gap_minutes) for gap in gaps]
-    tail = sorted(capped)[len(capped) // 2]
+    # A true median, not the upper-middle element. On an even number of gaps the latter can
+    # hand the final reading a materially larger duration than the record justifies, which
+    # moves the excursion percentage and with it the verdict.
+    ordered_gaps = sorted(capped)
+    middle = len(ordered_gaps) // 2
+    tail = (
+        ordered_gaps[middle]
+        if len(ordered_gaps) % 2
+        else (ordered_gaps[middle - 1] + ordered_gaps[middle]) / 2.0
+    )
     return [*capped, tail]
 
 
@@ -226,10 +246,21 @@ def main(argv: list[str] | None = None) -> int:
     product: dict[str, Any] = {}
     if args.product:
         try:
-            product = json.loads(args.product.read_text(encoding="utf-8"))
+            loaded = json.loads(args.product.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             print(f"could not load product profile from {args.product}: {exc}", file=sys.stderr)
             return 2
+        if not isinstance(loaded, dict):
+            # Valid JSON is not the same as a usable profile. A top-level list or string
+            # parses fine and then explodes on the first .get() — after the telemetry has
+            # already been read, which reads like a crash in the maths rather than bad input.
+            print(
+                f"product profile in {args.product} must be a JSON object, got "
+                f"{type(loaded).__name__}",
+                file=sys.stderr,
+            )
+            return 2
+        product = loaded
 
     lower = args.label_lower_c if args.label_lower_c is not None else product.get("storage_min_c")
     upper = args.label_upper_c if args.label_upper_c is not None else product.get("storage_max_c")

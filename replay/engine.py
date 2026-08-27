@@ -47,6 +47,11 @@ class ExcursionTrigger:
     detected_ts: str
     minutes_out_of_range: float
     peak_c: float
+    """The reading furthest from the labelled range, hot or cold — not the maximum.
+
+    Tracking `max()` alone reported a freeze excursion's peak as the coldest-but-highest
+    reading, or as -inf when every out-of-range reading was below the minimum. A cold-chain
+    incident is exactly the case where that is wrong."""
     label_upper_c: float
     label_lower_c: float
     readings_so_far: int
@@ -63,6 +68,10 @@ class ExcursionTrigger:
             "readings_recorded": self.readings_so_far,
             "telemetry_provenance": "real recorded shipment leg, replayed - see replay/SHIPMENT.md",
         }
+
+
+def _midpoint(lower: float, upper: float) -> float:
+    return (lower + upper) / 2.0
 
 
 def _minutes_between(a: str, b: str) -> float:
@@ -113,7 +122,13 @@ def send_excursion_turn(base_url: str, session_id: str, trigger: ExcursionTrigge
         f"{base_url}/sessions/{session_id}/turns",
         {"stream": False, "input": [{"type": "user.message", "content": message}]},
     )
-    return str(turn.get("data", turn).get("id", ""))
+    turn_id = turn.get("data", turn).get("id")
+    if not turn_id:
+        # Session creation already holds this contract; a turn deserves the same one. An
+        # empty string here meant replay printed "incident opened" and returned success with
+        # no verifiable receipt — the exact thing the SOP forbids the agent from doing.
+        raise RuntimeError(f"turn created but no id in response: {turn}")
+    return str(turn_id)
 
 
 def replay(
@@ -138,7 +153,23 @@ def replay(
     lower = float(product["storage_min_c"])
     upper = float(product["storage_max_c"])
 
-    readings: list[dict[str, Any]] = json.loads(leg_path.read_text(encoding="utf-8"))
+    if not leg_path.exists():
+        # data/samples/ is gitignored, so a fresh clone has no leg at all. Saying which file
+        # is missing and how to rebuild it beats a bare FileNotFoundError traceback.
+        print(
+            f"no telemetry at {leg_path}.\n"
+            f"data/samples/ is gitignored — the leg is re-fetchable from the dataset. See "
+            f"replay/SHIPMENT.md for the exact range request that rebuilds it, or pass "
+            f"--leg with your own file.",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        readings: list[dict[str, Any]] = json.loads(leg_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"could not read the leg at {leg_path}: {exc}", file=sys.stderr)
+        return 2
     if not readings:
         print(f"no readings in {leg_path}", file=sys.stderr)
         return 2
@@ -151,7 +182,7 @@ def replay(
 
     excursion_started: str | None = None
     minutes_out = 0.0
-    peak = float("-inf")
+    peak: float | None = None
     fired = False
 
     for index, reading in enumerate(readings):
@@ -161,7 +192,11 @@ def replay(
 
         breached = temp > upper or temp < lower
         if breached:
-            peak = max(peak, temp)
+            # Furthest from the band in whichever direction this excursion actually went.
+            if peak is None or abs(temp - _midpoint(lower, upper)) > abs(
+                peak - _midpoint(lower, upper)
+            ):
+                peak = temp
             if excursion_started is None:
                 excursion_started = ts
                 print(f"  {ts}  {temp:g} °C  ← out of range, excursion opens", flush=True)
@@ -171,7 +206,7 @@ def replay(
             # Back in range before the trigger threshold: a blip, not an incident. Reset
             # rather than accumulating, so two brief blips hours apart never add up to one.
             print(f"  {ts}  {temp:g} °C  ← back in range, excursion closed as a blip", flush=True)
-            excursion_started, minutes_out, peak = None, 0.0, float("-inf")
+            excursion_started, minutes_out, peak = None, 0.0, None
 
         if not fired and excursion_started and minutes_out >= trigger_after_minutes:
             fired = True
@@ -180,7 +215,7 @@ def replay(
                 started_ts=excursion_started,
                 detected_ts=ts,
                 minutes_out_of_range=minutes_out,
-                peak_c=peak,
+                peak_c=peak if peak is not None else temp,
                 label_upper_c=upper,
                 label_lower_c=lower,
                 readings_so_far=index + 1,
@@ -208,7 +243,7 @@ def replay(
                 store.open_incident(session_id, shipment_id)
                 try:
                     turn_id = send_excursion_turn(base_url, session_id, trigger)
-                except (urllib.error.URLError, json.JSONDecodeError) as exc:
+                except (urllib.error.URLError, json.JSONDecodeError, RuntimeError) as exc:
                     # The incident row survives on purpose: an excursion that was detected
                     # and could not be worked is a fact worth keeping, not one to roll back.
                     print(f"incident {session_id} opened but its turn failed: {exc}",
@@ -233,7 +268,13 @@ def main(argv: list[str] | None = None) -> int:
         prog="python replay/engine.py",
         description="Replay a real recorded shipment leg and open an incident on excursion.",
     )
-    p.add_argument("--leg", type=Path, default=REPO_ROOT / "data/samples/selected_leg.json")
+    p.add_argument(
+        "--leg",
+        type=Path,
+        default=REPO_ROOT / "data/samples/selected_leg.json",
+        help="the recorded leg to replay. The default lives under data/samples/, which is "
+        "gitignored — see replay/SHIPMENT.md for the exact range request that rebuilds it.",
+    )
     p.add_argument("--seed", type=Path, default=REPO_ROOT / "replay/seed.json")
     p.add_argument("--db", type=Path, default=REPO_ROOT / "data/coldcall.db")
     p.add_argument("--shipment-id", default="VCC-118")
