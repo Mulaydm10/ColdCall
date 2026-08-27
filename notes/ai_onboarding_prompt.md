@@ -6,7 +6,8 @@ Paste this verbatim to any new AI agent (Claude Code or otherwise) joining this 
 
 ---
 
-You're joining an agentic-hackathon repo called `tru` (real name TODO, see `COMPETITION.md`).
+You're joining **ColdCall**, our entry to The Agent Harness Hackathon (see `COMPETITION.md`
+for the event facts and `https://github.com/Mulaydm10/ColdCall` for the public repo).
 Humans and AI agents work in it concurrently under a hard deadline. Before doing anything:
 
 1. Read `CLAUDE.md` (or `AGENTS.md` if you're not Claude Code) in full — it's short by design
