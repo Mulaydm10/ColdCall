@@ -179,3 +179,56 @@ Harness state right now: TrueForge v0.1.4 on :8790, the `coldchain-sop` skill re
 reading back, `agents/coldcall.agent.json` validated by the API up to the unconfigured model
 provider, and `scripts/verify_apis.sh` passing 7 of 7 sources. Missing: the keys
 (`Q-0003`, `Q-0004`, `Q-0008`) and the idea (`Q-0001`).
+
+---
+
+### 2026-08-27 07:45 CEST — Mulaydm10 + Claude (PR #3 review resolved)
+
+Qodo reviewed the stack PR: **4 bugs, 6 rule violations**. Four fixed, four dismissed with
+reasons, and two of the dismissals produced repo changes anyway because the finding pointed at
+genuinely ambiguous wording even where its conclusion was wrong.
+
+**The four bugs were real, and two of them could have corrupted a verdict.**
+
+1. `stability_budget()` forwarded the caller's iterable to two consumers that each normalise
+   independently — so a generator was exhausted by the excursion pass and the MKT pass received
+   an empty series and raised. Normalise once, pass the sequence to both.
+2. `to_readings()` assigned an invented minute to the final reading, which nothing measures the
+   duration of, and to duplicate timestamps. On a short leg that invented exposure can move the
+   MKT and therefore the verdict. Both cases are now dropped rather than defaulted. Of a
+   duplicated pair the *later* reading survives, so a logger fault can never hide a hot reading —
+   the only direction of that error which is dangerous.
+3. `setup_trueforge.sh` counted successes and skips but not failures, and the skill step
+   swallowed its own error with `|| true`, so a wholly unconfigured harness could exit 0. It now
+   counts failures, reports them, and exits non-zero. A setup script that lies about success is
+   worse than one that fails loudly.
+4. `iter_telemetry(limit=0)` yielded one point because the limit was checked after the yield.
+
+Re-verified the real-data pipeline after the duration fix: readings now equal points minus one,
+and every verdict is unchanged. 47 tests green, ruff clean.
+
+**Findings 5–8 were dismissed, and the wording that caused them was fixed.** Qodo learned a rule
+that `ADR-####`/`Q-####`/`EXP-####`/`DEMO-####` may appear *only* in their canonical files, and
+flagged every citation in `STATE.md`, the worklog and the ADRs. That inverts the scheme: the
+whole point is that `grep -rn 'ADR-0003' .` recovers a decision's full trace. But the rule was
+learned from a `CLAUDE.md` table terse enough to read either way, so the table now states
+explicitly that it says where each ID is *defined*, never where it may be *mentioned*, and that
+only the canonical file may allocate a number.
+
+**Finding 4 dismissed, likewise with a clarification.** It held that editing a LOCKED file in
+place is non-compliant even with an audit row, and wanted "a generated replacement or versioned
+synchronization mechanism". No such requirement exists — the audit table *is* the mechanism.
+`GOVERNANCE.md` now spells out the compliant path, including that an agent may apply the
+keystroke on the Main Agent's instruction when the audit row attributes it, which is delegation
+of the typing and not of the authority.
+
+**Finding 9 was right, and is the one worth reading.** It observed that the repo now contains a
+fully specified cold-chain pharmaceutical agent while `VISION.md` still says the thesis has not
+been supplied and must stay `TODO`. That is a real inconsistency and not a false positive: the
+mission was inferred from the tech stack Mulaydm10 supplied, so it is not invented out of
+nothing, but nor is it agreed. Resolved by making the provisional status explicit and traceable
+rather than by arguing it away — `skills/coldchain-sop/SKILL.md` and
+`agents/coldcall.agent.json` both open with a banner stating that they encode a working
+assumption pending the real thesis, `STATE.md` says the same in its blockers, and `Q-0009`
+tracks confirming, amending or discarding it. `VISION.md` remains untouched and empty, which was
+the rule the finding was defending.

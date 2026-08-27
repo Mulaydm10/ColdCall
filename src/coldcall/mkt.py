@@ -278,8 +278,12 @@ def stability_budget(
             f"got {allowed_excursion_minutes!r}"
         )
 
-    excursion = excursion_summary(readings, label_lower_c, label_upper_c)
-    mkt = mean_kinetic_temperature(readings, activation_energy_j_per_mol)
+    # Normalise once. Both calculations below coerce their input independently, so forwarding
+    # the caller's object twice would exhaust a generator on the first pass and hand the second
+    # an empty series. A one-shot iterable is a perfectly reasonable thing to be handed here.
+    series = _as_readings(readings)
+    excursion = excursion_summary(series, label_lower_c, label_upper_c)
+    mkt = mean_kinetic_temperature(series, activation_energy_j_per_mol)
 
     reasons: list[str] = []
     verdict = "release"

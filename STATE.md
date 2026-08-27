@@ -5,8 +5,9 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-27 07:20 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
-full stack installed, configured and verified; three plan assumptions corrected.
+Last updated: 2026-08-27 07:45 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
+full stack installed, configured and verified; three plan assumptions corrected; PR #3's
+Qodo review resolved (4 bugs fixed, 4 findings dismissed with reasons).
 
 ## Deadline
 
@@ -33,7 +34,7 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
     accounting + a release/review/quarantine verdict carrying every input needed to re-derive it.
   - `replay.py` — streaming parser for the 402 MB telemetry array; never loads it into memory,
     and tolerates the truncated tail a range request always produces.
-- **43 tests green** (`uv run pytest`), ruff clean. The maths is cross-checked against an
+- **47 tests green** (`uv run pytest`), ruff clean. The maths is cross-checked against an
   independently written naive implementation, so an optimisation cannot silently break it.
 - `agents/coldcall.agent.json` — validated against the live API (accepted up to the
   unconfigured model provider). Approval gates on every MCP server; Stripe gated at `@all`.
@@ -54,9 +55,14 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
 
 ## Blocked
 
-1. **The ColdCall idea itself** (`Q-0001`, `VISION.md`) — Mulaydm10 is supplying it. The stack
-   implies a cold-chain excursion responder and the scaffolding assumes that shape, but
-   `VISION.md` stays empty until the real thesis lands. `DEMO-0001` waits on it.
+1. **The ColdCall idea itself** (`Q-0001`, `VISION.md`) — Mulaydm10 is supplying it.
+   **Read this before trusting anything cold-chain-shaped in the repo:** the supplied tech stack
+   named cold-chain telemetry, MKT maths and a quarantine write, so a working mission was
+   inferred from it in order to verify the setup against something concrete. That mission is
+   **provisional, not agreed** — `VISION.md` is deliberately still `TODO`, and the two places
+   that encode the assumption (`skills/coldchain-sop/SKILL.md` and `agents/coldcall.agent.json`)
+   both carry a banner saying so. Confirm, amend or discard it when the thesis lands; tracked as
+   `Q-0009`. `DEMO-0001` waits on the same answer.
 2. **OpenAI API key** (`Q-0003`) — the harness runs but cannot think. One line in `.env`.
 3. **Daytona API key** (`Q-0004`) — blocks *two* judged features at once: sandboxed execution
    is a scored criterion, and skills refuse to load without a sandbox. Highest-value key.

@@ -23,6 +23,7 @@ MODEL_ID=${COLDCALL_MODEL_ID:-gpt-5.6-sol}
 MODEL_NAME=$(printf '%s' "$MODEL_ID" | tr '.' '-')
 SKIPPED=0
 DONE=0
+FAILED=0
 
 say()  { printf '  \033[32mok\033[0m    %s\n' "$1"; DONE=$((DONE+1)); }
 skip() { printf '  \033[33mskip\033[0m  %-26s %s\n' "$1" "$2"; SKIPPED=$((SKIPPED+1)); }
@@ -40,6 +41,7 @@ put() {
   if [[ "$code" =~ ^2 ]]; then say "$label"; else
     printf '  \033[31mFAIL\033[0m  %-26s HTTP %s — %s\n' "$label" "$code" \
       "$(printf '%s' "$out" | sed '$d' | head -c 200)"
+    FAILED=$((FAILED+1))
     return 1
   fi
 }
@@ -101,12 +103,21 @@ put "coldchain-sop" /api/v1/settings/skills "$(cat <<JSON
  "path":"skills/coldchain-sop","ref":"$SKILL_REF",
  "description":"Standard operating procedure for judging a cold-chain temperature excursion: which readings count, how the stability budget is computed, and what must happen before a consignment is released or quarantined."}}
 JSON
-)" || true
+)"
 
 echo
-printf '  %d configured, %d skipped\n' "$DONE" "$SKIPPED"
+printf '  %d configured, %d skipped, %d failed\n' "$DONE" "$SKIPPED" "$FAILED"
 if [[ $SKIPPED -gt 0 ]]; then
   echo
   echo "  Skipped steps need values in .env (copy .env.example). Re-run this script after"
   echo "  filling them in — it is idempotent, nothing is duplicated."
+fi
+
+# A rejected PUT leaves the harness unconfigured, so exiting 0 would tell a caller (or CI, or
+# a teammate mid-demo) that the setup succeeded when it did not. A skip is different: it is a
+# known-missing key, reported as such, and not a failure.
+if [[ $FAILED -gt 0 ]]; then
+  echo
+  echo "  $FAILED step(s) were rejected by the harness. It is NOT fully configured."
+  exit 1
 fi

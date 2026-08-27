@@ -121,6 +121,9 @@ def iter_telemetry(path: str | Path, limit: int | None = None) -> Iterator[Telem
 
     A truncated final object ends the iteration quietly — see the module docstring.
     """
+    if limit is not None and limit <= 0:
+        return
+
     decoder = json.JSONDecoder()
     buffer = ""
     started = False
@@ -204,22 +207,37 @@ def to_readings(leg: ShipmentLeg, max_gap_minutes: float = 240.0) -> list[Readin
     Each reading is weighted by the time until the next one, which is what makes an hour at
     12 °C count for twelve times as much as five minutes at 12 °C.
 
+    Two cases have no measured interval behind them, and both are dropped rather than assigned
+    a plausible-looking default:
+
+    * **The final reading.** Nothing after it establishes how long it held. Inventing a minute
+      here would add exposure that was never observed, and on a short leg that invented minute
+      can move the MKT and therefore the verdict.
+    * **A duplicate or out-of-order timestamp.** A zero or negative interval is a logger fault,
+      not an instant of exposure. Of a duplicated pair the *later* reading survives, since the
+      interval to the next point belongs to it — which also means a hot duplicate is preserved
+      rather than discarded, and a logger fault can never hide an excursion.
+
+    Dropping them means ``len(to_readings(leg))`` can be smaller than ``len(leg.points)``. That
+    is the honest shape: these are *durations*, and a reading with no measurable duration
+    contributes no thermal exposure. The points themselves stay in the leg, so the record of
+    what the logger reported is not altered.
+
     ``max_gap_minutes`` caps how much weight a single reading can absorb when the logger goes
     silent. A dropout is missing evidence, not a guarantee that the temperature held; letting
-    one pre-dropout reading speak for two days would turn a gap in the record into a
-    confident claim about it. Capping keeps the known-good part of the journey honest and
-    leaves the gap visible in the leg's own timestamps.
+    one pre-dropout reading speak for two days would turn a gap in the record into a confident
+    claim about it. Capping keeps the known-good part of the journey honest and leaves the gap
+    visible in the leg's own timestamps.
     """
     if max_gap_minutes <= 0:
         raise ValueError("max_gap_minutes must be positive")
 
     points = leg.points
     readings: list[Reading] = []
-    for index, point in enumerate(points):
-        if index + 1 < len(points):
-            gap = (points[index + 1].at - point.at).total_seconds() / 60.0
-        else:
-            gap = 0.0
-        minutes = min(gap, max_gap_minutes) if gap > 0 else 1.0
-        readings.append(Reading(celsius=point.celsius, minutes=max(minutes, 1e-6)))
+    for index in range(len(points) - 1):
+        point = points[index]
+        gap = (points[index + 1].at - point.at).total_seconds() / 60.0
+        if gap <= 0:
+            continue
+        readings.append(Reading(celsius=point.celsius, minutes=min(gap, max_gap_minutes)))
     return readings

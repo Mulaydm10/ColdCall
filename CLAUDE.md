@@ -33,12 +33,23 @@ one directly; propose the change and let the Main Agent apply it, logging the ed
 
 ## Stable ID scheme
 
-One scheme, used everywhere, so `grep -rn '<ID>' .` recovers a thing's full trace:
+Each kind of thing is **defined once**, in one canonical place:
 
-- `ADR-####` — design/stack decisions, in `design/decisions/`
-- `Q-####` — open questions, in `research/open_questions.md`
-- `EXP-####` — experiments/spikes, in `experiments/experiment_log.md`
-- `DEMO-####` — demo-path scenarios, in `DEMO.md`
+| ID | The thing it names | Defined in |
+|---|---|---|
+| `ADR-####` | A design/stack decision | `design/decisions/ADR-####-*.md` |
+| `Q-####` | An open question | `research/open_questions.md` |
+| `EXP-####` | An experiment/spike | `experiments/experiment_log.md` |
+| `DEMO-####` | A demo-path scenario | `DEMO.md` |
+
+**Cite these IDs freely from anywhere else in the repo — that is the entire point of the
+scheme.** A commit message, a `STATE.md` blocker, a worklog entry, a code comment, or another
+ADR should all name the relevant ID, so that `grep -rn 'ADR-0003' .` recovers the full trace of
+a decision: where it was made, what it blocked, what it changed, and when.
+
+The table above says where each ID is *defined*, never where it may be *mentioned*. A rule that
+confined mentions to the canonical file would defeat the traceability the scheme exists for.
+Only the canonical file may allocate a new number.
 
 ## Layout
 

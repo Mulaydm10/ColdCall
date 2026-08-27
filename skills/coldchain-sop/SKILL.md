@@ -3,6 +3,14 @@ name: coldchain-sop
 description: Standard operating procedure for judging a cold-chain temperature excursion — which readings count, how the stability budget is computed, what evidence a deviation report must carry, and what must never be decided without a human. Load this before assessing any shipment.
 ---
 
+> **Provisional mission — not the project thesis.** `VISION.md` is still `TODO(Mulaydm10)` and
+> must stay that way until the Main Agent supplies the real thesis. What is encoded below is a
+> *working assumption* derived from the tech stack Mulaydm10 supplied on 2026-08-27, which named
+> cold-chain telemetry, MKT/stability maths, a quarantine write, and a `coldchain-sop` skill. It
+> was built so that setup could be verified against something concrete rather than waiting idle.
+> It is scaffolding to be confirmed, amended, or discarded when the thesis lands — tracked as
+> `Q-0009`. Do not treat it as the agreed mission, and do not cite it as one.
+
 # Cold-chain excursion SOP
 
 You are assessing whether a pharmaceutical consignment is still fit for release after its

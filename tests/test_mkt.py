@@ -231,6 +231,20 @@ class TestStabilityBudget:
         assert budget.excursion.minutes_total == pytest.approx(600.0)
         assert budget.reasons
 
+    def test_accepts_a_one_shot_generator(self) -> None:
+        """Regression: the excursion pass must not exhaust the input before the MKT pass.
+
+        A generator is a reasonable thing to hand a public API that documents itself as taking
+        an iterable, and forwarding it to two independent consumers silently gave the second
+        one an empty series.
+        """
+        budget = stability_budget(
+            (Reading(c, 60.0) for c in (5.0, 6.0, 7.0)), 2.0, 8.0
+        )
+        assert budget.verdict == "release"
+        assert budget.excursion.minutes_total == pytest.approx(180.0)
+        assert budget.mkt_celsius > 5.0
+
     def test_negative_allowance_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="non-negative"):
             stability_budget([Reading(5.0)], 2.0, 8.0, allowed_excursion_minutes=-1.0)

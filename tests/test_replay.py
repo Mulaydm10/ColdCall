@@ -134,6 +134,46 @@ class TestToReadings:
         assert readings[0].minutes == pytest.approx(120.0)
         assert readings[1].minutes == pytest.approx(10.0)
 
+    def test_final_reading_is_dropped_because_nothing_measures_its_duration(self) -> None:
+        """Inventing a minute for the last point adds exposure that was never observed."""
+        leg = ShipmentLeg(
+            device="A",
+            points=(
+                TelemetryPoint("A", BASE, 5.0),
+                TelemetryPoint("A", BASE + timedelta(minutes=60), 30.0),
+            ),
+        )
+        readings = to_readings(leg)
+        assert len(readings) == 1
+        assert readings[0].celsius == pytest.approx(5.0)
+
+    def test_duplicate_timestamps_keep_the_later_reading_not_the_earlier(self) -> None:
+        """A zero-length interval carries no exposure, so the earlier of the pair is dropped.
+
+        Which of the two survives is not arbitrary. When a logger reports twice at the same
+        instant there is no way to know which value held, and the interval to the *next* point
+        belongs to whichever reading came last. Keeping the later one means a hot duplicate is
+        preserved rather than discarded — a duplicate-timestamp fault must never be able to
+        hide an excursion, which is the only direction of this error that is dangerous.
+        """
+        leg = ShipmentLeg(
+            device="A",
+            points=(
+                TelemetryPoint("A", BASE, 5.0),
+                TelemetryPoint("A", BASE, 40.0),
+                TelemetryPoint("A", BASE + timedelta(minutes=30), 5.0),
+            ),
+        )
+        readings = to_readings(leg)
+        assert [r.celsius for r in readings] == [40.0]
+        assert readings[0].minutes == pytest.approx(30.0)
+
+    def test_limit_of_zero_yields_nothing(self, tmp_path) -> None:
+        """Documented contract: stop after N usable points. N=0 means none, not one."""
+        path = write_array(tmp_path, [record("A", i, 5.0) for i in range(5)])
+        assert list(iter_telemetry(path, limit=0)) == []
+        assert list(iter_telemetry(path, limit=-3)) == []
+
     def test_a_logger_dropout_cannot_absorb_unlimited_weight(self, tmp_path) -> None:
         """A three-day silence is missing evidence, not three days of proven 5 °C."""
         leg = ShipmentLeg(
