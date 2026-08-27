@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 import urllib.error
@@ -131,6 +132,41 @@ def send_excursion_turn(base_url: str, session_id: str, trigger: ExcursionTrigge
     return str(turn_id)
 
 
+def _load_leg(leg_path: Path) -> list[dict[str, Any]]:
+    """Read and *validate* a recorded leg.
+
+    Checking JSON syntax alone was not enough: a non-list root, a reading with no ``ts`` or
+    ``temp_c``, or a non-numeric temperature all parse fine and then raise TypeError,
+    KeyError or ValueError deep inside the replay loop — after telemetry has already been
+    written to the store, so the failure looks like a bug in the engine rather than a bad
+    input file. The leg is user-supplied via ``--leg``, so this is an input contract.
+
+    Raises:
+        ValueError: naming the offending index and what was wrong with it.
+    """
+    payload = json.loads(leg_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise ValueError(
+            f"expected a JSON array of readings, got {type(payload).__name__}"
+        )
+    if not payload:
+        raise ValueError("the leg is empty — there is nothing to replay")
+
+    for index, reading in enumerate(payload):
+        if not isinstance(reading, dict):
+            raise ValueError(f"reading {index} is {type(reading).__name__}, not an object")
+        if not isinstance(reading.get("ts"), str) or not reading["ts"].strip():
+            raise ValueError(f"reading {index} has no usable 'ts' timestamp")
+        temp = reading.get("temp_c")
+        if isinstance(temp, bool) or not isinstance(temp, (int, float)):
+            raise ValueError(
+                f"reading {index} has a non-numeric 'temp_c' ({temp!r})"
+            )
+        if not math.isfinite(float(temp)):
+            raise ValueError(f"reading {index} has a non-finite 'temp_c' ({temp!r})")
+    return payload
+
+
 def replay(
     leg_path: Path,
     seed_path: Path,
@@ -166,12 +202,9 @@ def replay(
         return 2
 
     try:
-        readings: list[dict[str, Any]] = json.loads(leg_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        readings = _load_leg(leg_path)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"could not read the leg at {leg_path}: {exc}", file=sys.stderr)
-        return 2
-    if not readings:
-        print(f"no readings in {leg_path}", file=sys.stderr)
         return 2
 
     print(
