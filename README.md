@@ -29,6 +29,11 @@ the entire project:
 result and drafts the paperwork. The verdict comes from `src/coldcall/disposition.py`, which is
 dependency-free, unit-tested, and readable by anyone who doesn't trust the agent.
 
+And because a single implementation can be reproducibly wrong, **every verdict is computed
+twice** — MKT by log-sum-exp and again by textbook direct summation, excursion minutes by two
+different routes — and the agent is forbidden from presenting a bundle whose two answers
+disagree. Not flagged: stopped. A labelled verdict is still one someone may act on.
+
 It also answers the question the arithmetic cannot: **why did it warm?** ColdCall pulls real
 recorded weather for the shipment's own GPS and compares it against the load. On the demo leg
 the outside air peaked at **17.7 °C** while the consignment reached **27 °C** — a median
@@ -116,7 +121,7 @@ Not a checklist — each row is a place the system would break if the feature we
 
 | Feature | Where it carries weight |
 |---|---|
-| **Sandboxed execution** (Daytona) | The regulatory maths. It runs off-host so the verdict is reproducible by someone who does not trust our laptop. |
+| **Sandboxed execution** (Daytona) | The regulatory maths — computed **twice**, by different numerical routes, off-host, so the verdict is reproducible by someone who does not trust our laptop. |
 | **Human approvals** | The release/quarantine gate. Every irreversible action halts on `tool.approval_required`. |
 | **Subagents** | Four strands answering one question each, in parallel. |
 | **Skills** | `coldchain-sop` — the SOP, fetched from git at a pinned ref, that the agent must follow. |
@@ -205,6 +210,7 @@ cargo, so the product label was chosen to match what the goods actually are.
 | Claim | Evidence |
 |---|---|
 | The maths is deterministic and reproducible | Same leg, same verdict on a laptop and in a remote microVM: MKT 24.54 °C, 64.35 %, `quarantine_retest` |
+| Two independent implementations agree | Primary 24.539952 °C, independent 24.539952 °C, difference `0.000e+00` — and the tests prove the check *catches* a tampered primary rather than never firing (`EXP-0014`) |
 | The sandbox is genuinely remote | A live turn returned `Linux x86_64 3.13.15` from a macOS/arm64 host |
 | The gate actually stops the agent | **Deny** → it reported the denial and stopped, no retry. **Allow** → branch `incident/INC-VCC-118-A2231-…`, deviation record committed as `1c859fc` |
 | The record survives a crash | `./scripts/restart_proof.sh` — `kill -9`, restart, and a **SHA-256 digest of every event's content** unchanged: `3c470830…` before and after, over **every field of every event** |

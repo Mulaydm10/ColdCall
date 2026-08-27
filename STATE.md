@@ -60,7 +60,7 @@ openFDA amoxicillin label, 20–25 °C, excursions permitted 15–30 °C.
   payload must import against a stock sandbox interpreter.
 - `src/coldcall/cli.py` — the sandbox entry point. Derives reading durations from timestamps
   rather than assuming a flat interval.
-- **146 tests green**, ruff clean. Sandbox-payload import is proven by subprocess under `-I`.
+- **161 tests green**, ruff clean. Sandbox-payload import is proven by subprocess under `-I`.
 
 **The demo case is real and was not tuned**
 
@@ -134,6 +134,11 @@ checkable receipt.
 - **The record survives `kill -9`.** `./scripts/restart_proof.sh` — 86 events and 7
   verdict-bearing responses intact across a SIGKILL.
 - **README and `DEMO-0001` are written** against what actually ran, not against intentions.
+- **Every verdict is computed twice** (`EXP-0014`, PR #10). MKT by log-sum-exp and again by
+  textbook direct summation; excursion minutes by two routes; the verdict re-derived from the
+  independent inputs. They agree to the digit on the demo leg (difference `0.000e+00`), and the
+  tests prove the check catches a tampered primary rather than never firing. A disagreement is
+  a **stop**, not a caveat — `cli` exits 3 and the SOP forbids presenting the bundle.
 - **The agent can say *why*, not only *what*** (`EXP-0013`, PR #10). The leg's own recorded GPS
   puts it in Valencia; real ERA5 weather there gives an ambient peak of 17.7 °C while the
   consignment reached 27 °C — a median **12.6 °C** gap over 14 of 14 matched readings, so the
