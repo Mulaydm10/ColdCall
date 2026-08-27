@@ -1,6 +1,5 @@
 {
   "$comment": "Reference rows for the incident store. The product's storage range, excursion range and label provenance are REAL - pulled live from the openFDA drug label API and pinned in data/product_profile.json. Everything marked as a demo assumption below is ours and is labelled as such wherever it is displayed. The unit value in particular is a plausible wholesale figure, not a quoted price, and the value-at-risk headline is derived from it rather than chosen first.",
-
   "products": [
     {
       "id": "AMOXICILLIN-500",
@@ -15,7 +14,6 @@
       "unit_value_usd": 12.5
     }
   ],
-
   "shipments": [
     {
       "id": "VCC-118",
@@ -25,10 +23,16 @@
       "origin": "Rotterdam DC",
       "destination": "Lyon regional hub",
       "carrier": "road freight, multi-drop",
-      "status": "in_transit"
+      "status": "in_transit",
+      "route_lat": 39.4565,
+      "route_lon": -0.3465,
+      "route_note": "LAST-KNOWN POSITION, not a position during the excursion. The dataset's 15 GPS fixes for this device all fall on 2021-11-08 17:48-20:06Z, spanning 367 m. The leg begins 2021-11-09T08:23:09Z (12.3 h later) and the excursion the weather is correlated against runs 14:58-18:49 on the 9th - 18.9 h after the final fix. The attribution therefore assumes the consignment remained in comparable conditions: an assumption, not an observation. See replay/SHIPMENT.md and src/coldcall/weather.py.",
+      "route_fix_count": 15,
+      "route_earliest_fix": "2021-11-08T17:48:04Z",
+      "route_latest_fix": "2021-11-08T20:06:41Z",
+      "route_spread_m": 366.8
     }
   ],
-
   "consignees": [
     {
       "id": "CON-01",
@@ -52,11 +56,34 @@
       "units_expected": 800
     }
   ],
-
   "warehouses": [
-    { "id": "WH-01", "name": "Lyon Sud bonded store", "city": "Lyon", "qualified_crt": 1, "distance_km": 14.2 },
-    { "id": "WH-02", "name": "Villefranche cross-dock", "city": "Villefranche", "qualified_crt": 0, "distance_km": 31.0 },
-    { "id": "WH-03", "name": "Grenoble regional DC", "city": "Grenoble", "qualified_crt": 1, "distance_km": 106.4 },
-    { "id": "WH-04", "name": "Marseille port store", "city": "Marseille", "qualified_crt": 1, "distance_km": 278.9 }
+    {
+      "id": "WH-01",
+      "name": "Lyon Sud bonded store",
+      "city": "Lyon",
+      "qualified_crt": 1,
+      "distance_km": 14.2
+    },
+    {
+      "id": "WH-02",
+      "name": "Villefranche cross-dock",
+      "city": "Villefranche",
+      "qualified_crt": 0,
+      "distance_km": 31.0
+    },
+    {
+      "id": "WH-03",
+      "name": "Grenoble regional DC",
+      "city": "Grenoble",
+      "qualified_crt": 1,
+      "distance_km": 106.4
+    },
+    {
+      "id": "WH-04",
+      "name": "Marseille port store",
+      "city": "Marseille",
+      "qualified_crt": 1,
+      "distance_km": 278.9
+    }
   ]
 }

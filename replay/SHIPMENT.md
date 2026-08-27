@@ -184,3 +184,54 @@ directly without re-parsing the big file or handling truncation. First and last 
   { "ts": "2021-11-10T04:42:10Z", "temp_c": 23.0 }
 ]
 ```
+
+## Route coordinates — a last-known position, not a position during the excursion
+
+The chosen leg's raw records carry `measurements.gps`. Device `DD:33:04:13:34:CD` has **15
+fixes**, and this is the part that matters:
+
+| | |
+|---|---|
+| Fixes | 15 |
+| All taken between | **2021-11-08 17:48:04Z and 20:06:41Z** |
+| Spread of those fixes | **367 m** from their centroid |
+| The leg begins | **2021-11-09 08:23:09Z** |
+| Gap from the last fix to the leg | **12.3 hours** |
+| Gap from the last fix to the **excursion** | **18.9 hours** |
+| The excursion runs | 2021-11-09 14:58 → 18:49Z |
+
+So `39.4565, −0.3465` (Valencia, Spain) is the consignment's **last known position, 12.3 h
+before the leg started and 18.9 h before the excursion the weather is correlated against**.
+The second figure is the one the attribution rests on, and it is the one the emitted record
+carries. No fix falls inside the excursion window. It is not established
+where the consignment was while it was warming.
+
+That distinction was not made when this section was first written — it said "the leg's own
+recorded GPS", which reads as a position *during* the leg. It is not, and the correction
+matters more here than most, because `src/coldcall/weather.py` fetches weather **for this
+coordinate** and attributes a root cause from the comparison.
+
+**What the code does about it.** When the fixes do not temporally cover the correlated window,
+the emitted `route_context` carries `qualified: true`, a `location_confidence` of
+`last_known_position`, and a `location_evidence` block with the fix count, the timestamps, the
+spread and the **signed** gap — signed because a fix recorded *after* a window is a different
+fact from one recorded before it — and the attribution's own notes say the
+finding assumes the consignment stayed in comparable conditions. The limit lives in the record,
+not only in this file.
+
+**What it shows anyway.** ERA5 for that coordinate on 2021-11-09 gives an ambient peak of
+17.7 °C over the whole day and **17.3 °C across the matched excursion readings**, while the
+consignment reached **27 °C** — a median **12.6 °C above outside air**, over 14 of 14 matched
+readings.
+
+The attribution is `containment_failure` rather than `environmental_exposure`, and the location
+gap does not overturn it: regional November ambient in eastern Spain does not reach 27 °C, so no
+plausible alternative position within a day's travel makes the weather the explanation. But that
+is **an argument, not an observation**, which is exactly why the record ships the evidence for a
+reader to weigh instead of asserting the conclusion. See `EXP-0013`.
+
+**The other honest limits**, which belong in any report quoting this: the archive gives point
+weather at hourly granularity for shade temperature, while the cargo moved and sat inside a
+vehicle. ERA5 is a **reanalysis** — an observation-constrained model, not a thermometer at that
+spot. And the 5 °C threshold separating "containment failure" from "environmental exposure" is
+ColdCall policy, not a regulatory value.

@@ -57,6 +57,15 @@ def deviation_report(
     Returns:
         Markdown. Sections the agent must complete are marked, not left blank.
     """
+    # Sections are numbered as they are emitted rather than hard-coded, because two of them
+    # are conditional. Fixed numbers meant a report *without* route context jumped from 4 to
+    # 6 — and in a regulated document a missing section number reads as a missing section,
+    # which is exactly the wrong thing for an auditor to wonder about.
+    _section_numbers = iter(range(1, 99))
+
+    def head(title: str) -> str:
+        return f"## {next(_section_numbers)}. {title}"
+
     shipment = shipment or {}
     product = product or {}
     consignees = consignees or []
@@ -77,7 +86,7 @@ def deviation_report(
         " disposition module and is re-derivable from the incident record. This is decision"
         " support; it is not a release decision.",
         "",
-        "## 1. Consignment",
+        head("Consignment"),
         "",
         "| | |",
         "|---|---|",
@@ -93,7 +102,7 @@ def deviation_report(
 
     lines += [
         "",
-        "## 2. Labelled storage conditions",
+        head("Labelled storage conditions"),
         "",
         f"- Labelled range: **{_fmt(label.get('lower_c'), ' °C', 1)} to "
         f"{_fmt(label.get('upper_c'), ' °C', 1)}**",
@@ -105,7 +114,7 @@ def deviation_report(
         lines += ["", f"> {provenance}", ""]
 
     lines += [
-        "## 3. The excursion",
+        head("The excursion"),
         "",
         "| Measure | Value |",
         "|---|---|",
@@ -117,7 +126,7 @@ def deviation_report(
         f"| Peak temperature | {_fmt(excursion.get('max_c'), ' °C', 1)} |",
         f"| Minimum temperature | {_fmt(excursion.get('min_c'), ' °C', 1)} |",
         "",
-        "## 4. Stability evaluation",
+        head("Stability evaluation"),
         "",
         "| Measure | Value | Basis |",
         "|---|---|---|",
@@ -142,11 +151,123 @@ def deviation_report(
             "",
         ]
 
-    lines += ["## 5. Basis for the disposition", ""]
+    route = verdict.get("route_context")
+    if isinstance(route, dict) and not route.get("error"):
+        attribution = str(route.get("attribution", "undetermined")).replace("_", " ")
+        lines += [
+            head("Route context — why the load warmed"),
+            "",
+            "The disposition arithmetic says what happens to the pallet. This says what to "
+            "investigate, which is a different question with a different corrective action.",
+            "",
+            "| Measure | Value |",
+            "|---|---|",
+            f"| Attribution | **{attribution.upper()}** |",
+            f"| Median load temperature above outside air | "
+            f"{_fmt(route.get('median_gap_c'), ' °C', 1)} |",
+            f"| Peak inside the consignment | {_fmt(route.get('peak_internal_c'), ' °C', 1)} |",
+            f"| Peak outside air on the route | {_fmt(route.get('peak_ambient_c'), ' °C', 1)} |",
+            f"| Excursion readings matched to weather | {route.get('matched_readings', '?')} of "
+            f"{route.get('total_excursion_readings', '?')} |",
+            "",
+        ]
+        evidence = route.get("location_evidence")
+        if isinstance(evidence, dict):
+            lines += [
+                "",
+                "**Where the consignment was, and how that is known**",
+                "",
+                "| | |",
+                "|---|---|",
+                f"| Coordinate | {evidence.get('latitude')}, {evidence.get('longitude')} |",
+                f"| Provenance | **{evidence.get('provenance')}** |",
+                f"| Fixes available | {evidence.get('fix_count')}, "
+                f"{evidence.get('earliest_fix', 'n/a')} to {evidence.get('latest_fix', 'n/a')} |",
+                f"| Spread of those fixes | {_fmt(evidence.get('fix_spread_m'), ' m', 0)} |",
+                f"| Gap to the excursion window | "
+                f"{_fmt(abs(evidence.get('gap_hours_to_window') or 0), ' h', 1)}, "
+                f"{evidence.get('gap_direction')} |",
+                "",
+            ]
+            if route.get("qualified"):
+                reason = {
+                    "provenance_unstated": (
+                        "**nothing records when this position was taken**, so whether it "
+                        "describes the consignment during the excursion is unknown"
+                    ),
+                    "fixes_bracket_window": (
+                        "**the fixes surround the excursion without any known to fall inside "
+                        "it** — surrounding a window is not the same as being observed in it"
+                    ),
+                    "recorded_after_window": (
+                        "**every fix was recorded after the excursion closed** — it is where "
+                        "the consignment ended up, not where it was while it warmed"
+                    ),
+                }.get(
+                    str(route.get("location_confidence")),
+                    "the consignment is **assumed** to have stayed in conditions comparable "
+                    "to its last recorded position",
+                )
+                lines += [
+                    f"> **This attribution is QUALIFIED.** The weather is real and the "
+                    f"arithmetic is real, but *which* weather applies rests on an assumption: "
+                    f"{reason}. That is an assumption, not an observation, and a reader acting "
+                    f"on this section should weigh it as one.",
+                    "",
+                ]
+        lines += [f"{i}. {note}" for i, note in enumerate(route.get("notes", []), 1)]
+        if route.get("ambient_source"):
+            lines += ["", f"> Weather provenance: {route['ambient_source']}"]
+        lines += [
+            "",
+            f"> The {_fmt(route.get('containment_gap_threshold_c'), ' °C', 1)} gap threshold "
+            f"separating a containment failure from environmental exposure is **ColdCall "
+            f"policy, not a regulatory value.** A closed vehicle in sun runs warmer than the "
+            f"shade temperature the archive reports, so some positive gap is expected.",
+            "",
+        ]
+    elif isinstance(route, dict) and route.get("error"):
+        lines += [
+            head("Route context — why the load warmed"),
+            "",
+            f"_Not available: {route['error']}_ — the cause of the excursion is therefore "
+            "**not established** in this record. Do not infer one from the temperature alone.",
+            "",
+        ]
+
+    check = verdict.get("cross_check")
+    if isinstance(check, dict):
+        agreed = check.get("agrees")
+        lines += [
+            head("Independent verification"),
+            "",
+            "The disposition was computed **twice**, by deliberately different numerical "
+            "routes, and the results were compared before this record was produced.",
+            "",
+            "| | |",
+            "|---|---|",
+            f"| Agreement | **{'YES' if agreed else 'NO — DO NOT ACT ON THIS RECORD'}** |",
+            f"| Primary MKT | {_fmt(check.get('primary_mkt_c'), ' °C', 4)} |",
+            f"| Independent MKT | {_fmt(check.get('independent_mkt_c'), ' °C', 4)} |",
+            f"| Difference | {check.get('mkt_difference_c', '?')} °C |",
+            f"| Independent verdict | "
+            f"{str(check.get('independent_verdict', '?')).replace('_', ' ')} |",
+            "",
+            f"> Method: {check.get('method', '')}",
+            "",
+            f"> Limit: {check.get('limits', '')}",
+            "",
+        ]
+        if not agreed:
+            lines += ["**Disagreements:**", ""]
+            lines += [f"- {d}" for d in check.get("disagreements", [])]
+            lines.append("")
+
+    lines += [head("Basis for the disposition"), ""]
     lines += [f"{i}. {reason}" for i, reason in enumerate(verdict.get("rationale", []), 1)]
     lines += [
         "",
-        "## 6. What is regulation and what is ColdCall policy",
+        head("What is regulation and what is ColdCall policy"),
         "",
         "| Regulation-anchored | ColdCall policy |",
         "|---|---|",
@@ -165,7 +286,7 @@ def deviation_report(
 
     if consignees:
         lines += [
-            "## 7. Affected consignees",
+            head("Affected consignees"),
             "",
             "| Consignee | Units expected |",
             "|---|---|",
@@ -175,7 +296,7 @@ def deviation_report(
         ]
         lines.append("")
 
-    lines += ["## 8. Sections to be completed", ""]
+    lines += [head("Sections to be completed"), ""]
     for section in _AGENT_SECTIONS:
         lines += [
             f"### {section}",
@@ -186,7 +307,7 @@ def deviation_report(
         ]
 
     lines += [
-        "## 9. Signature",
+        head("Signature"),
         "",
         "| | |",
         "|---|---|",

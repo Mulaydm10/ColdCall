@@ -38,6 +38,17 @@ plainly and move on — a disagreement you hide is the one that ends up in a reg
 If the module fails to run, that is the finding. Report the error. **Never fall back to
 estimating the verdict yourself.**
 
+### If the cross-check disagrees, stop
+
+The module computes the verdict twice, by deliberately different numerical routes, and reports
+`cross_check` in its output. When `agrees` is `false` — or the module exits **3** — two
+implementations of a regulated calculation have reached different answers and **nobody knows
+which is right**.
+
+Do not present the bundle. Do not annotate it and present it anyway; a labelled verdict is
+still a verdict someone may act on. Report which two numbers disagree, by how much, and stop.
+An agent that carries on past this has defeated the point of computing it twice.
+
 ## The incident, in order
 
 ### 1. Open the incident
@@ -46,15 +57,16 @@ The session *is* the regulatory record. Record, up front: shipment id, lot id, p
 excursion window, and where the telemetry came from. Everything after this appends to that
 record; nothing overwrites it.
 
-### 2. Fan out — four strands, in parallel
+### 2. Fan out — five strands, in parallel
 
-Spawn these as subagents. They share your tools and your sandbox, they cannot talk to the
+Spawn all five as subagents; a strand you skip is a question nobody answered. They share your tools and your sandbox, they cannot talk to the
 operator directly, and they cannot spawn helpers of their own. One level, that is all.
 
 | Strand | The one question it answers | How |
 |---|---|---|
 | 🔬 **Stability Analyst** | *Is the material still within its stability budget?* | Fetch the product profile. Run the module above in the sandbox. Return the verdict JSON verbatim and the chart path. **Do not modify the module.** |
 | 🚚 **Logistics Scout** | *If we hold it, where does it go, and what replaces it?* | Query qualified storage by distance; draft a reship plan with its ETA assumption stated as an assumption. |
+| 🌡️ **Route Analyst** | *Why did it warm?* | Re-run the module with `--route-lat/--route-lon`. It fetches real recorded weather at the shipment's own coordinates and reports whether the load tracked the outside air or ran away from it. **Report its attribution verbatim; never infer a cause from the temperature alone.** If the output sets `qualified: true`, the coordinate is a *last-known position* rather than one observed during the excursion — say so in the same breath as the attribution, with the gap from `location_evidence`. A reader who sees only `attribution` would never know. |
 | 📋 **Compliance Officer** | *What does the deviation record have to say?* | Draft it from the verdict JSON. Cite WHO TRS-999 Annex 5 and the product's own label provenance. Never cite a section you have not been given. |
 | 💰 **Exposure Accountant** | *What is at risk, and who is waiting on it?* | Value at risk = units × unit value. List affected consignees and what each expected. |
 
@@ -64,10 +76,16 @@ Strands report findings. **No strand executes an action.** Actions happen only a
 
 The bundle is what the human reads before signing. It must carry, in this order:
 
-1. **The verdict**, with the module's own rationale lines.
+1. **The verdict**, with the module's own rationale lines — and confirmation that the
+   independent cross-check agreed. If it did not, there is no bundle to assemble.
 2. **The arithmetic**: MKT, minutes out of range against the total record, budget consumed, and
    the margin to the next-worse verdict. If the call is borderline, lead with that — a verdict
    two points from flipping is a different fact from one that clears by forty.
+3. **The cause**, when route context is available: whether this was environmental exposure or
+   a containment failure. These lead to *opposite* corrective actions — one is about the lane
+   and the schedule, the other about packaging and the reefer — so a record that omits it
+   sends the investigation to the wrong place. If the module returns `undetermined`, say so
+   and stop; an unexplained excursion is a legitimate finding and a guessed cause is not.
 3. **The chart** — the excursion trace against the labelled envelope.
 4. **The exposure** — value at risk, consignees.
 5. **The draft deviation report.**

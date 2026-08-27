@@ -16,7 +16,24 @@ set -uo pipefail
 
 DRY=${1:-}
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-[[ -f "$ROOT/.env" ]] && set -a && . "$ROOT/.env" && set +a
+# Load .env WITHOUT clobbering what the caller already exported. `set -a && . .env` does the
+# opposite, and that cost real debugging time: .env pins COLDCALL_SKILL_REF=main, so
+# `COLDCALL_SKILL_REF=my-branch ./scripts/setup_trueforge.sh` silently registered the skill
+# against main anyway — and reported "ok", because the PUT genuinely succeeded with the wrong
+# ref. Standard dotenv semantics are the other way round: the environment wins over the file.
+if [[ -f "$ROOT/.env" ]]; then
+  while IFS='=' read -r _key _value; do
+    _key="${_key#"${_key%%[![:space:]]*}"}"          # ltrim
+    _key="${_key%"${_key##*[![:space:]]}"}"          # rtrim
+    [[ -z "$_key" || "$_key" == \#* ]] && continue
+    [[ "$_key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    [[ -n "${!_key+x}" ]] && continue                # already in the environment: leave it
+    _value="${_value%\"}"; _value="${_value#\"}"
+    _value="${_value%\'}"; _value="${_value#\'}"
+    export "$_key=$_value"
+  done < "$ROOT/.env"
+  unset _key _value
+fi
 
 TF=${TRUEFORGE_URL:-http://localhost:8790}
 MODEL_ID=${COLDCALL_MODEL_ID:-gpt-5.6-sol}
@@ -90,10 +107,18 @@ echo "Sandbox provider"
 # fallback is undocumented and is continuity only, not the sandbox we present to judges.
 if ! is_placeholder "${DAYTONA_API_KEY:-}"; then
   # Singleton resource: PUT only, no POST. All four timers are required by the schema.
+  #
+  # The delete timer is deliberately short. Every incident spawns a sandbox for the
+  # orchestrator and one per strand - five or six per run, ~3 GiB each - and the previous
+  # 7200-minute (5 day) setting meant they accumulated until Daytona's 30 GiB free-tier
+  # ceiling was hit. The resulting failure does NOT say "out of disk": it surfaces as
+  # "git ls-remote failed ... Connection reset by peer", which is indistinguishable from the
+  # transient cold-start network race, so you retry and debug the wrong thing while the agent
+  # runs without its SOP. See scripts/daytona_gc.sh to reap what has already piled up.
   put "daytona" /api/v1/settings/sandbox-providers "$(cat <<JSON
 {"manifest":{"type":"daytona","auth":{"api_key":"$DAYTONA_API_KEY"},
  "exec_timeout_ms":60000,"auto_stop_interval_in_minutes":5,
- "auto_archive_interval_in_minutes":60,"auto_delete_interval_in_minutes":7200}}
+ "auto_archive_interval_in_minutes":15,"auto_delete_interval_in_minutes":120}}
 JSON
 )"
 else

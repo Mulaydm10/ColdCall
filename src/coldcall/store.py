@@ -67,6 +67,10 @@ CREATE TABLE IF NOT EXISTS shipments (
   lot_id TEXT NOT NULL,
   units INTEGER NOT NULL,
   origin TEXT, destination TEXT, carrier TEXT,
+  -- The leg's own recorded GPS. Route context is only honest if the weather is fetched for
+  -- where the shipment actually was, so these travel with the shipment rather than being
+  -- passed in at call time.
+  route_lat REAL, route_lon REAL,
   status TEXT NOT NULL DEFAULT 'in_transit'
 );
 
@@ -254,6 +258,21 @@ class IncidentStore:
                         f"collapsed {removed} duplicate telemetry row(s) left by a "
                         f"pre-idempotent replay before adding the uniqueness constraint",
                     )
+            # CREATE TABLE IF NOT EXISTS will not add a column to a table that already
+            # exists, so a database written before route context would fail every seed with
+            # "no such column: route_lat". Same class as the migrations either side of it,
+            # and the same reason it matters: telemetry is preserved across runs, so people
+            # keep their databases.
+            existing_columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(shipments)")
+            }
+            for column in ("route_lat", "route_lon"):
+                if column not in existing_columns:
+                    conn.execute(f"ALTER TABLE shipments ADD COLUMN {column} REAL")
+
+            # Schema first, then data: this rewrites rows, so the columns it may touch must
+            # already exist. And it must run BEFORE SCHEMA_INDEXES, because it is what
+            # collapses the duplicate instants that would otherwise fail the unique index.
             self._canonicalise_timestamps(conn)
             conn.executescript(SCHEMA_INDEXES)
 
@@ -343,14 +362,15 @@ class IncidentStore:
                 # shipment row it describes.
                 conn.execute(
                     "INSERT INTO shipments (id, product_id, lot_id, units, origin,"
-                    " destination, carrier, status)"
+                    " destination, carrier, route_lat, route_lon, status)"
                     " VALUES (:id, :product_id, :lot_id, :units, :origin, :destination,"
-                    " :carrier, :status)"
+                    " :carrier, :route_lat, :route_lon, :status)"
                     " ON CONFLICT(id) DO UPDATE SET"
                     " product_id = excluded.product_id, lot_id = excluded.lot_id,"
                     " units = excluded.units, origin = excluded.origin,"
-                    " destination = excluded.destination, carrier = excluded.carrier",
-                    shipment,
+                    " destination = excluded.destination, carrier = excluded.carrier,"
+                    " route_lat = excluded.route_lat, route_lon = excluded.route_lon",
+                    {"route_lat": None, "route_lon": None, **shipment},
                 )
             for consignee in fixture.get("consignees", []):
                 conn.execute(
