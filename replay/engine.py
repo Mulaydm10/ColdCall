@@ -266,7 +266,18 @@ def replay(
     fired = False
 
     for index, reading in enumerate(readings):
-        ts = str(reading["ts"])
+        # Persist the INSTANT, normalised to UTC — never the raw offset-bearing string.
+        # `_load_leg` validates ordering by comparing parsed instants, but `telemetry_for`
+        # sorts the stored `ts` column lexicographically, so a strictly-increasing leg
+        # written with mixed offsets came back in reverse chronological order:
+        # "…T12:00:00+02:00" (10:00Z) sorts after "…T11:00:00Z" as text and before it in
+        # time. Everything downstream reads that column in order, so the excursion window
+        # itself was wrong.
+        #
+        # Normalising here also makes the (shipment_id, ts) uniqueness constraint
+        # offset-independent. Two spellings of one instant used to insert as two readings,
+        # which double-counts time-at-temperature — the number the verdict turns on.
+        ts = _parse_leg_ts(str(reading["ts"])).astimezone(timezone.utc).isoformat()
         temp = float(reading["temp_c"])
         store.record_ticks([TelemetryTick(shipment_id, ts, temp)])
 
