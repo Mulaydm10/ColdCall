@@ -74,9 +74,22 @@ review → follow-up review → human merge. Direct pushes to `main` do not coun
 
 **Status:** Qodo is installed on this repository and reviewing pull requests as of 2026-08-27.
 
-- **Representative merged PR:** TODO(Mulaydm10) — fill once PR #1 merges.
-- **What Qodo surfaced, and what we did:** TODO(Mulaydm10) — fill from PR #1's review.
-- **PR history:** https://github.com/Mulaydm10/ColdCall/pulls?q=is%3Apr
+- **Representative merged PR:** [#1 — real event facts, harness bring-up, and the two hard
+  gates](https://github.com/Mulaydm10/ColdCall/pull/1) (5 commits, merged 2026-08-27).
+- **What Qodo surfaced, and what we did:** Qodo raised **4 findings, all Medium severity, no
+  High**, and **all four were fixed rather than dismissed**. One was a genuine factual error —
+  `COMPETITION.md` described the hackathon's San Francisco day as already past when it was still
+  two days away, which would have quietly cost us an in-person option. The other three were
+  *staleness* bugs: checklist rows still marked "missing" for gates that this very PR had just
+  satisfied (the public repo, the AI-assistance disclosure), and a README claim that Qodo
+  reviewed every PR while `STATE.md` still said it was not installed. That last one we fixed
+  more thoroughly than the finding asked, splitting the section into **Policy** (the rule we
+  always hold to) and **Status** (what is true today, dated) — a status line that has to be
+  rewritten every time reality moves is the same bug the other findings were.
+- **PR history:** [all pull requests](https://github.com/Mulaydm10/ColdCall/pulls?q=is%3Apr) ·
+  [PR #1's review trail](https://github.com/Mulaydm10/ColdCall/pull/1) shows the completed
+  review, our decisions in the Fix Summary, and the **follow-up review against the final code
+  returning 0 bugs / 0 rule violations** before a human merged.
 
 ## AI assistance disclosure
 

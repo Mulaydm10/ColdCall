@@ -28,7 +28,7 @@ These are not scored criteria but a submission is incomplete without them — se
 | README with setup steps a stranger can follow | `README.md` → Quickstart | TODO, pending `ADR-0002` |
 | ~3-minute demo video | `submissions/` | Not started |
 | Write-up: what the agent does + how it uses TrueForge | `submissions/` | Not started |
-| `## Qodo Code Review Evidence` section | `README.md` | Section present; **merged-PR link pending** PR #1 merging |
+| `## Qodo Code Review Evidence` section | `README.md` | **Done** — links merged PR #1, states what Qodo surfaced and what we changed, and points at the follow-up-review trail |
 | AI-assistant use disclosed | `README.md` → "AI assistance disclosure" | **Done** — names Claude Code and Qodo; AI-authored commits carry a `Co-Authored-By` trailer |
 | No keys / personal data in repo or video | `.gitignore` secrets block; demo rehearsal check | Guarded in `.gitignore`; re-check before filming |
 
