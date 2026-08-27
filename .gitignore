@@ -50,3 +50,10 @@ build/
 data/samples/
 data/raw/
 *.json.gz
+
+# Runtime incident store. Rebuilt by `python replay/engine.py`, which seeds it from
+# replay/seed.json — so it is reproducible, and committing it would ship stale demo state
+# plus an audit trail that belongs to whoever last ran the replay.
+data/*.db
+data/*.db-wal
+data/*.db-shm

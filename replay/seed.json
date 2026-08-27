@@ -1,0 +1,62 @@
+{
+  "$comment": "Reference rows for the incident store. The product's storage range, excursion range and label provenance are REAL - pulled live from the openFDA drug label API and pinned in data/product_profile.json. Everything marked as a demo assumption below is ours and is labelled as such wherever it is displayed. The unit value in particular is a plausible wholesale figure, not a quoted price, and the value-at-risk headline is derived from it rather than chosen first.",
+
+  "products": [
+    {
+      "id": "AMOXICILLIN-500",
+      "name": "Amoxicillin 500 mg capsules (A-S Medication Solutions)",
+      "storage_min_c": 20.0,
+      "storage_max_c": 25.0,
+      "excursion_min_c": 15.0,
+      "excursion_max_c": 30.0,
+      "excursion_allowance_hours": 6.0,
+      "allowance_source": "ColdCall demo policy - NOT label text. Verified against openFDA: no real drug label states a permitted excursion duration. The 20-25C band and the 15-30C excursion range ARE label text.",
+      "label_provenance": "openFDA drug label API, set_id e13cafe2-f226-4021-81d8-7bd1f98b5582: 'Store at 20 to 25C (68 to 77F); excursions permitted to 15 to 30C (59 to 86F) [see USP Controlled Room Temperature].'",
+      "unit_value_usd": 12.5
+    }
+  ],
+
+  "shipments": [
+    {
+      "id": "VCC-118",
+      "product_id": "AMOXICILLIN-500",
+      "lot_id": "A2231",
+      "units": 4000,
+      "origin": "Rotterdam DC",
+      "destination": "Lyon regional hub",
+      "carrier": "road freight, multi-drop",
+      "status": "in_transit"
+    }
+  ],
+
+  "consignees": [
+    {
+      "id": "CON-01",
+      "shipment_id": "VCC-118",
+      "name": "Hopital Nord pharmacy",
+      "email": "pharmacy@example.invalid",
+      "units_expected": 1800
+    },
+    {
+      "id": "CON-02",
+      "shipment_id": "VCC-118",
+      "name": "Clinique Saint-Luc pharmacy",
+      "email": "pharmacy2@example.invalid",
+      "units_expected": 1400
+    },
+    {
+      "id": "CON-03",
+      "shipment_id": "VCC-118",
+      "name": "Centre de sante Beaulieu",
+      "email": "pharmacy3@example.invalid",
+      "units_expected": 800
+    }
+  ],
+
+  "warehouses": [
+    { "id": "WH-01", "name": "Lyon Sud bonded store", "city": "Lyon", "qualified_crt": 1, "distance_km": 14.2 },
+    { "id": "WH-02", "name": "Villefranche cross-dock", "city": "Villefranche", "qualified_crt": 0, "distance_km": 31.0 },
+    { "id": "WH-03", "name": "Grenoble regional DC", "city": "Grenoble", "qualified_crt": 1, "distance_km": 106.4 },
+    { "id": "WH-04", "name": "Marseille port store", "city": "Marseille", "qualified_crt": 1, "distance_km": 278.9 }
+  ]
+}

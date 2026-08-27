@@ -125,6 +125,13 @@ SKILL_REF=${COLDCALL_SKILL_REF:-main}
 # `ref` is required by the schema even though the docs read as if pinning is optional.
 # The skill is fetched from GitHub at $SKILL_REF, never from the working tree - editing
 # SKILL.md locally changes nothing until it is pushed to that ref.
+put "coldchain-sop" /api/v1/settings/skills "$(cat <<JSON
+{"manifest":{"type":"git","name":"coldchain-sop","url":"$SKILL_REPO",
+ "path":"skills/coldchain-sop","ref":"$SKILL_REF",
+ "description":"SOP for a pharmaceutical cold-chain temperature-excursion incident: how to open it, how the disposition is computed by the deterministic module rather than by the model, what the evidence bundle must carry, and what may never happen without a human. Aligned with WHO TRS-999 Annex 5 and USP <1079>."}}
+JSON
+)"
+
 put "repo-evidence" /api/v1/settings/skills "$(cat <<JSON
 {"manifest":{"type":"git","name":"repo-evidence","url":"$SKILL_REPO",
  "path":"skills/repo-evidence","ref":"$SKILL_REF",

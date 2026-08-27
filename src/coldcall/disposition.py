@@ -312,9 +312,9 @@ def disposition(
         f"MKT over the full record: {mkt:.2f} °C against a labelled range of "
         f"{label_lower_c:g}–{label_upper_c:g} °C (USP <1079> method, ΔH "
         f"{policy.activation_energy_j_per_mol:g} J/mol).",
-        f"Time out of labelled range: {exc.minutes_out_of_range:g} min of "
-        f"{exc.minutes_total:g} min recorded "
-        f"({exc.minutes_above:g} above, {exc.minutes_below:g} below); "
+        f"Time out of labelled range: {exc.minutes_out_of_range:.1f} min of "
+        f"{exc.minutes_total:.1f} min recorded "
+        f"({exc.minutes_above:.1f} above, {exc.minutes_below:.1f} below); "
         f"peak {exc.max_celsius:g} °C.",
         f"Stability budget consumed: {consumed_pct:.1f}% of a "
         f"{policy.allowed_excursion_hours:g} h allowance ({policy.source}).",
@@ -339,7 +339,7 @@ def disposition(
     if policy.freeze_is_disqualifying and exc.minutes_below > 0:
         verdict = QUARANTINE_RETEST
         rationale.append(
-            f"Freeze event: {exc.minutes_below:g} min below {label_lower_c:g} °C "
+            f"Freeze event: {exc.minutes_below:.1f} min below {label_lower_c:g} °C "
             f"(minimum {exc.min_celsius:g} °C). Product integrity cannot be assumed from "
             f"time-at-temperature alone — quarantine and retest."
         )
