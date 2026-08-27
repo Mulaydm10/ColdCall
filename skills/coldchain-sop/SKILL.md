@@ -76,11 +76,12 @@ operator directly, and they cannot spawn helpers of their own. One level, that i
 | Strand | The one question it answers | How |
 |---|---|---|
 | 🚚 **Logistics Scout** | *If we hold it, where does it go, and what replaces it?* | Query qualified storage by distance; draft a reship plan with its ETA assumption stated as an assumption. |
-| 🌡️ **Route Analyst** | *Why did it warm?* | Re-run the module with `--route-lat/--route-lon`. It fetches real recorded weather at the shipment's own coordinates and reports whether the load tracked the outside air or ran away from it. **Report its attribution verbatim; never infer a cause from the temperature alone.** If the output sets `qualified: true`, the coordinate is a *last-known position* rather than one observed during the excursion — say so in the same breath as the attribution, with the gap from `location_evidence`. A reader who sees only `attribution` would never know. |
+| 🌡️ **Route Analyst** | *Why did it warm?* | **Read the `route_context` block the orchestrator already produced** — the first invocation passes the route flags, so the weather comparison is done. Do not re-run the module. **Report its `attribution` verbatim; never infer a cause from the temperature alone.** If it sets `qualified: true`, the coordinate is a *last-known position* rather than one observed during the excursion — say so in the same breath as the attribution, with the gap from `location_evidence`. A reader who sees only `attribution` would never know. |
 | 📋 **Compliance Officer** | *What does the deviation record have to say?* | Draft it from the verdict JSON. Cite WHO TRS-999 Annex 5 and the product's own label provenance. Never cite a section you have not been given. |
 | 💰 **Exposure Accountant** | *What is at risk, and who is waiting on it?* | Value at risk = units × unit value. List affected consignees and what each expected. |
 
-Strands report findings. **No strand executes an action.** Actions happen only after step 4.
+Strands report findings. **No strand executes an action.** Nothing is executed until the human
+has approved it at step 5 — not after the bundle is assembled, after the *approval*.
 
 ### 4. Assemble the evidence bundle
 

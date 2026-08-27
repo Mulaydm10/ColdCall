@@ -82,14 +82,13 @@ flowchart TB
 
     subgraph H["2 · TrueForge — the session IS the incident record"]
         ORCH["Incident orchestrator<br/><i>follows the coldchain-sop skill</i>"]
-        subgraph S["Strands, in parallel"]
-            S1["Stability Analyst"]
-            S5["Route Analyst"]
+        subgraph S["Four strands, in parallel — context around the verdict"]
+            S5["Route Analyst<br/><i>reads the route_context</i>"]
             S2["Logistics Scout"]
             S3["Compliance Officer"]
             S4["Exposure Accountant"]
         end
-        ORCH --> S1 & S5 & S2 & S3 & S4
+        ORCH --> S5 & S2 & S3 & S4
     end
 
     subgraph D["3 · Daytona sandbox"]
@@ -99,8 +98,8 @@ flowchart TB
         MATH --> V
         WHY --> V
     end
-    S1 --> MATH
-    S5 --> WHY
+    ORCH -- "runs it itself, first" --> MATH
+    MATH -.-> WHY
 
     subgraph G["4 · The human gate"]
         BUNDLE["Evidence bundle<br/>verdict · arithmetic · chart ·<br/>exposure · draft deviation report"]
@@ -162,7 +161,7 @@ uv venv --python 3.12 .venv && uv sync --group dev
 uv run pytest                              # the maths, proven before you trust it
 
 # 3. Keys, then configure the harness (both idempotent)
-cp .env.example .env                       # add OPENAI_API_KEY and DAYTONA_API_KEY
+cp .env.example .env                       # three keys — see below
 ./scripts/setup_trueforge.sh               # model provider, sandbox, connectors, skills
 ./scripts/setup_trueforge.sh --dry-run     # or see what it would do, change nothing
 
@@ -172,6 +171,16 @@ cp .env.example .env                       # add OPENAI_API_KEY and DAYTONA_API_
 # 5. Run one incident, end to end
 uv run python replay/incident.py           # stops at the gate and asks you
 ```
+
+**Three keys are required**, and `setup_trueforge.sh` *skips* rather than fails when one is
+missing — so read its output instead of assuming. Expect `5 configured, 2 skipped, 0 failed`,
+with Supabase and Stripe the two expected skips.
+
+| Key | Without it |
+|---|---|
+| `OPENAI_API_KEY` | no model, no session at all |
+| `DAYTONA_API_KEY` | no remote sandbox, so the maths never runs off-host — needs the `write:snapshots` scope |
+| `GITHUB_TOKEN` | **the connector is skipped and the approval gate has no tool to call.** The demo's centrepiece silently does not happen rather than failing loudly, which is why it is called out here rather than left to the file. A classic PAT with `repo` scope, or `gh auth token`. |
 
 Step 5 halts and asks you to `allow` or `deny`. **That pause is the product.** `--auto allow`
 exists for unattended smoke runs and prints a warning when used, because a gate that approves
@@ -221,7 +230,7 @@ cargo, so the product label was chosen to match what the goods actually are.
 | The sandbox is genuinely remote | A live turn returned `Linux x86_64 3.13.15` from a macOS/arm64 host |
 | The gate actually stops the agent | **Deny** → it reported the denial and stopped, no retry. **Allow** → branch `incident/INC-VCC-118-A2231-…`, deviation record committed as `1c859fc` |
 | The record survives a crash | `./scripts/restart_proof.sh` — `kill -9`, restart, and a **SHA-256 digest of every event's content** unchanged: `3c470830…` before and after, over **every field of every event** |
-| The data sources work *now* | `./scripts/verify_apis.sh` calls each one and asserts on the response — 8/8, and the weather check runs `fetch_ambient` itself rather than pinging a URL |
+| The data sources work *now* | `./scripts/verify_apis.sh` calls each one and asserts on the response — 9/9, including a check that runs `fetch_ambient` itself rather than pinging a URL, and one that authenticates `GITHUB_TOKEN` because its absence is otherwise silent |
 | The root cause is evidence, not narration | 14 of 14 excursion readings matched to ERA5 reanalysis at the leg's last-known position → `containment_failure`, marked **qualified** because that position predates the window by 18.9 h (`EXP-0013`) |
 
 Full trail in [`experiments/experiment_log.md`](experiments/experiment_log.md) (`EXP-0001`–`EXP-0012`),

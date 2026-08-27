@@ -70,18 +70,33 @@ def _ref_exists_on_remote(ref: str) -> bool:
     there and nowhere earlier. That wasted a rehearsal: five strands ran, each reported the
     clone failure honestly, and the run reached no approval gate — a correct agent producing
     a useless run because the driver handed it an address that does not exist.
+
+    **Fails open.** ``git ls-remote --exit-code`` returns 2 for "no such ref" and 128 for a
+    transport failure — no network, DNS down, GitHub unreachable. Only 2 means the ref is
+    genuinely absent; treating anything non-zero as absent would block a legitimate run
+    because the checker itself could not reach the internet. A pre-flight check that turns its
+    own outage into your error is worse than no pre-flight check.
+
+    Both branches and tags are queried, since ``--heads`` alone would reject a valid tag.
     """
     import subprocess
 
     try:
         result = subprocess.run(
-            ["git", "ls-remote", "--exit-code", "--heads", PUBLIC_REPO, ref],
+            ["git", "ls-remote", "--exit-code", "--heads", "--tags", PUBLIC_REPO, ref],
             cwd=REPO_ROOT, capture_output=True, text=True, timeout=30,
         )
-        return result.returncode == 0
     except (OSError, subprocess.SubprocessError):
-        # Cannot tell. Do not block the run on a check that itself failed.
-        return True
+        return True  # cannot tell; do not block on a check that itself failed
+    if result.returncode == 2:
+        return False
+    if result.returncode not in (0, 2):
+        print(
+            f"{_YELLOW}  could not verify ref '{ref}' against the remote "
+            f"(git exit {result.returncode}); continuing anyway{_OFF}",
+            file=sys.stderr,
+        )
+    return True
 
 
 def _current_branch() -> str:

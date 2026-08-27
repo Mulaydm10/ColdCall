@@ -53,7 +53,7 @@ before scoring: **MKT 24.54 °C, 64.35 % of budget consumed → `quarantine_rete
 consignment reached **27 °C** — a **12.6 °C** median gap → `containment_failure`, marked
 **`qualified`** because the GPS predates the excursion by 18.9 h.
 
-**230 tests green, ruff clean, `verify_apis.sh` 8/8, `setup_trueforge.sh` idempotent**
+**230 tests green, ruff clean, `verify_apis.sh` 9/9, `setup_trueforge.sh` idempotent**
 (`5 configured, 2 skipped, 0 failed` on two consecutive runs).
 
 ## Needs Mulaydm10 — nothing technical is blocked on it

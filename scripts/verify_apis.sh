@@ -112,6 +112,31 @@ else
 fi
 
 echo
+echo "Credentialed API"
+# GITHUB_TOKEN is the one credential whose absence is SILENT: without it the connector is
+# skipped, the approval gate has no tool to call, and the demo's centrepiece does not happen
+# while every command still exits 0. A pre-flight that checks five keyless endpoints and not
+# this one is checking the things that were never going to fail.
+GH_TOKEN_VALUE=$(awk -F= '/^GITHUB_TOKEN=/{sub(/^GITHUB_TOKEN=/,""); gsub(/^["'"'"']|["'"'"']$/,""); print; exit}' \
+                 "$ROOT/.env" 2>/dev/null)
+GH_TOKEN_VALUE=${GITHUB_TOKEN:-$GH_TOKEN_VALUE}
+if [[ -z "$GH_TOKEN_VALUE" ]]; then
+  printf '  \033[31mFAIL\033[0m  %-22s GITHUB_TOKEN unset — the approval gate will have no tool to call\n' "GitHub token"
+  FAIL=$((FAIL+1))
+else
+  GH_LOGIN=$(curl -sS -m 20 -H "Authorization: Bearer $GH_TOKEN_VALUE" \
+             -H 'Accept: application/vnd.github+json' https://api.github.com/user \
+             | jq -r '.login // empty')
+  if [[ -n "$GH_LOGIN" ]]; then
+    printf '  \033[32mok\033[0m    %-22s authenticated as %s\n' "GitHub token" "$GH_LOGIN"
+    PASS=$((PASS+1))
+  else
+    printf '  \033[31mFAIL\033[0m  %-22s token present but rejected by api.github.com\n' "GitHub token"
+    FAIL=$((FAIL+1))
+  fi
+fi
+
+echo
 echo "Local harness"
 CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:8790/ || echo 000)
 if [[ "$CODE" == "200" ]]; then
