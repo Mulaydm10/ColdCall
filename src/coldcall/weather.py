@@ -56,6 +56,7 @@ __all__ = [
     "LocationAssessment",
     "LocationEvidence",
     "OBSERVED",
+    "BRACKETS",
     "LAST_KNOWN",
     "RECORDED_AFTER",
     "UNSTATED",
@@ -77,6 +78,7 @@ CONTAINMENT_GAP_C = 5.0
 #: states, not a boolean: "nobody told us" and "we checked and it was stale" are different
 #: facts, and collapsing them lets unknown provenance pass for verified provenance.
 OBSERVED = "observed_during_window"
+BRACKETS = "fixes_bracket_window"
 LAST_KNOWN = "last_known_position"
 RECORDED_AFTER = "recorded_after_window"
 UNSTATED = "provenance_unstated"
@@ -161,9 +163,22 @@ class LocationEvidence:
         if latest is None or earliest is None:
             return LocationAssessment(self, UNSTATED, 0.0)
 
-        # "Covers" means a fix falls inside the window, not merely that one exists nearby.
-        if earliest <= window_end and latest >= window_start:
+        # A KNOWN ENDPOINT must itself lie inside the window. The previous test — `earliest
+        # <= window_end and latest >= window_start` — is interval *overlap*, which one fix
+        # before the excursion and one after satisfies with zero fixes inside. The record then
+        # read "position observed during the correlated window" on a location nothing had
+        # verified. The comment here already said "a fix falls inside the window, not merely
+        # that one exists nearby"; the code did the other thing.
+        if window_start <= earliest <= window_end or window_start <= latest <= window_end:
             return LocationAssessment(self, OBSERVED, 0.0)
+
+        # Fixes on both sides with none provably inside. The consignment may well have been
+        # here throughout — but only `earliest_fix` and `latest_fix` are carried, so whether
+        # any of the intervening fixes landed in the window is unknown, and unknown stays
+        # qualified. Extending the model to hold every fix timestamp would let this resolve
+        # properly; until then it must not resolve optimistically.
+        if earliest < window_start and latest > window_end:
+            return LocationAssessment(self, BRACKETS, 0.0)
 
         # Signed, and the sign is the whole point: `abs()` would narrate a fix taken AFTER the
         # excursion as a last-known position BEFORE it — a false temporal statement in a
@@ -196,6 +211,10 @@ class LocationAssessment:
     def to_dict(self) -> dict[str, object]:
         provenance = {
             OBSERVED: "position observed during the correlated window",
+            BRACKETS: (
+                "FIXES BRACKET THE WINDOW — one before and one after, none known to fall "
+                "inside it"
+            ),
             LAST_KNOWN: "LAST-KNOWN POSITION — every fix predates the correlated window",
             RECORDED_AFTER: "POSITION RECORDED AFTER the correlated window — not where it was",
             UNSTATED: "PROVENANCE NOT SUPPLIED — no fix timestamp was given for this coordinate",
@@ -209,6 +228,8 @@ class LocationAssessment:
                 if self.gap_hours > 0
                 else "fixes follow the window"
                 if self.gap_hours < 0
+                else "fixes straddle the window, none known inside it"
+                if self.confidence == BRACKETS
                 else "not applicable"
             ),
             "limit": (
@@ -523,6 +544,16 @@ def attribute_excursion(
                 "QUALIFIED: no provenance was supplied for this coordinate — nothing records "
                 "when the position was taken, so whether it describes the consignment during "
                 "the excursion is unknown. Unknown is not the same as verified."
+            )
+        elif assessment.confidence == BRACKETS:
+            notes.append(
+                f"QUALIFIED: the available fixes BRACKET this window — one at "
+                f"{location.earliest_fix if location else '?'} before it and one at "
+                f"{location.latest_fix if location else '?'} after it — and none is known to "
+                f"fall inside it. Only the first and last of "
+                f"{location.fix_count if location else 0} fixes are recorded here, so whether "
+                f"any intervening fix was contemporaneous with the excursion is unknown. "
+                f"Surrounding a window is not the same as being observed in it."
             )
         elif assessment.confidence == RECORDED_AFTER:
             notes.append(

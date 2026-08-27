@@ -195,6 +195,10 @@ def deviation_report(
                         "**nothing records when this position was taken**, so whether it "
                         "describes the consignment during the excursion is unknown"
                     ),
+                    "fixes_bracket_window": (
+                        "**the fixes surround the excursion without any known to fall inside "
+                        "it** — surrounding a window is not the same as being observed in it"
+                    ),
                     "recorded_after_window": (
                         "**every fix was recorded after the excursion closed** — it is where "
                         "the consignment ended up, not where it was while it warmed"

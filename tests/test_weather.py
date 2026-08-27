@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from coldcall.weather import (
+    BRACKETS,
     CONTAINMENT,
     ENVIRONMENTAL,
     LAST_KNOWN,
@@ -205,8 +206,15 @@ class TestLocationEvidence:
         assert any("an assumption, not an observation" in n for n in result.notes)
 
     def test_a_coordinate_observed_during_the_window_is_not_qualified(self):
+        """A known endpoint must itself fall inside the excursion (+130..+190 here).
+
+        This fixture originally used +120 and +200 — a pair that *brackets* the window with
+        neither endpoint inside it. The old overlap test passed it, which is exactly the bug
+        `TestBracketingIsNotPresence` now pins: I wrote a test meaning "observed" and built a
+        bracket, and the code agreed with me.
+        """
         covering = self.fixes(
-            (START + timedelta(minutes=120)).isoformat(),
+            (START + timedelta(minutes=140)).isoformat(),
             (START + timedelta(minutes=200)).isoformat(),
             spread=40.0,
         )
@@ -323,3 +331,60 @@ class TestEmittedRecordCarriesTheEvidence:
         )
         assert result.attribution == UNDETERMINED
         assert result.to_dict()["location_evidence"]["confidence"] != OBSERVED
+
+
+class TestBracketingIsNotPresence:
+    """Devin/Qodo: `assess()` tested interval OVERLAP, which is not evidence of presence.
+
+    One fix before the excursion and one after satisfies `earliest <= window_end and latest >=
+    window_start` with **zero fixes inside** — and the record then said "position observed
+    during the correlated window" about a location nothing had verified. The comment directly
+    above that code already stated the correct rule ("a fix falls inside the window, not merely
+    that one exists nearby"); the code did the other thing.
+    """
+
+    def test_fixes_either_side_of_the_excursion_do_not_prove_presence_in_it(self):
+        helper = TestLocationEvidence()
+        # Excursion runs +130..+190. These straddle it and neither endpoint is inside.
+        bracketing = helper.fixes(
+            (START + timedelta(minutes=60)).isoformat(),
+            (START + timedelta(minutes=300)).isoformat(),
+        )
+        result = helper.containment_case(bracketing)
+        document = result.to_dict()
+
+        assert result.qualified is True, "surrounding a window is not being observed in it"
+        assert document["location_confidence"] == BRACKETS
+        assert "none is known to fall inside it" in " ".join(result.notes)
+        assert not any("observed during" in n for n in result.notes)
+
+    def test_the_bracketing_record_says_why_it_cannot_resolve(self):
+        """Only the first and last fix are carried, so an intervening one cannot be ruled in.
+
+        The honest statement is that it is unknown — not that it did not happen.
+        """
+        helper = TestLocationEvidence()
+        bracketing = helper.fixes(
+            (START + timedelta(minutes=60)).isoformat(),
+            (START + timedelta(minutes=300)).isoformat(),
+        )
+        evidence = helper.containment_case(bracketing).to_dict()["location_evidence"]
+        assert "FIXES BRACKET THE WINDOW" in evidence["provenance"]
+        assert evidence["gap_direction"] == "fixes straddle the window, none known inside it"
+
+    def test_one_endpoint_inside_a_bracketing_span_does_resolve(self):
+        """The conservative rule must not reject genuine evidence either."""
+        helper = TestLocationEvidence()
+        inside = helper.fixes(
+            (START + timedelta(minutes=60)).isoformat(),
+            (START + timedelta(minutes=150)).isoformat(),  # inside +130..+190
+        )
+        result = helper.containment_case(inside)
+        assert result.qualified is False
+        assert result.to_dict()["location_confidence"] == OBSERVED
+
+    def test_the_demo_leg_is_unaffected(self):
+        """Its fixes all predate the window, so it stays last_known rather than bracketing."""
+        helper = TestLocationEvidence()
+        result = helper.containment_case(helper.stale())
+        assert result.to_dict()["location_confidence"] == LAST_KNOWN
