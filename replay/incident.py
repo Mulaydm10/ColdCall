@@ -382,7 +382,12 @@ def decide(auto: str | None) -> tuple[str, str]:
 def run_once(
     base_url: str, spec: dict[str, Any], message: str, auto: str | None, timeout: float
 ) -> tuple[int, bool]:
-    """Run one incident. Returns ``(exit_code, hit_sandbox_init_failure)``."""
+    """Run one incident.
+
+    Returns ``(exit_code, retry_is_safe)``. ``retry_is_safe`` is true only when the sandbox
+    failed to initialise **and nothing was approved**, because a retry after an approved
+    action would repeat an irreversible one.
+    """
     session = _post_json(f"{base_url}/sessions", {"agent": {"spec": spec}}).get("data", {})
     session_id = session.get("id")
     if not session_id:
@@ -401,6 +406,7 @@ def run_once(
 
     saw_error = False
     sandbox_failed = False
+    approved_anything = False
     while True:
         pending: dict[str, Any] | None = None
         pending_calls: list[dict[str, Any]] = []
@@ -426,10 +432,10 @@ def run_once(
                 render(event)
         except urllib.error.HTTPError as exc:
             print(f"{_RED}turn failed: HTTP {exc.code} {exc.read().decode()[:400]}{_OFF}")
-            return 1, sandbox_failed
+            return 1, sandbox_failed and not approved_anything
         except urllib.error.URLError as exc:
             print(f"{_RED}could not reach the harness: {exc}{_OFF}")
-            return 1, sandbox_failed
+            return 1, sandbox_failed and not approved_anything
 
         if pending is None:
             if saw_error:
@@ -437,9 +443,15 @@ def run_once(
                 # failed incident. Reporting it as "turn complete" would let a broken demo
                 # exit 0 and look fine in CI.
                 print(f"\n{_RED}turn ended with errors — session {session_id}{_OFF}")
-                return 1, sandbox_failed
+                return 1, sandbox_failed and not approved_anything
             print(f"\n{_GREEN}turn complete — session {session_id}{_OFF}")
-            return 0, sandbox_failed
+            if sandbox_failed and approved_anything:
+                print(
+                    f"{_RED}  a strand's sandbox failed AND an action was approved. Not "
+                    f"retrying: a second run would repeat an irreversible action. Review "
+                    f"session {session_id} by hand.{_OFF}"
+                )
+            return 0, sandbox_failed and not approved_anything
 
         # Fail closed. If any pending call could not be described, the whole batch is denied
         # without asking: an operator cannot consent to an action they were never shown, and
@@ -478,6 +490,11 @@ def run_once(
                 for call in pending_calls
             ],
         }
+        if status == "allow":
+            # Past this point a retry is no longer safe: an allowed call creates a branch,
+            # commits, notifies, or mutates inventory. Repeating the incident would repeat
+            # those. `run()` reads this and refuses to retry.
+            approved_anything = True
         colour = _GREEN if status == "allow" else _YELLOW
         print(f"{colour}  → {status.upper()}{_OFF}\n")
 
@@ -499,9 +516,9 @@ def run(
     one that visibly retries.
     """
     for attempt in range(1, attempts + 1):
-        code, sandbox_failed = run_once(base_url, spec, message, auto, timeout)
-        if not sandbox_failed or attempt == attempts:
-            if sandbox_failed:
+        code, retry_is_safe = run_once(base_url, spec, message, auto, timeout)
+        if not retry_is_safe or attempt == attempts:
+            if retry_is_safe:
                 print(
                     f"{_RED}  the sandbox failed to fetch its skill on every attempt. "
                     f"The agent ran WITHOUT its SOP — do not trust this run.{_OFF}"

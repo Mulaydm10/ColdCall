@@ -53,7 +53,7 @@ npx @truefoundry/trueforge                 # up on :8790, Node 22+
 ```sh
 # Terminal 2 — credentials first, then the checks
 cp .env.example .env                       # then fill in OPENAI_API_KEY and DAYTONA_API_KEY
-uv sync --group dev && uv run pytest       # 127 green — the maths, before you trust it
+uv sync --group dev && uv run pytest       # 130 green — the maths, before you trust it
 ./scripts/verify_apis.sh                   # every external source, hit for real
 ./scripts/setup_trueforge.sh               # expect: 5 configured, 0 failed
 ```

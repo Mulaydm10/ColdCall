@@ -23,55 +23,86 @@
 #   ./scripts/daytona_gc.sh --yes      # actually delete
 #
 # Only touches sandboxes that are already stopped or archived — never one that is running.
+#
+# Uses jq rather than python: this issues irreversible DELETEs, and the other scripts in this
+# directory already depend on jq, so there is one less runtime in the destructive path.
 
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API=${DAYTONA_API_URL:-https://app.daytona.io/api}
 CONFIRM=${1:-}
+CEILING_GIB=30
 
 red()   { printf '\033[31m%s\033[0m\n' "$*"; }
 green() { printf '\033[32m%s\033[0m\n' "$*"; }
 dim()   { printf '\033[2m%s\033[0m\n' "$*"; }
 die()   { red "$*"; exit 1; }
 
-command -v python3 >/dev/null 2>&1 || die "python3 is required"
+command -v jq >/dev/null 2>&1 || die "jq is required (brew install jq / apt install jq)"
 
-# Read the key directly rather than sourcing .env. Sourcing it exports every other variable
-# into this shell as a side effect, and one malformed line aborts the whole file — which is
-# how this key silently came back empty once already.
+# Read the key directly rather than sourcing .env. Sourcing exports every other variable into
+# this shell as a side effect, and one malformed line aborts the whole file — which is how
+# this key silently came back empty once already.
 KEY=$(awk -F= '/^DAYTONA_API_KEY=/{sub(/^DAYTONA_API_KEY=/,""); gsub(/^["'"'"']|["'"'"']$/,""); print; exit}' \
       "$ROOT/.env" 2>/dev/null)
 KEY=${DAYTONA_API_KEY:-$KEY}
 [[ -n "$KEY" ]] || die "DAYTONA_API_KEY not found in the environment or $ROOT/.env"
 
-LIST=$(curl -sS -m 60 -H "Authorization: Bearer $KEY" "$API/sandbox") \
-  || die "could not reach Daytona at $API"
+# Every call goes through here. It asserts on the HTTP STATUS, not on the shape of the body:
+# a 403, a rate-limit, or a 500 returns a JSON object with no `items`, which a shape-only
+# check reads as "an empty list of sandboxes" — so the script would report nothing to reap and
+# exit 0, telling the operator cleanup succeeded while the quota problem stood untouched.
+daytona_get() {
+  local url="$1" out code body
+  out=$(curl -sS -m 60 -w '\n%{http_code}' -H "Authorization: Bearer $KEY" "$url" 2>&1) \
+    || die "could not reach Daytona at $url"
+  code=$(printf '%s' "$out" | tail -1)
+  body=$(printf '%s' "$out" | sed '$d')
+  [[ "$code" =~ ^2 ]] || die "Daytona returned HTTP $code for $url — $(printf '%s' "$body" | head -c 200)"
+  printf '%s' "$body" | jq -e 'if type == "array" then true else has("items") end' >/dev/null 2>&1 \
+    || die "unexpected response from $url — $(printf '%s' "$body" | head -c 200)"
+  printf '%s' "$body"
+}
 
-printf '%s' "$LIST" | python3 -c '
-import json, sys
-raw = sys.stdin.read()
-try:
-    data = json.loads(raw)
-except json.JSONDecodeError:
-    print("Daytona did not return JSON:", raw[:200], file=sys.stderr); sys.exit(1)
-if isinstance(data, dict) and data.get("statusCode") == 401:
-    print("Daytona rejected the key (401).", file=sys.stderr); sys.exit(1)
-items = data if isinstance(data, list) else data.get("items", [])
-total = sum((s.get("disk") or 0) for s in items)
-reapable = [s for s in items if s.get("state") in ("stopped", "archived", "archiving")]
-freed = sum((s.get("disk") or 0) for s in reapable)
-print(f"  {len(items)} sandbox(es), {total} GiB total  (free tier ceiling: 30 GiB)")
-print(f"  {len(reapable)} reapable, {freed} GiB would be freed")
-if total >= 30:
-    print("  \033[31mAT OR OVER THE CEILING — sandbox creation will fail with a misleading "
-          "network error\033[0m")
-with open("/tmp/coldcall-daytona-reap", "w") as fh:
-    fh.write("\n".join(s["id"] for s in reapable))
-' || exit 1
+inventory() {  # -> "<count> <disk_gib>"; non-zero if the read or parse failed
+  daytona_get "$API/sandbox" \
+    | jq -r '(if type == "array" then . else .items end)
+             | "\(length) \([.[].disk // 0] | add // 0)"'
+}
 
-IDS=$(cat /tmp/coldcall-daytona-reap 2>/dev/null)
-[[ -n "$IDS" ]] || { green "nothing to reap."; exit 0; }
+# `|| exit` is load-bearing: `die` inside a command substitution exits only the SUBSHELL, so
+# without this the guard fires, prints, and the script sails on with LIST empty — reporting
+# "nothing to reap" on an auth failure. That is the same failure-becomes-empty-success shape
+# the guards were added to prevent, one level up.
+LIST=$(daytona_get "$API/sandbox") || exit 1
+
+TOTAL=$(printf '%s' "$LIST" | jq -r '(if type=="array" then . else .items end) | length')
+DISK=$(printf '%s' "$LIST" | jq -r '(if type=="array" then . else .items end)
+                                    | [.[].disk // 0] | add // 0')
+# Read the ids into an array rather than a temp file. The previous version wrote them to a
+# fixed /tmp path that another local process could pre-create as a symlink or overwrite —
+# feeding attacker-chosen ids into irreversible DELETE requests, or truncating someone else's
+# file. Nothing about a destructive flow should touch a predictable path.
+IDS=()
+while IFS= read -r id; do
+  [[ -n "$id" ]] && IDS+=("$id")
+done < <(printf '%s' "$LIST" | jq -r '(if type=="array" then . else .items end)
+                                      | .[] | select(.state == "stopped" or .state == "archived"
+                                                     or .state == "archiving") | .id')
+
+FREEABLE=$(printf '%s' "$LIST" | jq -r '(if type=="array" then . else .items end)
+                                        | [.[] | select(.state == "stopped" or .state == "archived"
+                                                        or .state == "archiving") | .disk // 0]
+                                        | add // 0')
+
+printf '  %s sandbox(es), %s GiB total  (free tier ceiling: %s GiB)\n' "$TOTAL" "$DISK" "$CEILING_GIB"
+printf '  %s reapable, %s GiB would be freed\n' "${#IDS[@]}" "$FREEABLE"
+if [[ "$DISK" -ge "$CEILING_GIB" ]] 2>/dev/null; then
+  red "  AT OR OVER THE CEILING — sandbox creation will fail with a misleading network error"
+fi
+
+[[ "${#IDS[@]}" -gt 0 ]] || { echo; green "nothing to reap."; exit 0; }
 
 if [[ "$CONFIRM" != "--yes" ]]; then
   echo
@@ -82,9 +113,9 @@ fi
 
 echo
 FAILED=0
-for id in $IDS; do
+for id in "${IDS[@]}"; do
   code=$(curl -sS -m 120 -o /dev/null -w '%{http_code}' -X DELETE \
-         -H "Authorization: Bearer $KEY" "$API/sandbox/$id?force=true")
+         -H "Authorization: Bearer $KEY" "$API/sandbox/$id?force=true" 2>/dev/null)
   if [[ "$code" =~ ^2 ]]; then
     printf '  \033[32mdeleted\033[0m %s\n' "${id:0:8}"
   else
@@ -93,11 +124,13 @@ for id in $IDS; do
   fi
 done
 
+# Verify, and let a failed verification fail the script. Previously this pipeline was
+# unguarded and the `FAILED -eq 0` test that followed overwrote its status, so cleanup could
+# exit 0 having never confirmed the resulting count — the one thing the operator came for.
 echo
-curl -sS -m 60 -H "Authorization: Bearer $KEY" "$API/sandbox" | python3 -c '
-import json, sys
-data = json.load(sys.stdin)
-items = data if isinstance(data, list) else data.get("items", [])
-print(f"  now: {len(items)} sandbox(es), {sum((s.get(\"disk\") or 0) for s in items)} GiB")
-'
-[[ "$FAILED" -eq 0 ]] || exit 1
+if ! AFTER=$(inventory); then
+  die "deletions ran but the resulting sandbox count could not be verified"
+fi
+printf '  now: %s sandbox(es), %s GiB\n' "${AFTER% *}" "${AFTER#* }"
+
+[[ "$FAILED" -eq 0 ]] || die "$FAILED deletion(s) failed — the quota may still be exhausted"

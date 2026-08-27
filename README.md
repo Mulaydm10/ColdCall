@@ -198,7 +198,7 @@ cargo, so the product label was chosen to match what the goods actually are.
 | The record survives a crash | `./scripts/restart_proof.sh` — `kill -9`, restart, and a **SHA-256 digest of every event's content** unchanged: `3c470830…` before and after, over **every field of every event** |
 | The data sources work *now* | `./scripts/verify_apis.sh` calls each one and asserts on the response |
 
-Full trail in [`experiments/experiment_log.md`](experiments/experiment_log.md) (`EXP-0001`–`EXP-0011`),
+Full trail in [`experiments/experiment_log.md`](experiments/experiment_log.md) (`EXP-0001`–`EXP-0012`),
 including the bugs that had to be fixed on the way and the ones still open.
 
 ## Honest limits
