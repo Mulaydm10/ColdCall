@@ -28,6 +28,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -132,36 +133,82 @@ def send_excursion_turn(base_url: str, session_id: str, trigger: ExcursionTrigge
     return str(turn_id)
 
 
+def _parse_leg_ts(raw: str) -> datetime:
+    """Parse a leg timestamp into an aware datetime, assuming UTC when no offset is given.
+
+    Naive stamps are made aware rather than left alone: `replay` subtracts them, and mixing
+    naive with offset-aware raises ``TypeError`` mid-loop — after telemetry has already been
+    written, so the advertised input-error path became a partial-write traceback instead.
+    """
+    return (
+        parsed.replace(tzinfo=timezone.utc)
+        if (parsed := datetime.fromisoformat(raw.strip().replace("Z", "+00:00"))).tzinfo is None
+        else parsed
+    )
+
+
 def _load_leg(leg_path: Path) -> list[dict[str, Any]]:
     """Read and *validate* a recorded leg.
 
-    Checking JSON syntax alone was not enough: a non-list root, a reading with no ``ts`` or
-    ``temp_c``, or a non-numeric temperature all parse fine and then raise TypeError,
-    KeyError or ValueError deep inside the replay loop — after telemetry has already been
-    written to the store, so the failure looks like a bug in the engine rather than a bad
-    input file. The leg is user-supplied via ``--leg``, so this is an input contract.
+    Checking JSON syntax alone was not enough, and neither was checking each reading in
+    isolation. The leg is user-supplied via ``--leg``, so this is an input contract, and three
+    things about the series as a whole matter as much as the individual records:
+
+    * **Timestamps must actually parse.** A non-empty string is not a timestamp. ``replay``
+      subtracts them later, so a malformed one raised deep in the loop with rows already
+      persisted.
+    * **They must be strictly increasing.** ``replay`` computes durations and state
+      transitions in file order, so an unordered leg yields negative excursion durations, can
+      suppress a real trigger, and replays on a timeline that never happened.
+    * **No duplicates.** The store keeps only the first reading at a given instant (uniqueness
+      on ``(shipment_id, ts)``), while ``replay`` would evaluate every raw temperature — so
+      the incident's peak and trigger payload could rest on a reading that is *absent* from
+      the audit telemetry a downstream verdict is computed from. Two records for one instant
+      is a contradiction to resolve upstream, not something to silently pick between.
 
     Raises:
         ValueError: naming the offending index and what was wrong with it.
     """
     payload = json.loads(leg_path.read_text(encoding="utf-8"))
     if not isinstance(payload, list):
-        raise ValueError(
-            f"expected a JSON array of readings, got {type(payload).__name__}"
-        )
+        raise ValueError(f"expected a JSON array of readings, got {type(payload).__name__}")
     if not payload:
         raise ValueError("the leg is empty — there is nothing to replay")
 
+    previous: datetime | None = None
     for index, reading in enumerate(payload):
         if not isinstance(reading, dict):
             raise ValueError(f"reading {index} is {type(reading).__name__}, not an object")
-        if not isinstance(reading.get("ts"), str) or not reading["ts"].strip():
+
+        raw_ts = reading.get("ts")
+        if not isinstance(raw_ts, str) or not raw_ts.strip():
             raise ValueError(f"reading {index} has no usable 'ts' timestamp")
+        try:
+            stamp = _parse_leg_ts(raw_ts)
+        except ValueError as exc:
+            raise ValueError(
+                f"reading {index} has an unparseable 'ts' ({raw_ts!r}): {exc}"
+            ) from exc
+
+        if previous is not None:
+            if stamp == previous:
+                raise ValueError(
+                    f"reading {index} repeats the timestamp of reading {index - 1} "
+                    f"({raw_ts}). The store keeps only the first reading at an instant, so a "
+                    f"duplicate would leave the incident resting on telemetry absent from the "
+                    f"audit record — resolve the conflict rather than letting one be dropped."
+                )
+            if stamp < previous:
+                raise ValueError(
+                    f"reading {index} ({raw_ts}) precedes reading {index - 1}. The replay "
+                    f"computes durations in file order, so an unordered leg produces negative "
+                    f"excursion times and can suppress a real trigger — sort it first."
+                )
+        previous = stamp
+
         temp = reading.get("temp_c")
         if isinstance(temp, bool) or not isinstance(temp, (int, float)):
-            raise ValueError(
-                f"reading {index} has a non-numeric 'temp_c' ({temp!r})"
-            )
+            raise ValueError(f"reading {index} has a non-numeric 'temp_c' ({temp!r})")
         if not math.isfinite(float(temp)):
             raise ValueError(f"reading {index} has a non-finite 'temp_c' ({temp!r})")
     return payload
