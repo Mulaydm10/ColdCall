@@ -76,3 +76,38 @@ class TestLoadReadings:
     def test_an_empty_document_is_refused(self):
         with pytest.raises(ValueError, match="non-empty"):
             load_readings([])
+
+
+class TestExplicitDurationsWin:
+    """A reading that states its own duration does not need a timestamp to be believed."""
+
+    def test_explicit_durations_survive_a_missing_timestamp(self):
+        """Regression: tightening the timestamp rules rejected a supported shape.
+
+        When every reading carries an authoritative `minutes`, the timestamps are incidental
+        metadata that nothing reads — so a missing or malformed one must not invalidate the
+        series. The strict rule still applies when durations actually come from timestamps.
+        """
+        readings = load_readings([
+            {"ts": "2026-01-01T00:00:00Z", "temp_c": 22.0, "minutes": 30.0},
+            {"temp_c": 27.0, "minutes": 45.0},                      # no timestamp at all
+            {"ts": "not-a-timestamp", "temp_c": 23.0, "minutes": 15.0},  # unparseable
+        ])
+        assert [r.minutes for r in readings] == [30.0, 45.0, 15.0]
+
+    def test_a_partial_timestamp_still_fails_when_durations_are_derived(self):
+        """The strict rule survives for the case it was written for."""
+        with pytest.raises(ValueError, match="missing or unparseable"):
+            load_readings([
+                {"ts": "2026-01-01T00:00:00Z", "temp_c": 22.0},
+                {"temp_c": 27.0},
+            ])
+
+    def test_a_mix_derives_only_the_readings_that_need_it(self):
+        readings = load_readings([
+            {"ts": "2026-01-01T00:00:00Z", "temp_c": 22.0, "minutes": 5.0},
+            {"ts": "2026-01-01T00:20:00Z", "temp_c": 27.0},
+            {"ts": "2026-01-01T00:30:00Z", "temp_c": 23.0},
+        ])
+        assert readings[0].minutes == 5.0     # explicit wins
+        assert readings[1].minutes == 10.0    # derived from the gap
