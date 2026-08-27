@@ -279,25 +279,46 @@ def resolve_pending_calls(
     """
     wanted = {c.get("id"): c.get("source_event_id") for c in event.get("tool_calls", [])}
     resolved: dict[str, dict[str, Any]] = {}
-    try:
-        events = _get_json(
-            f"{base_url}/sessions/{session_id}/turns/{turn_id}/events"
-        ).get("data", [])
-    except (urllib.error.URLError, json.JSONDecodeError) as exc:
-        print(f"{_RED}  could not resolve the pending calls: {exc}{_OFF}")
-        events = []
 
-    for candidate in events:
-        if candidate.get("type") != "model.message":
+    # Search EVERY turn in the session, not just the one `turn.created` announced. A live run
+    # proved the assumption wrong: the requesting `model.message` landed in a different turn
+    # from the one the stream opened with, so a single-turn lookup found nothing and the
+    # fail-closed rule then denied a perfectly legitimate action. Searching the session is a
+    # handful of requests and cannot miss.
+    try:
+        turn_ids = [
+            t.get("id")
+            for t in _get_json(f"{base_url}/sessions/{session_id}/turns").get("data", [])
+            if t.get("id")
+        ]
+    except (urllib.error.URLError, json.JSONDecodeError) as exc:
+        print(f"{_RED}  could not list the session's turns: {exc}{_OFF}")
+        turn_ids = [turn_id] if turn_id else []
+    if turn_id and turn_id not in turn_ids:
+        turn_ids.append(turn_id)
+
+    for candidate_turn in reversed(turn_ids):  # newest first: the call is almost always there
+        if len(resolved) == len(wanted):
+            break
+        try:
+            events = _get_json(
+                f"{base_url}/sessions/{session_id}/turns/{candidate_turn}/events"
+            ).get("data", [])
+        except (urllib.error.URLError, json.JSONDecodeError) as exc:
+            print(f"{_RED}  could not read events for turn {candidate_turn}: {exc}{_OFF}")
             continue
-        for call in candidate.get("tool_calls") or []:
-            if call.get("id") in wanted:
-                fn = call.get("function", {})
-                try:
-                    args = json.loads(fn.get("arguments") or "{}")
-                except json.JSONDecodeError:
-                    args = {"<unparsed>": fn.get("arguments")}
-                resolved[call["id"]] = {"name": fn.get("name", "?"), "arguments": args}
+
+        for candidate in events:
+            if candidate.get("type") != "model.message":
+                continue
+            for call in candidate.get("tool_calls") or []:
+                if call.get("id") in wanted:
+                    fn = call.get("function", {})
+                    try:
+                        args = json.loads(fn.get("arguments") or "{}")
+                    except json.JSONDecodeError:
+                        args = {"<unparsed>": fn.get("arguments")}
+                    resolved[call["id"]] = {"name": fn.get("name", "?"), "arguments": args}
 
     return [
         {
