@@ -93,7 +93,7 @@ Then check the two things that actually break takes:
 | 2 | **The excursion, in shipment-time** | `uv run python replay/engine.py --speed 60` — real recorded readings stream in, one leg, and the excursion opens on screen. | 0:20–0:45 |
 | 3 | **The fan-out** | `uv run python replay/incident.py` — four strands start in parallel, visible as `thread.created` events. Say: *this is the harness doing the work, not a loop we wrote.* | 0:45–1:05 |
 | 4 | **The maths, off-host** | The Stability Analyst clones the repo **inside a Daytona microVM** and runs the deterministic module. Show the verdict JSON: MKT **24.54 °C**, budget **64.35 %**, verdict **`quarantine_retest`** — and the `cross_check` block showing the same number reached by a second, different implementation. Say: *this is WHO TRS-999 and USP <1079> arithmetic, in the repo, unit-tested — not an LLM guess. Same numbers on my laptop.* | 1:05–1:40 |
-| 5 | **Why it warmed** | Show the `route_context` block. The Route Analyst pulled **real recorded weather at this shipment's own GPS**: outside air peaked at **17.7 °C** while the box hit **27 °C** — a **12.6 °C** median gap, 14 of 14 readings matched. Say: *this was not a hot day. The weather does not account for it, so this is a containment failure — the investigation goes to the packaging and the reefer, not to the lane. Two public datasets, and neither gives you that alone.* | 1:40–2:00 |
+| 5 | **Why it warmed** | Show the `route_context` block. The Route Analyst pulled **the ERA5 weather archive for this shipment's own GPS**: outside air peaked at **17.7 °C** while the box hit **27 °C** — a **12.6 °C** median gap, 14 of 14 readings matched. Say: *this was not a hot day. The weather does not account for it, so this is a containment failure — the investigation goes to the packaging and the reefer, not to the lane. Two public datasets, and neither gives you that alone.* | 1:40–2:00 |
 | 6 | **The moment** | The agent attempts a real GitHub write and **the harness stops it.** The banner names the tool, the repo and the branch. Read it aloud, then type `allow`. | 2:00–2:25 |
 | 7 | **Receipts** | Show the created branch and the committed deviation record on GitHub — real commit sha, real openFDA label provenance, real value at risk, and the root-cause section. | 2:25–2:38 |
 | 8 | **The stunt** | `./scripts/restart_proof.sh <session-id>` — `kill -9` the harness on camera, restart, and the incident comes back with every event and every verdict intact. Say: *in pharma, the record **is** the product.* | 2:38–2:50 |
@@ -154,7 +154,8 @@ At step 7: `PASS — the incident record survived a SIGKILL intact.`
 4. **"We computed it twice."** By different numerical routes, and the agent is not allowed to
    show you a bundle where the two disagree. A single implementation can be reproducibly
    wrong, and reproducibility would make it *more* convincing.
-5. **"The weather is real, and so is the coordinate."** The GPS comes from the dataset's own
+5. **"The weather archive is real, and so is the coordinate."** ERA5 is a reanalysis — an
+   observation-constrained model, not a thermometer at that spot. Say reanalysis if asked. The GPS comes from the dataset's own
    records, not a plausible-sounding city — an invented location would produce an invented
    root cause. The 5 °C gap threshold that separates containment failure from environmental
    exposure is ours.

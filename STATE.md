@@ -140,7 +140,7 @@ checkable receipt.
   tests prove the check catches a tampered primary rather than never firing. A disagreement is
   a **stop**, not a caveat — `cli` exits 3 and the SOP forbids presenting the bundle.
 - **The agent can say *why*, not only *what*** (`EXP-0013`, PR #10). The leg's own recorded GPS
-  puts it in Valencia; real ERA5 weather there gives an ambient peak of 17.7 °C while the
+  puts it in Valencia; ERA5 reanalysis there gives an ambient peak of 17.7 °C while the
   consignment reached 27 °C — a median **12.6 °C** gap over 14 of 14 matched readings, so the
   attribution is **`containment_failure`**, not a hot day. That sends the investigation to the
   packaging rather than the lane, which is the opposite corrective action.

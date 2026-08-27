@@ -169,3 +169,52 @@ class TestSerialisedOutput:
         # overclaiming: two implementations can share a misreading of the standard.
         assert "not proof of correctness" in document["limits"]
         assert math.isclose(document["primary_mkt_c"], document["independent_mkt_c"], abs_tol=1e-6)
+
+
+class TestFalseDisagreementsAreTheWorstFailure:
+    """A verifier that fires on valid input trains the operator that the alarm cries wolf.
+
+    Both cases here produced exit code 3 — "do not trust this bundle" — for shipments the
+    primary logic handled correctly. That is worse than having no cross-check: a real
+    disagreement afterwards would be read as another false alarm.
+    """
+
+    def test_a_zero_degree_envelope_bound_is_not_absent(self):
+        """0.0 is falsy, so `envelope_lower_c or label_lower_c` silently discarded it.
+
+        The checker then evaluated a different envelope than disposition() did. A frozen-goods
+        label with a 0 °C floor is an entirely ordinary thing for this system to be handed.
+        """
+        readings = [Reading(3.0, 60.0)] * 8 + [Reading(-2.0, 60.0)]
+        pol = policy(hours=6.0, freeze_is_disqualifying=False)
+        result = disposition(
+            readings, 2.0, 8.0, pol, excursion_lower_c=0.0, excursion_upper_c=10.0
+        )
+        assert result.envelope_lower_c == 0.0
+
+        check = cross_check(result, readings, pol)
+        assert check.agrees, f"false disagreement: {check.disagreements}"
+        assert check.independent_verdict == result.verdict
+
+    def test_a_zero_bound_still_catches_a_genuine_breach(self):
+        """Fixing the false positive must not cost the true positive."""
+        readings = [Reading(3.0, 60.0)] * 8 + [Reading(-5.0, 60.0)]
+        pol = policy(hours=6.0, freeze_is_disqualifying=False)
+        result = disposition(
+            readings, 2.0, 8.0, pol, excursion_lower_c=0.0, excursion_upper_c=10.0
+        )
+        assert result.verdict == QUARANTINE_RETEST
+        assert cross_check(result, readings, pol).agrees
+
+    def test_a_one_shot_iterable_does_not_exhaust_between_the_two_paths(self):
+        """`readings: object` is advertised the way disposition() advertises it.
+
+        The primary path consumed the generator, then the verification received an empty
+        series and raised — so handing over a perfectly legal input broke the verifier.
+        """
+        pol = policy(hours=6.0)
+        materialised = [Reading(22.0, 60.0)] * 20 + [Reading(27.0, 60.0)] * 3
+        result = disposition(iter(materialised), CRT_LOWER, CRT_UPPER, pol)
+        check = cross_check(result, iter(materialised), pol)
+        assert check.agrees
+        assert check.independent_verdict == result.verdict

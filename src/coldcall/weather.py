@@ -12,13 +12,15 @@ warmed*, and those are different questions with different consequences:
   route would have prevented it.
 
 A deviation record that says "the shipment reached 27 °C" and stops has skipped the only part
-an investigator can act on. This module supplies the missing half from real recorded weather at
-the shipment's own coordinates, so the answer is evidence rather than narration.
+an investigator can act on. This module supplies the missing half from a historical weather
+archive at the shipment's own coordinates, so the answer is evidence rather than narration.
 
 The data
 --------
-Open-Meteo's **archive** (ERA5 reanalysis), keyless and free for non-commercial use. It is
-*historical measurement*, not forecast, which is what a retrospective investigation needs.
+Open-Meteo's **archive**, which serves **ERA5 reanalysis** — an observation-constrained
+model, not a direct measurement at that coordinate. Keyless, free for non-commercial use.
+It is retrospective rather than a forecast, which is what an investigation needs; but the
+word for it is *reanalysis*, and nothing here should call it an observation.
 
 Honest limits, which belong in any report that quotes this
 ----------------------------------------------------------

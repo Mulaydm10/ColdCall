@@ -102,7 +102,13 @@ PYEOF
     printf '  \033[31mFAIL\033[0m  %-22s %s\n' "fetch_ambient" "${ROUTE#FAIL }"; FAIL=$((FAIL+1))
   fi
 else
-  printf '  \033[33mwarn\033[0m  %-22s uv not found; skipping the code-path check\n' "fetch_ambient"
+  # A skip is not a pass. This script's contract is that green means the data path works NOW,
+  # so silently omitting a check while still reporting "N passed, 0 failed" would let a
+  # missing toolchain read as a working one — the precise overclaim the script exists to
+  # prevent. uv is a documented prerequisite; not having it is a real failure of the check.
+  printf '  \033[31mFAIL\033[0m  %-22s uv not found, so the route-context code path is UNVERIFIED\n' \
+    "fetch_ambient"
+  FAIL=$((FAIL+1))
 fi
 
 echo

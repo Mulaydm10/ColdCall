@@ -162,8 +162,27 @@ def cross_check(
     Never raises on a disagreement — it reports one. The caller decides what to do, and the
     SOP says what that is: stop, and say which two numbers disagree.
     """
+    # Materialise once, up front. Both public helpers advertise `readings: object` the way
+    # `disposition()` does, so a caller may legitimately hand over a one-shot iterable — and
+    # this function used it twice, computing the primary path and then blowing up the
+    # verification with "cannot compute over an empty temperature series". A verifier that
+    # fails on valid input is worse than no verifier: it trains the operator to ignore it.
     series = _as_readings(readings)
     disagreements: list[str] = []
+
+    # Resolve the envelope with explicit `is None` checks, never truthiness. A legitimate
+    # 0.0 °C bound is falsy, so `envelope_lower_c or label_lower_c` silently discarded it and
+    # the checker evaluated a DIFFERENT envelope than `disposition()` did — manufacturing a
+    # disagreement, and exit code 3, on a shipment the primary logic handled correctly. For a
+    # module whose whole meaning is "a disagreement means do not trust this bundle", a false
+    # disagreement is the worst thing it can produce.
+    envelope_lower = (
+        result.label_lower_c if result.envelope_lower_c is None else result.envelope_lower_c
+    )
+    envelope_upper = (
+        result.label_upper_c if result.envelope_upper_c is None else result.envelope_upper_c
+    )
+    has_envelope = result.envelope_lower_c is not None or result.envelope_upper_c is not None
 
     try:
         independent_mkt: float | None = recompute_mkt_directly(
@@ -204,13 +223,10 @@ def cross_check(
     )
     reference_mkt = independent_mkt if independent_mkt is not None else result.mkt_c
 
-    if policy.freeze_is_disqualifying and any(
-        r.celsius < (result.envelope_lower_c or result.label_lower_c) for r in series
-    ):
+    if policy.freeze_is_disqualifying and any(r.celsius < envelope_lower for r in series):
         independent_verdict = QUARANTINE_RETEST
-    elif result.envelope_upper_c is not None and any(
-        r.celsius > result.envelope_upper_c or r.celsius < (result.envelope_lower_c or -273.0)
-        for r in series
+    elif has_envelope and any(
+        r.celsius > envelope_upper or r.celsius < envelope_lower for r in series
     ):
         independent_verdict = QUARANTINE_RETEST
     elif consumed >= policy.destroy_at_pct:
