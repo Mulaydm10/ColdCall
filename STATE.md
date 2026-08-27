@@ -76,6 +76,12 @@ into every emitted record.
 
 Building the spec end to end. Milestone PRs open as each lands; Devin AI merges.
 
+**M2 is complete** — the incident world exists: `src/coldcall/store.py` (Appendix B's schema in
+portable SQL over stdlib `sqlite3`), `replay/engine.py` (streams the real leg on compressed
+shipment-time and opens the incident on a sustained excursion), `src/coldcall/report.py` (the
+deviation record, numbers filled deterministically), the real `coldchain-sop` skill, and the
+orchestrator's real instructions.
+
 ## Blocked
 
 Nothing is blocking the critical path.
