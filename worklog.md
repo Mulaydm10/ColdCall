@@ -118,3 +118,172 @@ dismissed**:
 Worth recording: three of the four were *staleness* bugs — docs describing a world that changed
 while the PR was open. That is the failure mode this repo's STATE-vs-worklog split exists to
 prevent, and Qodo caught it in the one place the split doesn't reach: a table inside a PR.
+
+---
+
+### 2026-08-27 07:20 CEST — Mulaydm10 + Claude (stack installed, configured, verified)
+
+The required tech stack was supplied and is now installed, configured and — the part that
+matters — **verified by use rather than by reading documentation**. Two research agents ran in
+parallel against the live APIs and the running harness's own OpenAPI spec while the Python
+side was built inline.
+
+**Three things in the plan turned out not to be true.** Finding them now cost an afternoon;
+finding them on submission day would have cost the submission.
+
+1. **The VCC-CPLD dataset (Zenodo, "445K real cold-chain records") does not exist.** Zero hits
+   for the exact identifier on Zenodo's API; broader searches surface only market reports and
+   electronics documentation where CPLD means Complex Programmable Logic Device. Substituted
+   Zenodo 7907515 "Shipments Sensors readings" (DOI 10.5281/zenodo.7907515, CC-BY-4.0, ~402 MB
+   of real per-reading telemetry), verified resolving and verified parsing. `ADR-0003`.
+   We do **not** claim 445 000 records, because we have not counted them.
+2. **TrueForge has no named-subagent registry.** `AgentSpec` has no such field; the only
+   mechanism is `config.dynamic_sub_agents`, where the root agent writes each subagent's
+   instructions at runtime. Subagents also share the root's tools and **cannot nest**. So the
+   four specialists become a pattern in the instructions rather than four config objects —
+   which is the harness working as designed, and using it as designed is what the rubric
+   rewards. `ADR-0004`.
+3. **There is no configurable local sandbox.** The boot log's "Local sandbox fallback is
+   available" line is misleading: `SandboxProviderManifest.type` is the single-value enum
+   `["daytona"]`, and `GET /settings/sandbox-providers` 404s until one is configured. Since
+   **skills require a sandbox**, a Daytona key now blocks two judged features at once.
+
+Two smaller corrections worth recording because they cost real time: `require_approval_for_tools`
+lives on each `mcp_servers[]` entry, not at the top level of `agent.json`; and `PUT` goes to the
+**collection** route (`/api/v1/settings/skills`), not `/settings/skills/{name}` — the per-name
+route is read-only and 404s on a write, which the published docs get wrong. Everything scripted
+here is written against the live OpenAPI spec, never the docs.
+
+**What was built.** `ADR-0002` is Accepted: Node runs the harness because it must, Python
+computes the regulated numbers because a verdict a model reasoned its way to cannot be audited.
+`src/coldcall/` has zero required dependencies on purpose — it is uploaded into a sandbox and
+must import against a stock interpreter. `mkt.py` implements mean kinetic temperature with
+log-sum-exp rather than naive summation, because the exponentials involved are around 1e-16 and
+precision matters exactly where a borderline shipment gets decided. `replay.py` streams the
+402 MB array instead of loading it, and tolerates the truncated tail a range request always
+produces. 43 tests, green, with the maths cross-checked against an independently written naive
+implementation so that an optimisation cannot silently break it.
+
+One test failed honestly and got fixed honestly: a docstring claimed ΔH/R comes out to *exactly*
+10 000 K. It is 9 999.91 with the CODATA gas constant. The claim was wrong, not the constant,
+so the claim changed.
+
+**`EXP-0004`, the finding that shapes the demo.** Running the real telemetry through the real
+maths against a 2–8 °C biologic label quarantines every leg immediately — the cargo is ambient
+(~22–30 °C), so that comparison is trivially true and tells a judge nothing. Against a real USP
+controlled-room-temperature label (15–25 °C), which is what the goods actually are and which
+openFDA supplies for real products, the same data gives a genuine spread: two legs need review,
+four quarantine. The borderline verdict is the one worth showing. Raised as `Q-0007`.
+
+Harness state right now: TrueForge v0.1.4 on :8790, the `coldchain-sop` skill registered and
+reading back, `agents/coldcall.agent.json` validated by the API up to the unconfigured model
+provider, and `scripts/verify_apis.sh` passing 7 of 7 sources. Missing: the keys
+(`Q-0003`, `Q-0004`, `Q-0008`) and the idea (`Q-0001`).
+
+---
+
+### 2026-08-27 07:45 CEST — Mulaydm10 + Claude (PR #3 review resolved)
+
+Qodo reviewed the stack PR: **4 bugs, 6 rule violations**. Four fixed, four dismissed with
+reasons, and two of the dismissals produced repo changes anyway because the finding pointed at
+genuinely ambiguous wording even where its conclusion was wrong.
+
+**The four bugs were real, and two of them could have corrupted a verdict.**
+
+1. `stability_budget()` forwarded the caller's iterable to two consumers that each normalise
+   independently — so a generator was exhausted by the excursion pass and the MKT pass received
+   an empty series and raised. Normalise once, pass the sequence to both.
+2. `to_readings()` assigned an invented minute to the final reading, which nothing measures the
+   duration of, and to duplicate timestamps. On a short leg that invented exposure can move the
+   MKT and therefore the verdict. Both cases are now dropped rather than defaulted. Of a
+   duplicated pair the *later* reading survives, so a logger fault can never hide a hot reading —
+   the only direction of that error which is dangerous.
+3. `setup_trueforge.sh` counted successes and skips but not failures, and the skill step
+   swallowed its own error with `|| true`, so a wholly unconfigured harness could exit 0. It now
+   counts failures, reports them, and exits non-zero. A setup script that lies about success is
+   worse than one that fails loudly.
+4. `iter_telemetry(limit=0)` yielded one point because the limit was checked after the yield.
+
+Re-verified the real-data pipeline after the duration fix: readings now equal points minus one,
+and every verdict is unchanged. 47 tests green, ruff clean.
+
+**Findings 5–8 were dismissed, and the wording that caused them was fixed.** Qodo learned a rule
+that `ADR-####`/`Q-####`/`EXP-####`/`DEMO-####` may appear *only* in their canonical files, and
+flagged every citation in `STATE.md`, the worklog and the ADRs. That inverts the scheme: the
+whole point is that `grep -rn 'ADR-0003' .` recovers a decision's full trace. But the rule was
+learned from a `CLAUDE.md` table terse enough to read either way, so the table now states
+explicitly that it says where each ID is *defined*, never where it may be *mentioned*, and that
+only the canonical file may allocate a number.
+
+**Finding 4 dismissed, likewise with a clarification.** It held that editing a LOCKED file in
+place is non-compliant even with an audit row, and wanted "a generated replacement or versioned
+synchronization mechanism". No such requirement exists — the audit table *is* the mechanism.
+`GOVERNANCE.md` now spells out the compliant path, including that an agent may apply the
+keystroke on the Main Agent's instruction when the audit row attributes it, which is delegation
+of the typing and not of the authority.
+
+**Finding 9 was right, and is the one worth reading.** It observed that the repo now contains a
+fully specified cold-chain pharmaceutical agent while `VISION.md` still says the thesis has not
+been supplied and must stay `TODO`. That is a real inconsistency and not a false positive: the
+mission was inferred from the tech stack Mulaydm10 supplied, so it is not invented out of
+nothing, but nor is it agreed. Resolved by making the provisional status explicit and traceable
+rather than by arguing it away — `skills/coldchain-sop/SKILL.md` and
+`agents/coldcall.agent.json` both open with a banner stating that they encode a working
+assumption pending the real thesis, `STATE.md` says the same in its blockers, and `Q-0009`
+tracks confirming, amending or discarding it. `VISION.md` remains untouched and empty, which was
+the rule the finding was defending.
+
+### 2026-08-27 07:55 CEST — follow-up review on PR #3
+
+**0 bugs.** All four fixes confirmed against the final code. The six rule violations re-report
+unchanged, which is expected: they were dismissed in-thread with reasons rather than fixed,
+and the learned rule that produced four of them still exists in Qodo.
+
+Briefly attempted to correct that learned rule at source, in Qodo's Review standards, so it
+stops firing on every future PR. Abandoned it: the rules table does not expose its contents to
+automation, and the dashboard reports 44 passed / 0 detected violations, so the rule is not
+editable from there. Not worth more time — dismissing in-thread is the documented compliant
+path, it is done, and the `CLAUDE.md` clarification landed in this PR may well cause the rule to
+be re-learned correctly on the next one. Noting it here so nobody re-treads the same ground.
+
+---
+
+### 2026-08-27 08:20 CEST — Daytona: required after all (`ADR-0005`)
+
+Reversing the conclusion of the previous entry, on Mulaydm10's direction and on evidence that
+supports it.
+
+`EXP-0007` was technically correct — standalone TrueForge does fall back to a built-in
+`LocalSandboxProvider`, and with zero providers configured the harness reports both
+`sandbox.enabled: true` and `skill.enabled: true`. What that finding missed is that **being
+technically satisfied is not the same as being credited**. Checked against the sources a judge
+will actually read:
+
+- `trueforge.dev` states *"Daytona is the only sandbox provider supported today."* The local
+  fallback appears nowhere in the documentation — it exists in the bundle only.
+- The event's own kick-off guide makes "Add a sandbox" Step 5, and that step is Daytona.
+- No hackathon rule names Daytona, so this is not a literal requirement. But "Control and
+  safety" is one of six equally weighted criteria, and with no sandbox provider configured the
+  reasonable outside conclusion is that we skipped the sandbox. Relying on a judge reading
+  TrueForge's source to award that mark is not a plan.
+- On the merits too: the local provider runs on the host under a sandbox root. Real isolation,
+  but not a remote microVM, and the criterion asks whether generated code runs *somewhere safe*.
+
+So: **demo on Daytona; keep the local fallback as undocumented continuity only.** `ADR-0005`
+records this, and `.env.example` plus the setup script now treat `DAYTONA_API_KEY` as required
+rather than opt-in.
+
+The operational trap from `EXP-0007` survives the reversal and gets louder, because it is
+counter-intuitive: the fallback applies **only when no Daytona record is stored**. A
+configured-but-broken provider is strictly worse than none — the harness uses it and fails
+instead of falling back — and TrueForge exposes no DELETE for sandbox providers, so recovering
+means stopping the harness and clearing the row from the SQLite store. That needs rehearsing
+before demo day, not discovering during one.
+
+What the key needs: **`write:snapshots`**. The key supplied today is valid and created a real
+sandbox when called directly; it fails only because `buildImage()` registers TrueForge's sandbox
+image as a Daytona snapshot and the key lacks that scope. Daytona maps this to 403 and
+TrueForge maps any 401/403 to "Daytona rejected the API key", which sends you looking at the
+wrong thing. Daytona key permissions are fixed at creation, so the key has to be recreated. The
+kick-off guide's Step 5 does say *"Create a Daytona API key with the required permissions"* —
+easy to read past, and the only place the requirement is hinted at.

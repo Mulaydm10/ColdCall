@@ -53,13 +53,23 @@ Start the agent harness every submission must run on (needs Node 22+):
 npx @truefoundry/trueforge   # → http://localhost:8790
 ```
 
-Then add a model provider (Settings → Models), connect tools (Settings → Connectors), and a
-sandbox (Settings → Sandbox providers).
+Then set up the Python side and configure the harness:
 
-Project build/run/test commands: TODO(Mulaydm10) — pending stack selection
-(`design/decisions/ADR-0002-stack-selection.md`, `Q-0002`). See `CLAUDE.md`'s "Canonical
-commands", which must be filled in the same change that resolves ADR-0002. Any Python work runs
-under **`uv` in a project-local venv** — never a global install.
+```sh
+uv venv --python 3.12 .venv     # project-local; nothing is installed globally
+uv sync --group dev
+uv run pytest                   # 43 tests, green
+
+cp .env.example .env            # fill in the keys — .env is gitignored
+./scripts/setup_trueforge.sh    # model provider, sandbox, MCP servers, skills (idempotent)
+./scripts/verify_apis.sh        # hits every external source for real
+```
+
+`setup_trueforge.sh` re-runs safely and reports exactly which steps are still waiting on a key,
+so a half-configured machine is visible rather than mysterious. `verify_apis.sh` is the
+pre-demo check: green means the data path works right now.
+
+Stack rationale is in `design/decisions/ADR-0002-stack-selection.md`.
 
 ## Qodo Code Review Evidence
 
