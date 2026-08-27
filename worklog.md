@@ -64,3 +64,27 @@ submission gates (public repo, ~3-min video, `## Qodo Code Review Evidence` READ
 Still blocked on Mulaydm10 for: the project idea (`Q-0001`), a public GitHub repo + Qodo install
 (`Q-0005`), a model provider key (`Q-0003`), a Daytona key (`Q-0004`), and roster/registration
 confirmation (`Q-0006`).
+
+---
+
+### 2026-08-27 06:35 CEST — Mulaydm10 + Claude (repo live, PR trail started)
+
+Project named **ColdCall** by the Main Agent. Public repo created at
+**https://github.com/Mulaydm10/ColdCall** (MIT, public — the open-source submission requirement),
+`main` pushed, and **PR #1** opened from `docs/event-facts` carrying the event-facts work from
+the previous entry. The review trail now exists on day 4 rather than day 7.
+
+Deliberate: the docs work was committed to a branch *before* the remote existed, so nothing has
+ever been pushed straight to `main` on the remote. `main` holds only the two original scaffold
+commits.
+
+README gained the two sections the rules require and neither of which can be back-filled at the
+end credibly: `## Qodo Code Review Evidence` (merged-PR link marked TODO until PR #1 lands) and an
+**AI assistance disclosure** naming Claude Code and Qodo, with the note that AI-authored commits
+carry a `Co-Authored-By` trailer so the split is visible in `git log`. Glossary gained ColdCall,
+TrueForge, Qodo and "the three beats"; the LOCKED onboarding prompt now names the project and
+points at the repo (logged in `GOVERNANCE.md`).
+
+Blocking on Mulaydm10, in priority order: **install Qodo on the repo** (`Q-0005`, only a human
+with repo admin can), the ColdCall idea (`Q-0001`), a model provider key (`Q-0003`), a Daytona
+key or a verdict on the local sandbox fallback (`Q-0004`), roster + registration (`Q-0006`).

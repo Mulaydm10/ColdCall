@@ -5,8 +5,8 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-27 06:20 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
-event facts researched and landed in `COMPETITION.md`; TrueForge running locally.
+Last updated: 2026-08-27 06:35 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
+event facts landed, TrueForge running, public repo created, PR #1 open.
 
 ## Deadline
 
@@ -26,6 +26,14 @@ Event window opened 2026-08-24 — we are entering **day 4 of 7**.
   Log: `<scratchpad>/trueforge.log`. It also reports a **local sandbox fallback** available
   on darwin, in addition to the documented Daytona provider.
 - Judging rubric mirrored into `notes/judging_alignment.md` (6 equally weighted criteria).
+- **Project named `ColdCall`.** Public repo created and pushed:
+  **https://github.com/Mulaydm10/ColdCall** (MIT) — satisfies the open-source submission
+  requirement. `main` is the merge target.
+- **PR #1 open** — https://github.com/Mulaydm10/ColdCall/pull/1 (branch `docs/event-facts`).
+  This starts the Qodo review trail. Nothing has been pushed directly to `main` since the
+  remote existed.
+- README now carries the two mandatory sections: `## Qodo Code Review Evidence` (link pending
+  PR #1 merging) and the AI assistance disclosure required by rule 12.
 
 ## In flight
 
@@ -37,13 +45,11 @@ Ordered by what unblocks the most:
 
 1. **The project idea / thesis** (`Q-0001`, `VISION.md`) — Mulaydm10 is supplying it. Blocks
    `DEMO.md`, `research/prior_art.md`, and the final shape of `ADR-0002`.
-2. **Public GitHub repo does not exist yet** (`Q-0005`). There is no git remote; the repo is
-   local-only on `main` with 2 direct commits. The hackathon requires a *public* repo AND that
-   every substantive change land through a **Qodo-reviewed pull request** — so the remote must
-   exist before any further real work is committed. Needs a repo name decision (currently `tru`).
-3. **Qodo not installed** (`Q-0005`) — requires Mulaydm10 to sign in at app.qodo.ai with GitHub
-   admin on the repo. An agent cannot do this step. **Highest-risk item:** judges check that the
-   Qodo trail runs through the build, not just the final merge, and we are on day 4 with zero PRs.
+2. **Qodo not installed** (`Q-0005`) — requires Mulaydm10 to sign in at https://app.qodo.ai/signin
+   and run Integrations → SaaS → GitHub → Add installation against `Mulaydm10/ColdCall`. An agent
+   cannot do this step. **Highest-risk item:** judges check that the Qodo trail runs through the
+   build, not just the final merge, and PR #1 will sit unreviewed until this is done. Once
+   installed, comment `/agentic_review` on PR #1 to kick the first review.
 4. **No model provider API key configured in TrueForge** (`Q-0003`) — the harness runs but
    cannot think without one. BYO key; the SF OpenAI credits do not apply to us.
 5. **No Daytona sandbox key** (`Q-0004`) — sandboxed code execution is one of the three beats
@@ -53,9 +59,12 @@ Ordered by what unblocks the most:
 
 ## Next intended step
 
-1. Mulaydm10: supply the idea → `VISION.md` gets drafted and applied.
-2. Mulaydm10: create/confirm the public GitHub repo + install Qodo on it (both need a human).
-3. Then: first branch + PR immediately, to start the Qodo review trail on day 4 rather than day 7.
+1. **Mulaydm10: install Qodo on `Mulaydm10/ColdCall`** — the one blocker only a human can clear,
+   and the one that ages worst. Then `/agentic_review` on PR #1, resolve findings, merge, and
+   fill the README's `## Qodo Code Review Evidence` section with the merged link.
+2. Mulaydm10: supply the ColdCall idea → `VISION.md` gets drafted and applied, `DEMO-0001`
+   becomes writable, `ADR-0002` can close.
+3. Mulaydm10: model provider key (`Q-0003`) so the harness can actually think.
 
 ## Latest experiment
 
