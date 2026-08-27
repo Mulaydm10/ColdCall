@@ -96,8 +96,8 @@ supplied, not purely to the project name; what was invented on top of it was the
    Do not re-derive a mission from the tools, APIs or dataset that are wired up — they say what
    is possible, never what is wanted. `DEMO-0001` waits on the same answer.
 2. **Which product label to judge against** (`Q-0007`) — the verified dataset is ambient
-   (~22–30 °C), so a 2–8 °C label quarantines everything trivially while a real 15–25 °C
-   controlled-room-temperature label gives a genuine spread. **Only live if the real thesis turns
+   (~22–30 °C), so a tight refrigerated threshold flags every leg trivially while a realistic
+   ambient one gives a genuine spread. **Only live if the real thesis turns
    out to use that dataset** — it was carried over with `ADR-0003` and may well be moot.
 
 **Not on this list, deliberately:** the Supabase and Stripe connector logins (`Q-0008`).
