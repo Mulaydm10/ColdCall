@@ -20,6 +20,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 TF=${TRUEFORGE_URL:-http://localhost:8790}
 MODEL_ID=${COLDCALL_MODEL_ID:-gpt-5.6-sol}
+# TrueForge's FQN is provider/name, and `name` must match ResourceName (lowercase, no dots),
+# so the upstream id is sanitised into a valid local name. `properties` is REQUIRED by the
+# schema even though the catalog preset makes it look optional — omitting it is a 400.
 MODEL_NAME=$(printf '%s' "$MODEL_ID" | tr '.' '-')
 SKIPPED=0
 DONE=0
@@ -70,7 +73,10 @@ echo "Model provider"
 if ! is_placeholder "${OPENAI_API_KEY:-}"; then
   put "openai / $MODEL_ID" /api/v1/settings/model-providers "$(cat <<JSON
 {"manifest":{"type":"openai","auth":{"api_key":"$OPENAI_API_KEY"},
- "models":[{"model_id":"$MODEL_ID","name":"$MODEL_NAME"}]}}
+ "models":[{"model_id":"$MODEL_ID","name":"$MODEL_NAME",
+ "properties":{"context_length":${MODEL_CONTEXT_LENGTH:-400000},
+ "max_output_tokens":${MODEL_MAX_OUTPUT_TOKENS:-128000},
+ "reasoning_efforts":["none","low","medium","high"]}}]}}
 JSON
 )"
 else
