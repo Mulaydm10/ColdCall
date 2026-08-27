@@ -1,10 +1,10 @@
-# tru — cold-start entry point
+# ColdCall — cold-start entry point
 
 Event: **The Agent Harness Hackathon** (WeMakeDevs × TrueFoundry × Qodo) — full facts in
-`COMPETITION.md`. Project name: TODO(Mulaydm10), pending the idea. This is an **agentic
-hackathon** repo worked by humans and AI agents concurrently, under deadline pressure. If you
-are an agent picking this up cold, read this file fully, then follow the read order below. Do
-not ask a human anything this repo can already answer you.
+`COMPETITION.md`. Project: **ColdCall** — what it does is TODO(Mulaydm10), the idea is pending.
+This is an **agentic hackathon** repo worked by humans and AI agents concurrently, under
+deadline pressure. If you are an agent picking this up cold, read this file fully, then follow
+the read order below. Do not ask a human anything this repo can already answer you.
 
 ## Read order (cold agent)
 
@@ -39,6 +39,11 @@ One scheme, used everywhere, so `grep -rn '<ID>' .` recovers a thing's full trac
 - `Q-####` — open questions, in `research/open_questions.md`
 - `EXP-####` — experiments/spikes, in `experiments/experiment_log.md`
 - `DEMO-####` — demo-path scenarios, in `DEMO.md`
+
+## Where the code lives
+
+Public repo (open source is a submission requirement): **https://github.com/Mulaydm10/ColdCall**
+(MIT). `main` is the merge target; nothing lands on it except through a Qodo-reviewed PR.
 
 ## Canonical commands
 

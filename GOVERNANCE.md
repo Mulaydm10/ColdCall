@@ -57,3 +57,4 @@ correct, not a violation; logging it models the right behavior for whoever edits
 | 2026-08-27 | `notes/ai_onboarding_prompt.md` | Initial authorship (scaffold) | Mulaydm10 | Paste-ready cold-start prompt |
 | 2026-08-27 | `tests/README.md` | Initial authorship (scaffold) | Mulaydm10 | No baseline yet; pending ADR-0002 |
 | 2026-08-27 | `COMPETITION.md` | Filled all event facts from official sources (deadline, TrueForge/Qodo requirements, rubric, tracks, hard rules) | Mulaydm10 (via Claude, on their behalf) | Replaces scaffold TODOs; sourced from event overview/rules/schedule/resources + kick-off guide |
+| 2026-08-27 | `notes/ai_onboarding_prompt.md` | Project named ColdCall; points new agents at the public repo | Mulaydm10 (via Claude, on their behalf) | Name supplied by Main Agent |
