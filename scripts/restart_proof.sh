@@ -224,6 +224,9 @@ FAILED=0
 MODELS=$(fetch "$API/models" | jq '.data | length') || exit 1
 SKILLS=$(fetch "$API/settings/skills" | jq '.data | length') || exit 1
 echo "  config:  $MODELS model(s), $SKILLS skill(s) still registered"
+# Show the config digest the way the event digest is shown. This script is read on camera,
+# and a comparison nobody can see happening is indistinguishable from one that is not.
+echo "           config digest ${AFTER_CONFIG_DIGEST:0:16}…  coldchain-sop present"
 # Counts above are for a human watching, not the gate: they cannot tell "lost X, gained Y"
 # apart from "kept X". The digest can, and the coldchain-sop check names the one config
 # object an incident session cannot continue without.
