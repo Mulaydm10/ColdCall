@@ -86,20 +86,25 @@ def _post(url: str, body: dict[str, Any], timeout: float = 30.0) -> dict[str, An
     return json.loads(raw) if raw.strip() else {}
 
 
-def open_incident_session(
-    base_url: str, agent_manifest: dict[str, Any], trigger: ExcursionTrigger
-) -> tuple[str, str]:
-    """Create the TrueForge session that *is* the incident record, and send the first turn.
+def create_incident_session(base_url: str, agent_manifest: dict[str, Any]) -> str:
+    """Create the TrueForge session that *is* the incident record.
 
-    Returns ``(session_id, turn_id)``. Raises on failure rather than degrading: a replay that
-    silently fails to open an incident looks identical to a shipment that never excursed, and
-    that is the worst way for this to go wrong.
+    Raises rather than degrading: a replay that silently fails to open an incident looks
+    identical to a shipment that never excursed, which is the worst way for this to go wrong.
+
+    Note the body shape — ``{"agent": {"spec": ...}}``. The build spec's Appendix A.6 has
+    ``{"agent": ...}``, which the API rejects with only "Invalid input at agent".
     """
-    session = _post(f"{base_url}/sessions", {"agent": agent_manifest})
-    session_id = session.get("id") or session.get("session_id")
+    session = _post(f"{base_url}/sessions", {"agent": {"spec": agent_manifest}})
+    data = session.get("data", session)
+    session_id = data.get("id") or data.get("session_id")
     if not session_id:
         raise RuntimeError(f"session created but no id in response: {session}")
+    return str(session_id)
 
+
+def send_excursion_turn(base_url: str, session_id: str, trigger: ExcursionTrigger) -> str:
+    """Send the excursion alert as the session's first turn."""
     message = (
         "EXCURSION ALERT — open an incident and work it per the coldchain-sop skill.\n\n"
         + json.dumps(trigger.as_payload(), indent=2)
@@ -108,7 +113,7 @@ def open_incident_session(
         f"{base_url}/sessions/{session_id}/turns",
         {"stream": False, "input": [{"type": "user.message", "content": message}]},
     )
-    return session_id, turn.get("id", "")
+    return str(turn.get("data", turn).get("id", ""))
 
 
 def replay(
@@ -190,12 +195,25 @@ def replay(
             else:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                 manifest.pop("$comment", None)
+                # Create the session, record the incident locally, and only THEN send the
+                # turn. The agent's first instruction is "open an incident", so it must not
+                # run before the row its verdict and actions attach to exists. Doing the
+                # turn first also meant a mid-turn failure returned with an orphaned
+                # TrueForge session and no local incident or `opened` audit event at all.
                 try:
-                    session_id, turn_id = open_incident_session(base_url, manifest, trigger)
+                    session_id = create_incident_session(base_url, manifest)
                 except (urllib.error.URLError, RuntimeError, json.JSONDecodeError) as exc:
                     print(f"could not open the incident in TrueForge: {exc}", file=sys.stderr)
                     return 1
                 store.open_incident(session_id, shipment_id)
+                try:
+                    turn_id = send_excursion_turn(base_url, session_id, trigger)
+                except (urllib.error.URLError, json.JSONDecodeError) as exc:
+                    # The incident row survives on purpose: an excursion that was detected
+                    # and could not be worked is a fact worth keeping, not one to roll back.
+                    print(f"incident {session_id} opened but its turn failed: {exc}",
+                          file=sys.stderr)
+                    return 1
                 print(f"incident opened — session {session_id} turn {turn_id}", flush=True)
                 print(f"   watch it at {base_url.rsplit('/api/', 1)[0]}", flush=True)
 

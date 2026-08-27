@@ -302,8 +302,12 @@ def resolve_pending_calls(
     return [
         {
             "id": call_id,
-            "name": resolved.get(call_id, {}).get("name", "<could not resolve>"),
-            "arguments": resolved.get(call_id, {}).get("arguments", {}),
+            "name": resolved.get(call_id, {}).get("name"),
+            "arguments": resolved.get(call_id, {}).get("arguments"),
+            # The gate is the safety boundary. A call we could not describe must not be
+            # approvable at all — otherwise the operator authorises an irreversible action
+            # sight unseen, which is worse than no gate, because it looks like oversight.
+            "resolved": call_id in resolved,
         }
         for call_id in wanted
     ]
@@ -314,6 +318,10 @@ def approval_banner(calls: list[dict[str, Any]]) -> None:
     print(f"{_BOLD}{_YELLOW}  HELD FOR APPROVAL - irreversible action{_OFF}")
     print(f"{_BOLD}{_YELLOW}{'=' * 72}{_OFF}")
     for call in calls:
+        if not call["resolved"]:
+            print(f"\n  {_RED}{_BOLD}UNRESOLVED{_OFF}  {_DIM}{call['id']}{_OFF}")
+            print(f"    {_RED}Could not recover this call's name or arguments from the turn.{_OFF}")
+            continue
         print(f"\n  {_BOLD}{call['name']}{_OFF}  {_DIM}{call['id']}{_OFF}")
         rendered = json.dumps(call["arguments"], indent=2)
         for line in rendered.splitlines()[:30]:
@@ -354,6 +362,7 @@ def run(base_url: str, spec: dict[str, Any], message: str, auto: str | None, tim
     }
     turn_id = ""
 
+    saw_error = False
     while True:
         pending: dict[str, Any] | None = None
         pending_calls: list[dict[str, Any]] = []
@@ -363,6 +372,8 @@ def run(base_url: str, spec: dict[str, Any], message: str, auto: str | None, tim
                     # `turn_id` is the turn; `id` is the event's own ULID. Using the latter
                     # makes the approval resume 404 with "Turn not found".
                     turn_id = event.get("turn_id") or turn_id
+                if event.get("type") == "turn.error" or event.get("error"):
+                    saw_error = True
                 if event.get("type") == "tool.approval_required":
                     pending = event
                     pending_calls = resolve_pending_calls(
@@ -379,10 +390,32 @@ def run(base_url: str, spec: dict[str, Any], message: str, auto: str | None, tim
             return 1
 
         if pending is None:
+            if saw_error:
+                # A stream that terminates normally after a terminal error event is still a
+                # failed incident. Reporting it as "turn complete" would let a broken demo
+                # exit 0 and look fine in CI.
+                print(f"\n{_RED}turn ended with errors — session {session_id}{_OFF}")
+                return 1
             print(f"\n{_GREEN}turn complete — session {session_id}{_OFF}")
             return 0
 
-        status, reason = decide(auto)
+        # Fail closed. If any pending call could not be described, the whole batch is denied
+        # without asking: an operator cannot consent to an action they were never shown, and
+        # a prompt that offers "allow" for a blank call manufactures consent rather than
+        # collecting it.
+        unresolved = [c for c in pending_calls if not c["resolved"]]
+        if unresolved:
+            print(
+                f"{_RED}  {len(unresolved)} pending call(s) could not be resolved. "
+                f"Denying automatically — an action nobody could read is not one anybody "
+                f"can approve.{_OFF}"
+            )
+            status, reason = "deny", (
+                "ColdCall denied automatically: the approval gate could not recover the "
+                "tool name and arguments for this call, so no human could review it."
+            )
+        else:
+            status, reason = decide(auto)
         approval: dict[str, Any] = {"status": status}
         if status == "deny" and reason:
             approval["reason"] = reason

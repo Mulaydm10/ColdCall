@@ -79,6 +79,17 @@ Building the spec end to end. Milestone PRs open as each lands; Devin AI merges.
 **Merge order: #6 → #7 → #8 → #9.** Each is based on its predecessor's branch, not `main`, so
 each diff stays scoped to its own milestone and retargets automatically as its parent lands.
 
+**M3 is complete** — one incident runs end to end against the live harness, including the
+approval gate and an executed action with a checkable receipt (`EXP-0010`). Deny → the agent
+reported the denial and stopped; allow → branch `incident/INC-VCC-118-A2231-…` with the
+deviation record committed as `1c859fc`.
+
+**M2 is complete** — the incident world exists: `src/coldcall/store.py` (Appendix B's schema in
+portable SQL over stdlib `sqlite3`), `replay/engine.py` (streams the real leg on compressed
+shipment-time and opens the incident on a sustained excursion), `src/coldcall/report.py` (the
+deviation record, numbers filled deterministically), the real `coldchain-sop` skill, and the
+orchestrator's real instructions.
+
 ## Blocked
 
 Nothing is blocking the critical path.

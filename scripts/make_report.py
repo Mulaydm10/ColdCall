@@ -87,12 +87,16 @@ def main(argv: list[str] | None = None) -> int:
         value_at_risk_usd=context["value_at_risk_usd"],
     )
 
+    print(markdown)
     if args.out:
         try:
             args.out.write_text(markdown, encoding="utf-8")
         except OSError as exc:
-            print(f"warning: could not write {args.out}: {exc}", file=sys.stderr)
-    print(markdown)
+            # The caller asked for a file and there is no file. Warning-and-exit-0 meant the
+            # agent went on to commit a deviation record that was never written, and the
+            # receipt would have pointed at nothing.
+            print(f"could not write the report to {args.out}: {exc}", file=sys.stderr)
+            return 1
     return 0
 
 
