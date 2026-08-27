@@ -189,6 +189,15 @@ def load_readings(payload: Any, default_interval_minutes: float = 1.0) -> list[R
         )
         stamps.append(next((_parse_iso(item.get(k)) for k in _TS_KEYS if k in item), None))
 
+    # Only derive from timestamps for readings that do not carry their own duration. When
+    # every reading has an authoritative `minutes`, the timestamps are incidental metadata
+    # and their completeness is irrelevant — validating them anyway rejected a documented,
+    # supported shape over a field nothing was going to read. That was a regression from
+    # tightening the timestamp rules, and the tightening is still right for the case where
+    # durations actually come from timestamps.
+    if all(given is not None for given in explicit):
+        return [Reading(temp, given) for temp, given in zip(temps, explicit, strict=True)]
+
     derived = _durations_from_timestamps(stamps, interval)
     return [
         Reading(temp, given if given is not None else span)
