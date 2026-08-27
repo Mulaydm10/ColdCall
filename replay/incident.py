@@ -28,8 +28,9 @@ import json
 import sys
 import urllib.error
 import urllib.request
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BASE_URL = "http://localhost:8790/api/v1"
@@ -41,6 +42,21 @@ _BOLD, _DIM, _RED, _GREEN, _YELLOW, _CYAN, _OFF = (
     if sys.stdout.isatty()
     else ("", "", "", "", "", "", "")
 )
+
+
+def _current_branch() -> str:
+    """The branch the sandbox should clone. Falls back to main outside a git checkout."""
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=REPO_ROOT, capture_output=True, text=True, timeout=10,
+        )
+        branch = result.stdout.strip()
+        return branch if result.returncode == 0 and branch and branch != "HEAD" else "main"
+    except (OSError, subprocess.SubprocessError):
+        return "main"
 
 
 def _request(method: str, url: str, body: dict[str, Any] | None = None, timeout: float = 60.0):
@@ -107,25 +123,46 @@ def build_spec(manifest_path: Path, base_url: str) -> dict[str, Any]:
     return spec
 
 
-def excursion_message(payload: dict[str, Any], readings: list[dict[str, Any]]) -> str:
+def excursion_message(
+    payload: dict[str, Any], readings: list[dict[str, Any]], ref: str
+) -> str:
     """The webhook a temperature logger would post, plus what the sandbox needs to act on it.
 
-    The readings travel in the payload rather than being read from a database because the
-    incident store is local SQLite and the sandbox is a remote microVM. That is also how a
-    real excursion webhook works — the logger posts its window. When the Supabase connector is
-    authorised, this becomes a database read and the payload carries only the identifiers.
+    Two things travel in the message that a fully-wired deployment would fetch instead:
+
+    * **the readings**, because the incident store is local SQLite and the sandbox is a remote
+      microVM. This is also how a real excursion webhook works — the logger posts its window.
+    * **the clone ref**, pinned explicitly. ``git clone --depth 1 <url>`` takes the *default*
+      branch, which cost a live run: the disposition module lives on a feature branch until
+      its PR merges, so the agent cloned a `main` where ``coldcall.cli`` does not exist and
+      correctly reported "no module named coldcall.cli" as its finding.
+
+    Shipment, consignee and warehouse context comes from ``replay/seed.json`` inside the
+    clone. That is deliberate rather than pasted into the prompt: it is a real file the strands
+    read for themselves, so the Logistics and Exposure strands have a source to cite instead of
+    assumptions to state.
     """
     return f"""EXCURSION ALERT. Open an incident and work it per the `coldchain-sop` skill.
 
 {json.dumps(payload, indent=2)}
 
-## Getting the disposition module into your sandbox
+## Getting the disposition module and the shipment context into your sandbox
 
-The deterministic module is open source. In the sandbox, run:
+The repository is open source. Clone it at the pinned ref — **not** the default branch:
 
-    git clone --depth 1 {PUBLIC_REPO} /work/coldcall
+    git clone --depth 1 --branch {ref} {PUBLIC_REPO} /work/coldcall
 
-Then write the readings below to `/work/leg.json` and run, from `/work/coldcall`:
+That clone gives you three things you need:
+
+* `src/coldcall/` — the deterministic disposition module.
+* `data/product_profile.json` — the real openFDA label for this product.
+* `replay/seed.json` — shipment, consignees and qualified warehouses. **Read this for the
+  Logistics and Exposure strands rather than assuming values.** If a figure you need is
+  genuinely not in it, say so; do not invent one.
+
+## Running the module
+
+Write the readings below to `/work/leg.json`, then from `/work/coldcall`:
 
     PYTHONPATH=src python -m coldcall.cli \\
       --telemetry /work/leg.json \\
@@ -136,6 +173,12 @@ Then write the readings below to `/work/leg.json` and run, from `/work/coldcall`
 
 Report its JSON verbatim. Do not restate the verdict in your own words and do not round it.
 If it fails to run, that is the finding — report the error rather than estimating.
+
+For the deviation report, use the repository's own generator rather than writing the numbers
+by hand, then complete the narrative sections it marks as yours:
+
+    PYTHONPATH=src python -c "import json,sys; from coldcall.report import deviation_report; \\
+      print(deviation_report(json.load(open('/work/verdict.json'))))" > /work/deviation.md
 
 ## Telemetry for this shipment ({len(readings)} readings, real recorded data, replayed)
 
@@ -190,8 +233,11 @@ def render(event: dict[str, Any]) -> None:
                 if text and text.strip():
                     print(f"\n{text.strip()}\n")
     elif kind == "tool.response":
-        content = str(event.get("content", ""))
-        if '"error"' in content or "failed" in content.lower():
+        content = str(event.get("content", "")).lstrip()
+        # Only a genuine error envelope. The harness returns instruction payloads through the
+        # same channel, and some of them contain the word "failed" in prose — flagging those
+        # as errors trains a demo audience to ignore red text, which is worse than silence.
+        if content.startswith('{"error"'):
             print(f"{_RED}     [{where}] tool error: {content[:300]}{_OFF}")
     elif kind == "turn.error" or event.get("error"):
         print(f"{_RED}  turn error: {json.dumps(event)[:400]}{_OFF}")
@@ -308,6 +354,12 @@ def main(argv: list[str] | None = None) -> int:
         help="answer the approval gate automatically. For unattended smoke runs only — the "
         "gate is the demo, and a gate that approves itself is not one.",
     )
+    p.add_argument(
+        "--repo-ref",
+        default=_current_branch(),
+        help="git ref the sandbox clones. Defaults to the current branch, because the module "
+        "only exists on main once its PR has merged.",
+    )
     p.add_argument("--timeout", type=float, default=900.0)
     args = p.parse_args(argv)
 
@@ -336,7 +388,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"could not load the agent manifest: {exc}", file=sys.stderr)
         return 2
 
-    return run(base_url, spec, excursion_message(payload, readings), args.auto, args.timeout)
+    print(f"{_DIM}  sandbox will clone {PUBLIC_REPO} at ref {args.repo_ref}{_OFF}")
+    message = excursion_message(payload, readings, args.repo_ref)
+    return run(base_url, spec, message, args.auto, args.timeout)
 
 
 if __name__ == "__main__":
