@@ -5,7 +5,7 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-27 07:45 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
+Last updated: 2026-08-27 09:15 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
 full stack installed, configured and verified; three plan assumptions corrected; PR #3's
 Qodo review resolved (4 bugs fixed, 4 findings dismissed with reasons).
 
@@ -21,11 +21,30 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
 - Public repo https://github.com/Mulaydm10/ColdCall (MIT); Qodo installed, Healthy, reviewing.
 - **PRs #1 and #2 merged**, each with a completed review, recorded decisions, and a clean
   follow-up review against the final code. Zero direct pushes to `main`.
-- **PR #3 reviewed and resolved, awaiting a human merge.** Qodo raised 4 bugs and 6 rule
-  violations; all 4 bugs fixed, follow-up review confirms **0 bugs**. The 6 rule violations are
-  dismissed in-thread with reasons and re-report because the learned rule persists — two of
-  them still produced repo changes, because the finding pointed at genuinely ambiguous wording
-  even where its conclusion was wrong. See the worklog entry for the full reasoning.
+- **PR #3 merged** (2026-08-27 07:10 UTC, 7 commits). Qodo raised 4 bugs and 6 rule violations;
+  all 4 bugs fixed, and the re-review against the final code returned **0 bugs**. The 6 rule
+  violations were dismissed in-thread with reasons and re-report because the learned rule
+  persists — two of them still produced repo changes, because the finding pointed at genuinely
+  ambiguous wording even where its conclusion was wrong.
+- **Three PRs merged, zero direct pushes to `main` since the remote existed.**
+
+**The judged path is proven, not asserted** (`EXP-0008`)
+
+- OpenAI **`gpt-5`** registered and answering real turns. Note the account has
+  `gpt-5`/`gpt-5-mini`/`gpt-5-pro`, **not** the `gpt-5.6-sol` in TrueForge's catalog preset —
+  the catalog is a suggestion, the key decides.
+- **Daytona `status: ready`.** The replacement key carries `write:snapshots`, which the first
+  one lacked. A live turn produced `sandbox: v1:daytona:…` returning **`Linux x86_64 3.13.15`** —
+  a genuine remote microVM, not this macOS/arm64 host. Network reachable from inside
+  (`github:200`).
+- **Git-backed skill mounts and is read.** The agent fetched `coldchain-sop` from GitHub inside
+  the sandbox and quoted its governing rule verbatim. Re-verified after the merge with the ref
+  pointed back at `main`.
+- **GitHub MCP connected — 44 tools live**, authorised with the existing `gh` CLI token rather
+  than a newly minted credential.
+- `scripts/setup_trueforge.sh` reports **4 configured, 0 failed**.
+- Homebrew **git 2.55.0** installed, so the local sandbox fallback can also mount skills — see
+  `EXP-0009` for why the Xcode git shim cannot.
 - README carries the `## Qodo Code Review Evidence` section and the AI-assistance disclosure.
 
 **Stack — installed and verified, not merely declared**
@@ -68,17 +87,12 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
    that encode the assumption (`skills/coldchain-sop/SKILL.md` and `agents/coldcall.agent.json`)
    both carry a banner saying so. Confirm, amend or discard it when the thesis lands; tracked as
    `Q-0009`. `DEMO-0001` waits on the same answer.
-2. **OpenAI API key** (`Q-0003`) — the harness runs but cannot think. One line in `.env`.
-3. **Daytona API key with the `write:snapshots` scope** (`Q-0004`, `ADR-0005`). The key supplied
-   on 2026-08-27 is valid — it created a real sandbox in Daytona directly — but lacks that one
-   scope, so TrueForge's `buildImage()` gets a 403 and reports it as "rejected the API key".
-   Daytona key permissions cannot be edited after creation, so it must be recreated with the
-   scope ticked. A local sandbox fallback covers us technically, but `ADR-0005` decides we demo
-   on Daytona: the fallback is undocumented, and a judge checking our sandbox claim reads the
-   docs, not the bundle.
-4. **Supabase / Stripe test-mode / GitHub tokens** (`Q-0008`) — the three real integrations.
-   None can be created by an agent.
-5. **Which product label to judge against** (`Q-0007`) — the verified dataset is ambient
+2. **Supabase and Stripe need one browser click each** (`Q-0008`). Both are registered with the
+   correct config and returning valid authorize URLs, but they authenticate by **OAuth (`dcr`)**,
+   not by an API token — there was never a token to generate. Someone must click Connect in
+   Settings → Connectors and log in; Supabase needs a project, Stripe needs test mode. Until
+   then the full `coldcall` agent will not create, because its manifest references both.
+3. **Which product label to judge against** (`Q-0007`) — the verified dataset is ambient
    (~22–30 °C), so a 2–8 °C label quarantines everything trivially while a real 15–25 °C
    controlled-room-temperature label gives a genuine spread. Decision shapes the demo.
 
@@ -91,8 +105,8 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
 
 ## Latest experiment
 
-`EXP-0004` — full pipeline on real telemetry: 3 818 readings, 6 devices, a genuine
-release/review/quarantine spread against a real label. See `experiments/experiment_log.md`.
+`EXP-0008` — the whole judged path verified end to end on Daytona: remote Linux microVM,
+sandboxed execution, git skill mounted from GitHub. See `experiments/experiment_log.md`.
 
 ## Work claims
 

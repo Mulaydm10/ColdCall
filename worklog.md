@@ -287,3 +287,38 @@ TrueForge maps any 401/403 to "Daytona rejected the API key", which sends you lo
 wrong thing. Daytona key permissions are fixed at creation, so the key has to be recreated. The
 kick-off guide's Step 5 does say *"Create a Daytona API key with the required permissions"* —
 easy to read past, and the only place the requirement is hinted at.
+
+---
+
+### 2026-08-27 09:15 CEST — PR #3 merged; platform work complete
+
+PR #3 merged at 07:10 UTC (7 commits, 0 bugs on the re-review against final code). Third merge,
+still zero direct pushes to `main`. Branch deleted locally and on the remote.
+
+**Skill ref restored to `main` and re-verified.** `skills/coldchain-sop/SKILL.md` only existed on
+the feature branch, so the skill registration had been pointed at that branch to work at all.
+With the merge it is on `main`, the registration points back there, and a fresh session confirms
+the agent still fetches and reads it — quoting *"You do not compute the verdict. The maths module
+does."* from inside a Daytona sandbox. Worth recording that TrueForge fetches skills **from
+GitHub at the registered ref, never from the working tree**: editing `SKILL.md` locally changes
+nothing until it is pushed to that ref.
+
+**GitHub connector: no new credential minted.** The GitHub MCP endpoint accepted the token the
+`gh` CLI already holds (scopes `repo`, `workflow`, `read:org`), so that was reused rather than
+creating another long-lived secret. 44 tools now exposed to the agent.
+
+**Supabase and Stripe: the premise was wrong, and this is worth flagging loudly** because the
+original plan and this repo both said "token". Both connectors authenticate by **OAuth via
+dynamic client registration** (`auth.type: dcr`) — there was never an API token to generate for
+either. They are registered with the correct config and returning valid authorize URLs; each
+needs one human browser login. Left for Mulaydm10 deliberately: authorising means signing into
+their accounts.
+
+**`brew install git`** (git 2.55.0 at `/opt/homebrew/bin/git`). Not needed for the demo now that
+Daytona is live, but it makes the local fallback genuinely usable as a continuity path — see
+`EXP-0009` for why TrueForge's macOS sandbox cannot use the Xcode `/usr/bin/git` shim.
+
+Platform work is finished. `setup_trueforge.sh` reports **4 configured, 0 failed**, and the
+judged path is proven rather than asserted. **The only thing now blocking product work is the
+idea itself** (`Q-0001`) — `VISION.md` is still deliberately empty, and `Q-0009` stands ready to
+discard the provisional cold-chain mission if the real thesis differs.
