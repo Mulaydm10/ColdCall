@@ -343,3 +343,32 @@ this worklog (how we got here), `experiments/experiment_log.md` (`EXP-0001`–`E
 ADRs (`ADR-0002`–`ADR-0005`). A session log with the dead ends — the things that are expensive to
 rediscover but do not belong in permanent history — is at
 `logs/session-2026-08-27-platform-setup.md` (gitignored).
+
+### 2026-08-27 10:05 CEST — PR #4 review resolved
+
+Qodo reviewed PR #4: **2 bugs, 2 rule violations.** Both bugs were valid and are fixed; both rule
+violations are the same learned-rule false positive dismissed four times on PR #3.
+
+**Bug — stale instruction in the canonical snapshot.** `STATE.md`'s "Next intended step" still
+told Mulaydm10 to put the OpenAI and Daytona keys in `.env` and run `setup_trueforge.sh`, work
+that the same file records as finished four sections earlier. A snapshot that sends a maintainer
+to redo completed setup is worse than one that says nothing. The step now states plainly that the
+harness is already working, says not to repeat the setup, and lists what actually remains.
+
+**Bug — overstated readiness.** The previous entry said the idea is "the only thing now blocking
+product work". That was wrong on its own terms: the product-label decision (`Q-0007`) is also
+open, and the Supabase and Stripe connector logins still gate creating the full agent. This
+worklog is append-only, so the earlier entry stands as written and is corrected here instead —
+that is the point of the append-only rule. `STATE.md`, which is the file that must be right about
+*now*, was also carrying the connectors in **both** its Blocked list and its Deferred backlog
+table, saying two different things about the same work in one file. Blocked now holds only the
+idea and the label question; the connectors are named once, under Deferred, with a line in
+Blocked explaining why they are not there.
+
+**Two rule violations dismissed, again.** Qodo rule 2936598 reads the stable-ID table in
+`CLAUDE.md` as confining every `EXP-####` and `Q-####` mention to its canonical file. `CLAUDE.md`
+says the opposite in as many words: the table records where each ID is *defined*, never where it
+may be *mentioned*, and citing IDs from anywhere is the entire point of the scheme — a rule that
+confined mentions would make `grep -rn ADR-0003 .` return one file and destroy the traceability
+the IDs exist for. Dismissed in-thread with that reason. It will re-report while the learned rule
+persists; the clarifying paragraph landed in PR #3 and has not yet retrained it.

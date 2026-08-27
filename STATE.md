@@ -5,9 +5,9 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-27 09:15 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
-full stack installed, configured and verified; three plan assumptions corrected; PR #3's
-Qodo review resolved (4 bugs fixed, 4 findings dismissed with reasons).
+Last updated: 2026-08-27 10:05 CEST — by Mulaydm10 (+ Claude, acting on their behalf):
+full stack installed, configured and verified; three plan assumptions corrected; PR #3 merged;
+PR #4's Qodo review resolved (2 bugs fixed, 2 rule violations dismissed with reasons).
 
 ## Deadline
 
@@ -75,7 +75,8 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
 
 ## In flight
 
-- Nothing being actively edited. PR open with all of the above; awaiting the idea.
+- Nothing being actively edited. PR #4 carries the documentation of all of the above and is
+  awaiting its follow-up review and a human merge. Awaiting the idea.
 
 ## Blocked
 
@@ -87,14 +88,14 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
    that encode the assumption (`skills/coldchain-sop/SKILL.md` and `agents/coldcall.agent.json`)
    both carry a banner saying so. Confirm, amend or discard it when the thesis lands; tracked as
    `Q-0009`. `DEMO-0001` waits on the same answer.
-2. **Supabase and Stripe need one browser click each** (`Q-0008`). Both are registered with the
-   correct config and returning valid authorize URLs, but they authenticate by **OAuth (`dcr`)**,
-   not by an API token — there was never a token to generate. Someone must click Connect in
-   Settings → Connectors and log in; Supabase needs a project, Stripe needs test mode. Until
-   then the full `coldcall` agent will not create, because its manifest references both.
-3. **Which product label to judge against** (`Q-0007`) — the verified dataset is ambient
+2. **Which product label to judge against** (`Q-0007`) — the verified dataset is ambient
    (~22–30 °C), so a 2–8 °C label quarantines everything trivially while a real 15–25 °C
-   controlled-room-temperature label gives a genuine spread. Decision shapes the demo.
+   controlled-room-temperature label gives a genuine spread. Decision shapes the demo. Cannot be
+   settled ahead of the idea — the label follows from what the agent is for.
+
+**Not on this list, deliberately:** the Supabase and Stripe connector logins (`Q-0008`).
+Mulaydm10 parked them — see the Deferred backlog below. They gate creating the *full* `coldcall`
+agent, whose manifest references both, but nothing on the critical path is waiting on them today.
 
 ## Deferred backlog (scheduled, not blocked)
 
@@ -111,9 +112,13 @@ not do them unprompted.
 
 ## Next intended step
 
-1. Mulaydm10: drop `OPENAI_API_KEY` and `DAYTONA_API_KEY` into `.env`, then
-   `./scripts/setup_trueforge.sh`. That converts the harness from configured to *working*.
-2. Mulaydm10: supply the idea → `VISION.md`, then `DEMO-0001`.
+The harness is already configured and working — `OPENAI_API_KEY` and `DAYTONA_API_KEY` are in
+`.env`, `./scripts/setup_trueforge.sh` reports 4 configured / 0 failed, and a real agent turn has
+run on a Daytona microVM. **Do not repeat that setup.** Re-run the script only to re-verify after
+a machine restart; it is idempotent.
+
+1. Mulaydm10: supply the idea → `VISION.md`, then `DEMO-0001`.
+2. With the idea in hand, settle the product label (`Q-0007`) — it decides what the demo shows.
 3. Then: first end-to-end run of the agent against the replayed telemetry, filmed.
 
 ## Latest experiment
