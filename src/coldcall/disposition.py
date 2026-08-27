@@ -162,6 +162,15 @@ class DispositionPolicy:
                 f"allowed excursion must be a non-negative finite number of hours, "
                 f"got {self.allowed_excursion_hours!r}"
             )
+        # Finiteness is checked before ordering, because `inf <= inf` is true: a policy of
+        # retest=inf, destroy=inf would pass an ordering-only check and then never reach
+        # either threshold, silently releasing arbitrarily over-budget material.
+        for field_name, value in (
+            ("retest_at_pct", self.retest_at_pct),
+            ("destroy_at_pct", self.destroy_at_pct),
+        ):
+            if not math.isfinite(value):
+                raise ValueError(f"{field_name} must be finite, got {value!r}")
         if not 0 < self.retest_at_pct <= self.destroy_at_pct:
             raise ValueError(
                 f"thresholds must satisfy 0 < retest ({self.retest_at_pct}) "
@@ -185,6 +194,14 @@ class Disposition:
     label_lower_c: float
     label_upper_c: float
     policy: DispositionPolicy
+    envelope_lower_c: float | None
+    """Lower bound of the label's permitted excursion range, or ``None`` when the label states
+    no separate excursion range. ``None`` is not the same as "equal to the storage bound": it
+    means there is no wider envelope to breach, so the beyond-envelope rule does not apply."""
+    envelope_upper_c: float | None
+    envelope_minutes_outside: float
+    """Time spent outside the permitted excursion range — conditions the label makes no
+    stability claim about at all, as distinct from time merely outside the storage range."""
     rationale: tuple[str, ...] = field(default_factory=tuple)
 
     @property
@@ -237,7 +254,10 @@ class Disposition:
             "label": {
                 "lower_c": self.label_lower_c,
                 "upper_c": self.label_upper_c,
+                "excursion_permitted_lower_c": self.envelope_lower_c,
+                "excursion_permitted_upper_c": self.envelope_upper_c,
             },
+            "minutes_beyond_permitted_envelope": round(self.envelope_minutes_outside, 2),
             "excursion": {
                 "minutes_total": self.excursion.minutes_total,
                 "minutes_out_of_range": self.excursion.minutes_out_of_range,
@@ -273,27 +293,62 @@ def disposition(
     label_lower_c: float,
     label_upper_c: float,
     policy: DispositionPolicy,
+    excursion_lower_c: float | None = None,
+    excursion_upper_c: float | None = None,
 ) -> Disposition:
     """Decide the disposition of a shipment from its recorded temperature history.
 
+    Two bands, not one
+    ------------------
+    A real label states both: a **storage range** ("store at 20–25 °C") and a **permitted
+    excursion range** ("excursions permitted to 15–30 °C"). They mean different things and
+    conflating them gets the verdict wrong in both directions:
+
+    * Time outside the *storage* range is what spends the excursion budget.
+    * Time outside the *permitted excursion* range is a condition the label does not cover at
+      all, and no amount of remaining budget makes it releasable on the arithmetic alone.
+
+    Passing only the storage band — which this function used to do — treats a labelled-and-
+    permitted 18 °C as a freeze, and lets a brief 35 °C spike through whenever MKT and the
+    time percentage stay low. Both are wrong. When the excursion band is omitted it falls
+    back to the storage band, which is the conservative reading for a label that states no
+    excursion range.
+
     The rules, applied in order of severity, with the first match winning:
 
-    1. **Freeze**, when ``freeze_is_disqualifying``: any time below the labelled minimum
-       quarantines for retest. A freeze is a product-integrity question, not a budget item,
-       and it is never waved through on a percentage.
-    2. **Allowance spent** — budget consumed at or above ``destroy_at_pct`` — leaves no
+    1. **Freeze**, when ``freeze_is_disqualifying``: time below the *permitted excursion*
+       minimum. A freeze is a product-integrity question, not a budget item, and it is never
+       waved through on a percentage.
+    2. **Beyond the permitted envelope**: any time outside the label's own excursion range
+       quarantines for retest, regardless of budget. The product experienced conditions the
+       label makes no claim about.
+    3. **Allowance spent** — budget consumed at or above ``destroy_at_pct`` — leaves no
        basis on which the material can be released.
-    3. **MKT above the labelled maximum**, or budget consumed at or above ``retest_at_pct``:
+    4. **MKT above the labelled maximum**, or budget consumed at or above ``retest_at_pct``:
        quarantine pending a potency retest. An MKT above the label means the *cumulative*
        thermal stress exceeded what the product is labelled for, whatever the clock says.
-    4. Otherwise **release**, logging the deviation if the range was left at all.
+    5. Otherwise **release**, logging the deviation if the range was left at all.
 
-    Note that rule 2 is deliberately reachable only through the time budget. A single
+    Note that rule 3 is deliberately reachable only through the time budget. A single
     catastrophic spike inflates MKT and lands on retest, not destruction — the arithmetic
     should never be the thing that condemns a pallet on its own.
     """
+    # Whether the label states a separate excursion range at all. When it does not, there is
+    # no wider envelope to breach and rule 2 must not fire — otherwise the fallback collapses
+    # onto the storage band and *every* excursion becomes "beyond the envelope", making the
+    # budget rules unreachable.
+    has_envelope = excursion_lower_c is not None or excursion_upper_c is not None
+    envelope_lower = label_lower_c if excursion_lower_c is None else excursion_lower_c
+    envelope_upper = label_upper_c if excursion_upper_c is None else excursion_upper_c
+    if envelope_lower > label_lower_c or envelope_upper < label_upper_c:
+        raise ValueError(
+            f"the permitted excursion range {envelope_lower:g}-{envelope_upper:g} °C must "
+            f"contain the labelled storage range {label_lower_c:g}-{label_upper_c:g} °C"
+        )
+
     series: list[Reading] = _as_readings(readings)
     exc = excursion_summary(series, label_lower_c, label_upper_c)
+    envelope = excursion_summary(series, envelope_lower, envelope_upper)
     mkt = mean_kinetic_temperature(series, policy.activation_energy_j_per_mol)
     potency = potency_estimate_pct(
         series,
@@ -312,10 +367,16 @@ def disposition(
         f"MKT over the full record: {mkt:.2f} °C against a labelled range of "
         f"{label_lower_c:g}–{label_upper_c:g} °C (USP <1079> method, ΔH "
         f"{policy.activation_energy_j_per_mol:g} J/mol).",
-        f"Time out of labelled range: {exc.minutes_out_of_range:g} min of "
-        f"{exc.minutes_total:g} min recorded "
-        f"({exc.minutes_above:g} above, {exc.minutes_below:g} below); "
-        f"peak {exc.max_celsius:g} °C.",
+        f"Time out of labelled range: {exc.minutes_out_of_range:.1f} min of "
+        f"{exc.minutes_total:.1f} min recorded "
+        f"({exc.minutes_above:.1f} above, {exc.minutes_below:.1f} below); "
+        f"peak {exc.max_celsius:g} °C."
+        + (
+            f" Of that, {envelope.minutes_out_of_range:.1f} min fell outside the label's own "
+            f"permitted excursion range of {envelope_lower:g}-{envelope_upper:g} °C."
+            if has_envelope
+            else ""
+        ),
         f"Stability budget consumed: {consumed_pct:.1f}% of a "
         f"{policy.allowed_excursion_hours:g} h allowance ({policy.source}).",
         f"Estimated potency remaining: {potency:.2f}% — first-order Arrhenius ESTIMATE, "
@@ -336,12 +397,31 @@ def disposition(
             )
         return f"Margin: {gap:.1f} percentage points of budget before this becomes {worse}."
 
-    if policy.freeze_is_disqualifying and exc.minutes_below > 0:
+    if policy.freeze_is_disqualifying and (
+        envelope.minutes_below if has_envelope else exc.minutes_below
+    ) > 0:
         verdict = QUARANTINE_RETEST
         rationale.append(
-            f"Freeze event: {exc.minutes_below:g} min below {label_lower_c:g} °C "
-            f"(minimum {exc.min_celsius:g} °C). Product integrity cannot be assumed from "
-            f"time-at-temperature alone — quarantine and retest."
+            f"Freeze event: "
+            f"{(envelope.minutes_below if has_envelope else exc.minutes_below):.1f} min below "
+            f"{(envelope_lower if has_envelope else label_lower_c):g} °C "
+            f"(minimum {exc.min_celsius:g} °C)"
+            + (
+                ", beneath what the label permits even as an excursion"
+                if has_envelope
+                else ""
+            )
+            + ". Product integrity cannot be assumed from time-at-temperature alone — "
+            "quarantine and retest."
+        )
+    elif has_envelope and envelope.minutes_out_of_range > 0:
+        verdict = QUARANTINE_RETEST
+        rationale.append(
+            f"Beyond the permitted excursion envelope: "
+            f"{envelope.minutes_out_of_range:.1f} min outside "
+            f"{envelope_lower:g}-{envelope_upper:g} °C (peak {envelope.max_celsius:g} °C). The "
+            f"label makes no stability claim about these conditions, so remaining budget does "
+            f"not make the material releasable — quarantine and retest."
         )
     elif consumed_pct >= policy.destroy_at_pct:
         verdict = DESTROY
@@ -387,5 +467,8 @@ def disposition(
         label_lower_c=label_lower_c,
         label_upper_c=label_upper_c,
         policy=policy,
+        envelope_lower_c=envelope_lower if has_envelope else None,
+        envelope_upper_c=envelope_upper if has_envelope else None,
+        envelope_minutes_outside=envelope.minutes_out_of_range if has_envelope else 0.0,
         rationale=tuple(rationale),
     )

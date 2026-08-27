@@ -21,7 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -40,18 +40,34 @@ _MINUTES_KEYS = ("minutes", "duration_minutes", "interval_min")
 #: derived from the gap to the next one rather than assumed — see ``_durations_from_timestamps``.
 _TS_KEYS = ("ts", "timestamp", "time", "recorded_at")
 
+#: Longest gap that still counts as measured exposure, in minutes. Matches
+#: ``replay.to_readings``' default: past four hours of silence, a logger has stopped
+#: reporting rather than reported a steady temperature.
+MAX_GAP_MINUTES = 240.0
+
 
 def _parse_iso(raw: object) -> datetime | None:
-    """Parse an ISO-8601 timestamp, tolerating the trailing ``Z`` that JSON exports use."""
+    """Parse an ISO-8601 timestamp, tolerating the trailing ``Z`` that JSON exports use.
+
+    A naive timestamp is assumed to be UTC rather than left naive. Mixing naive and aware
+    datetimes in one series makes subtraction raise ``TypeError``, which turned otherwise
+    valid telemetry into a crash instead of the documented exit code 2 — and real exports mix
+    the two freely.
+    """
     if not isinstance(raw, str):
         return None
     try:
-        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
     except ValueError:
         return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def _durations_from_timestamps(stamps: list[datetime | None], fallback: float) -> list[float]:
+def _durations_from_timestamps(
+    stamps: list[datetime | None],
+    fallback: float,
+    max_gap_minutes: float = MAX_GAP_MINUTES,
+) -> list[float]:
     """Turn a list of timestamps into the minutes each reading stands for.
 
     A logger samples on a nominal interval that drifts, and it drops out. Assuming a flat
@@ -59,21 +75,36 @@ def _durations_from_timestamps(stamps: list[datetime | None], fallback: float) -
     which is the number the verdict turns on. So each reading covers the span until the next
     one, and the last reading inherits the median of the rest rather than a guess.
 
-    Returns the fallback for every reading if the stamps are unusable (missing, unordered,
-    or all identical), because a wrong duration is worse than an assumed one.
+    **A dropout is missing evidence, not measured exposure.** Any gap longer than
+    ``max_gap_minutes`` is capped there, matching ``replay.to_readings``. Without the cap a
+    multi-day logger silence became days of recorded exposure at whatever the last reading
+    happened to be — enough to condemn a pallet on a stale hot value, or to dilute MKT with a
+    stale cold one. Neither is a measurement.
+
+    Raises:
+        ValueError: if the timestamps are not strictly increasing. The previous behaviour was
+            to fall back to a flat interval for the *whole* series, which silently collapsed
+            hours of excursion into minutes and could release a shipment that should not
+            have been. Rejecting is the safe direction to be wrong in; the caller can sort.
     """
     if any(s is None for s in stamps) or len(stamps) < 2:
         return [fallback] * len(stamps)
 
     ordered = [s for s in stamps if s is not None]
-    gaps = [
-        (b - a).total_seconds() / 60.0 for a, b in zip(ordered, ordered[1:], strict=False)
-    ]
-    if any(g <= 0 for g in gaps):
-        return [fallback] * len(stamps)
+    gaps = [(b - a).total_seconds() / 60.0 for a, b in zip(ordered, ordered[1:], strict=False)]
 
-    tail = sorted(gaps)[len(gaps) // 2]
-    return [*gaps, tail]
+    for index, gap in enumerate(gaps):
+        if gap <= 0:
+            raise ValueError(
+                f"telemetry is not in chronological order: reading {index + 1} "
+                f"({ordered[index + 1].isoformat()}) does not follow reading {index} "
+                f"({ordered[index].isoformat()}). Sort the series before scoring it — "
+                f"guessing a duration here would misstate the excursion."
+            )
+
+    capped = [min(gap, max_gap_minutes) for gap in gaps]
+    tail = sorted(capped)[len(capped) // 2]
+    return [*capped, tail]
 
 
 def load_readings(payload: Any, default_interval_minutes: float = 1.0) -> list[Reading]:
@@ -221,7 +252,14 @@ def main(argv: list[str] | None = None) -> int:
                 or "ColdCall demo policy — not a regulatory limit"
             ),
         )
-        result = disposition(readings, float(lower), float(upper), policy)
+        result = disposition(
+            readings,
+            float(lower),
+            float(upper),
+            policy,
+            excursion_lower_c=product.get("excursion_min_c"),
+            excursion_upper_c=product.get("excursion_max_c"),
+        )
     except ValueError as exc:
         print(f"could not compute a disposition: {exc}", file=sys.stderr)
         return 2
