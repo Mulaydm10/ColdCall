@@ -30,22 +30,37 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from coldcall.report import deviation_report  # noqa: E402
 
 
-def context_from_seed(seed: dict[str, Any], shipment_id: str) -> dict[str, Any]:
+def context_from_seed(seed: Any, shipment_id: str) -> dict[str, Any]:
     """Pull the one shipment's context out of the seed fixture.
 
-    Returns empty pieces rather than raising when a shipment is unknown: a report with a
-    missing row is still a usable draft, and the report itself renders `?` where a value is
-    absent, which is visible to a reviewer. A crash here would lose the verdict too.
-    """
-    shipments = {s["id"]: s for s in seed.get("shipments", [])}
-    shipment = shipments.get(shipment_id, {})
-    products = {p["id"]: p for p in seed.get("products", [])}
-    product = products.get(shipment.get("product_id", ""), {})
-    consignees = [c for c in seed.get("consignees", []) if c.get("shipment_id") == shipment_id]
+    Never raises. The docstring used to promise that and the code did not deliver it: a seed
+    that was valid JSON but the wrong shape, or a row missing ``id``, raised AttributeError or
+    KeyError outside the loader's except clause — losing the whole report, and with it a
+    verdict that had already been computed.
 
-    value = None
-    if shipment.get("units") is not None and product.get("unit_value_usd") is not None:
-        value = float(shipment["units"]) * float(product["unit_value_usd"])
+    Every layer is therefore checked before it is used, and anything unusable is skipped
+    rather than fatal. A report with a blank consignment row is still a usable draft, and the
+    renderer prints ``?`` where a value is absent, which a reviewer can see. A traceback is
+    not a draft.
+    """
+    if not isinstance(seed, dict):
+        return {"shipment": {}, "product": {}, "consignees": [], "value_at_risk_usd": None}
+
+    def rows(key: str) -> list[dict[str, Any]]:
+        value = seed.get(key)
+        return [row for row in value if isinstance(row, dict)] if isinstance(value, list) else []
+
+    shipment = next((s for s in rows("shipments") if s.get("id") == shipment_id), {})
+    product = next(
+        (p for p in rows("products") if p.get("id") == shipment.get("product_id")), {}
+    )
+    consignees = [c for c in rows("consignees") if c.get("shipment_id") == shipment_id]
+
+    value: float | None = None
+    units, unit_value = shipment.get("units"), product.get("unit_value_usd")
+    if isinstance(units, (int, float)) and isinstance(unit_value, (int, float)):
+        # A non-numeric units or price is a bad row, not a reason to lose the report.
+        value = float(units) * float(unit_value)
 
     return {
         "shipment": shipment,
