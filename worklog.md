@@ -287,3 +287,131 @@ TrueForge maps any 401/403 to "Daytona rejected the API key", which sends you lo
 wrong thing. Daytona key permissions are fixed at creation, so the key has to be recreated. The
 kick-off guide's Step 5 does say *"Create a Daytona API key with the required permissions"* —
 easy to read past, and the only place the requirement is hinted at.
+
+---
+
+### 2026-08-27 09:15 CEST — PR #3 merged; platform work complete
+
+PR #3 merged at 07:10 UTC (7 commits, 0 bugs on the re-review against final code). Third merge,
+still zero direct pushes to `main`. Branch deleted locally and on the remote.
+
+**Skill ref restored to `main` and re-verified.** `skills/coldchain-sop/SKILL.md` only existed on
+the feature branch, so the skill registration had been pointed at that branch to work at all.
+With the merge it is on `main`, the registration points back there, and a fresh session confirms
+the agent still fetches and reads it — quoting *"You do not compute the verdict. The maths module
+does."* from inside a Daytona sandbox. Worth recording that TrueForge fetches skills **from
+GitHub at the registered ref, never from the working tree**: editing `SKILL.md` locally changes
+nothing until it is pushed to that ref.
+
+**GitHub connector: no new credential minted.** The GitHub MCP endpoint accepted the token the
+`gh` CLI already holds (scopes `repo`, `workflow`, `read:org`), so that was reused rather than
+creating another long-lived secret. 44 tools now exposed to the agent.
+
+**Supabase and Stripe: the premise was wrong, and this is worth flagging loudly** because the
+original plan and this repo both said "token". Both connectors authenticate by **OAuth via
+dynamic client registration** (`auth.type: dcr`) — there was never an API token to generate for
+either. They are registered with the correct config and returning valid authorize URLs; each
+needs one human browser login. Left for Mulaydm10 deliberately: authorising means signing into
+their accounts.
+
+**`brew install git`** (git 2.55.0 at `/opt/homebrew/bin/git`). Not needed for the demo now that
+Daytona is live, but it makes the local fallback genuinely usable as a continuity path — see
+`EXP-0009` for why TrueForge's macOS sandbox cannot use the Xcode `/usr/bin/git` shim.
+
+Platform work is finished. `setup_trueforge.sh` reports **4 configured, 0 failed**, and the
+judged path is proven rather than asserted. **The only thing now blocking product work is the
+idea itself** (`Q-0001`) — `VISION.md` is still deliberately empty, and `Q-0009` stands ready to
+discard the provisional cold-chain mission if the real thesis differs.
+
+### 2026-08-27 09:30 CEST — deferred backlog recorded before context compaction
+
+Mulaydm10 explicitly parked the Supabase and Stripe connector logins. Recorded in `STATE.md`
+under a new **Deferred backlog** heading rather than left in Blocked, because the distinction
+matters to whoever reads this next: these are scheduled decisions, not obstacles. An agent that
+reports them as blockers will waste a turn asking about work that has already been triaged.
+
+The same table carries the optional items nobody should burn critical-path time on: the San
+Francisco day (2026-08-29, separate Luma registration), the blog-post prize, and starring the
+TrueForge repo for the free draw.
+
+Also worth restating here because it caused a wrong ask earlier in the session: **Supabase and
+Stripe authenticate by OAuth (`auth.type: dcr`), not by API tokens.** There is no token for
+anyone to generate. Each needs one browser login at Settings → Connectors.
+
+Context is being compacted after this entry. Durable state lives in `STATE.md` (current truth),
+this worklog (how we got here), `experiments/experiment_log.md` (`EXP-0001`–`EXP-0009`), and the
+ADRs (`ADR-0002`–`ADR-0005`). A session log with the dead ends — the things that are expensive to
+rediscover but do not belong in permanent history — is at
+`logs/session-2026-08-27-platform-setup.md` (gitignored).
+
+### 2026-08-27 10:05 CEST — PR #4 review resolved
+
+Qodo reviewed PR #4: **2 bugs, 2 rule violations.** Both bugs were valid and are fixed; both rule
+violations are the same learned-rule false positive dismissed four times on PR #3.
+
+**Bug — stale instruction in the canonical snapshot.** `STATE.md`'s "Next intended step" still
+told Mulaydm10 to put the OpenAI and Daytona keys in `.env` and run `setup_trueforge.sh`, work
+that the same file records as finished four sections earlier. A snapshot that sends a maintainer
+to redo completed setup is worse than one that says nothing. The step now states plainly that the
+harness is already working, says not to repeat the setup, and lists what actually remains.
+
+**Bug — overstated readiness.** The previous entry said the idea is "the only thing now blocking
+product work". That was wrong on its own terms: the product-label decision (`Q-0007`) is also
+open, and the Supabase and Stripe connector logins still gate creating the full agent. This
+worklog is append-only, so the earlier entry stands as written and is corrected here instead —
+that is the point of the append-only rule. `STATE.md`, which is the file that must be right about
+*now*, was also carrying the connectors in **both** its Blocked list and its Deferred backlog
+table, saying two different things about the same work in one file. Blocked now holds only the
+idea and the label question; the connectors are named once, under Deferred, with a line in
+Blocked explaining why they are not there.
+
+**Two rule violations dismissed, again.** Qodo rule 2936598 reads the stable-ID table in
+`CLAUDE.md` as confining every `EXP-####` and `Q-####` mention to its canonical file. `CLAUDE.md`
+says the opposite in as many words: the table records where each ID is *defined*, never where it
+may be *mentioned*, and citing IDs from anywhere is the entire point of the scheme — a rule that
+confined mentions would make `grep -rn ADR-0003 .` return one file and destroy the traceability
+the IDs exist for. Dismissed in-thread with that reason. It will re-report while the learned rule
+persists; the clarifying paragraph landed in PR #3 and has not yet retrained it.
+
+### 2026-08-27 10:40 CEST — the inferred mission was cleared (`ADR-0006`)
+
+Mulaydm10 asked, before handing over the idea, whether the repo carried assumptions about it —
+explicitly so that neither the repo nor the agent reading it would bias the real thesis. It did,
+in twenty files. They directed that the idea-derived ones be removed.
+
+**The origin matters, and the first answer given was too simple.** It was not purely a guess from
+the project name. The tech stack Mulaydm10 supplied named a *"VCC-CPLD dataset (445K real
+cold-chain records)"* and openFDA drug labels, so "cold-chain" traces back to their own input.
+What was invented on top of it was the **mission**: mean kinetic temperature, USP <1079> stability
+budgets, a release/review/quarantine verdict, a quality team signing a deviation record. None of
+that was asked for. The same stack also named Stripe test-mode — which a pharmaceutical QA agent
+has almost no use for, and which should have been read much earlier as a signal that the real idea
+was something else.
+
+Removed: `mkt.py`, `replay.py`, their 45 tests, `skills/coldchain-sop/SKILL.md`, and the agent's
+`instructions`. Kept: the harness, the Daytona sandbox, the connectors and their approval gates,
+the Qodo loop, both scripts, the `uv` toolchain, and the dependency-free constraint on the sandbox
+payload — none of which depends on what ColdCall turns out to be.
+
+Two judgement calls worth recording. **`ADR-0003` and the verified dataset stay**, even though the
+ADR says "cold chain": it was Mulaydm10's input, the substitution was real work, and rewriting a
+historical ADR to match a later reset would falsify the trail. And **`coldchain-sop` was replaced
+rather than deleted** — the git-backed skill mount is a judged capability proven in `EXP-0008`,
+and deleting the only skill would break the registration. `skills/repo-evidence/SKILL.md` carries
+the repo's actual evidence rule instead, which holds whatever the idea is.
+
+The test count drops 47 → 2, and that is the honest number rather than a regression: 45 of them
+tested a mission nobody agreed to. `tests/test_package.py` keeps the canonical command green and
+fails if domain logic reappears before `VISION.md` is real.
+
+Also fixed while in the manifest: `model.name` was `openai/gpt-5-6-sol`, TrueForge's catalog
+preset, which does not exist on this account's key (`EXP-0008` recorded that and the manifest was
+never updated). It would have failed on agent creation. Now `openai/gpt-5`.
+
+Restoring is one command if the thesis turns out to be cold-chain after all —
+`git checkout 3e01090 -- src/coldcall tests skills/coldchain-sop` — which is why removal was
+preferred to an `attic/` directory. Equally recoverable; only removal stops it pulling on what
+comes next. `Q-0009` closes as discarded. `Q-0001` is now the only real blocker.
+
+`tests/README.md` is LOCKED and its layout table still names the deleted test files. Proposed to
+Main Agent, not applied.

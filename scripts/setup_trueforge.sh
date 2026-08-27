@@ -112,21 +112,23 @@ JSON
 )"
 }
 mcp_header supabase "${SUPABASE_MCP_URL:-}" "${SUPABASE_ACCESS_TOKEN:-}" \
-  "Shipment inventory, telemetry and incident records. The quarantine write lands here."
+  "Relational store for whatever state the agent must persist. Purpose follows the thesis (ADR-0006)."
 mcp_header stripe   "${STRIPE_MCP_URL:-}"   "${STRIPE_SECRET_KEY:-}" \
-  "Test-mode billing: reship orders and refunds for a rejected consignment."
+  "Test-mode billing. Gated at @all: every tool call waits for approval. Purpose follows the thesis."
 mcp_header github   "${GITHUB_MCP_URL:-}"   "${GITHUB_TOKEN:-}" \
-  "Commits the deviation report, which is what makes the audit trail permanent."
+  "Reads and writes this repo, which is what makes the agent's output auditable."
 
 echo
 echo "Skills"
 SKILL_REPO=${COLDCALL_SKILL_REPO:-https://github.com/Mulaydm10/ColdCall}
 SKILL_REF=${COLDCALL_SKILL_REF:-main}
 # `ref` is required by the schema even though the docs read as if pinning is optional.
-put "coldchain-sop" /api/v1/settings/skills "$(cat <<JSON
-{"manifest":{"type":"git","name":"coldchain-sop","url":"$SKILL_REPO",
- "path":"skills/coldchain-sop","ref":"$SKILL_REF",
- "description":"Standard operating procedure for judging a cold-chain temperature excursion: which readings count, how the stability budget is computed, and what must happen before a consignment is released or quarantined."}}
+# The skill is fetched from GitHub at $SKILL_REF, never from the working tree - editing
+# SKILL.md locally changes nothing until it is pushed to that ref.
+put "repo-evidence" /api/v1/settings/skills "$(cat <<JSON
+{"manifest":{"type":"git","name":"repo-evidence","url":"$SKILL_REPO",
+ "path":"skills/repo-evidence","ref":"$SKILL_REF",
+ "description":"How this repo proves a claim: a result is worth nothing until it is backed by something a human can re-run. Domain-neutral, so it holds whatever the thesis turns out to be."}}
 JSON
 )"
 
