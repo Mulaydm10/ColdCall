@@ -266,19 +266,59 @@ def render(event: dict[str, Any]) -> None:
         print(f"{_RED}  turn error: {json.dumps(event)[:400]}{_OFF}")
 
 
-def approval_banner(event: dict[str, Any]) -> None:
-    calls = event.get("tool_calls", [])
-    print(f"\n{_BOLD}{_YELLOW}{'═' * 72}{_OFF}")
-    print(f"{_BOLD}{_YELLOW}  HELD FOR APPROVAL — irreversible action{_OFF}")
-    print(f"{_BOLD}{_YELLOW}{'═' * 72}{_OFF}")
+def resolve_pending_calls(
+    base_url: str, session_id: str, turn_id: str, event: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Turn the approval event's bare ids into the calls a human can actually judge.
+
+    ``ToolCallRef`` carries only ``id`` and ``source_event_id`` — no tool name, no arguments.
+    So the name and the arguments have to be fetched from the ``model.message`` that requested
+    the call. This is not decoration: an approval prompt that shows the operator a bare id is
+    the rubber stamp the SOP explicitly condemns. If the lookup fails, that is reported too,
+    because approving something we could not describe is worse than not approving it.
+    """
+    wanted = {c.get("id"): c.get("source_event_id") for c in event.get("tool_calls", [])}
+    resolved: dict[str, dict[str, Any]] = {}
+    try:
+        events = _get_json(
+            f"{base_url}/sessions/{session_id}/turns/{turn_id}/events"
+        ).get("data", [])
+    except (urllib.error.URLError, json.JSONDecodeError) as exc:
+        print(f"{_RED}  could not resolve the pending calls: {exc}{_OFF}")
+        events = []
+
+    for candidate in events:
+        if candidate.get("type") != "model.message":
+            continue
+        for call in candidate.get("tool_calls") or []:
+            if call.get("id") in wanted:
+                fn = call.get("function", {})
+                try:
+                    args = json.loads(fn.get("arguments") or "{}")
+                except json.JSONDecodeError:
+                    args = {"<unparsed>": fn.get("arguments")}
+                resolved[call["id"]] = {"name": fn.get("name", "?"), "arguments": args}
+
+    return [
+        {
+            "id": call_id,
+            "name": resolved.get(call_id, {}).get("name", "<could not resolve>"),
+            "arguments": resolved.get(call_id, {}).get("arguments", {}),
+        }
+        for call_id in wanted
+    ]
+
+
+def approval_banner(calls: list[dict[str, Any]]) -> None:
+    print(f"\n{_BOLD}{_YELLOW}{'=' * 72}{_OFF}")
+    print(f"{_BOLD}{_YELLOW}  HELD FOR APPROVAL - irreversible action{_OFF}")
+    print(f"{_BOLD}{_YELLOW}{'=' * 72}{_OFF}")
     for call in calls:
-        name = call.get("name") or call.get("tool_name") or "?"
-        args = call.get("arguments") or call.get("args") or {}
-        rendered = json.dumps(args, indent=2) if isinstance(args, dict) else str(args)
-        print(f"\n  {_BOLD}{name}{_OFF}")
-        for line in rendered.splitlines()[:24]:
-            print(f"    {_DIM}{line}{_OFF}")
-    print(f"\n{_BOLD}{_YELLOW}{'─' * 72}{_OFF}")
+        print(f"\n  {_BOLD}{call['name']}{_OFF}  {_DIM}{call['id']}{_OFF}")
+        rendered = json.dumps(call["arguments"], indent=2)
+        for line in rendered.splitlines()[:30]:
+            print(f"    {_DIM}{line[:160]}{_OFF}")
+    print(f"\n{_BOLD}{_YELLOW}{'-' * 72}{_OFF}")
 
 
 def decide(auto: str | None) -> tuple[str, str]:
@@ -316,13 +356,19 @@ def run(base_url: str, spec: dict[str, Any], message: str, auto: str | None, tim
 
     while True:
         pending: dict[str, Any] | None = None
+        pending_calls: list[dict[str, Any]] = []
         try:
             for event in _stream(f"{base_url}/sessions/{session_id}/turns", body, timeout):
                 if event.get("type") == "turn.created":
-                    turn_id = event.get("id", turn_id) or turn_id
+                    # `turn_id` is the turn; `id` is the event's own ULID. Using the latter
+                    # makes the approval resume 404 with "Turn not found".
+                    turn_id = event.get("turn_id") or turn_id
                 if event.get("type") == "tool.approval_required":
                     pending = event
-                    approval_banner(event)
+                    pending_calls = resolve_pending_calls(
+                        base_url, session_id, turn_id, event
+                    )
+                    approval_banner(pending_calls)
                     break
                 render(event)
         except urllib.error.HTTPError as exc:
@@ -351,10 +397,10 @@ def run(base_url: str, spec: dict[str, Any], message: str, auto: str | None, tim
                 {
                     "type": "user.tool_approval",
                     "thread_id": pending.get("thread_id", ""),
-                    "tool_call_id": call.get("id") or call.get("tool_call_id", ""),
+                    "tool_call_id": call["id"],
                     "approval": approval,
                 }
-                for call in pending.get("tool_calls", [])
+                for call in pending_calls
             ],
         }
         colour = _GREEN if status == "allow" else _YELLOW
