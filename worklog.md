@@ -322,3 +322,24 @@ Platform work is finished. `setup_trueforge.sh` reports **4 configured, 0 failed
 judged path is proven rather than asserted. **The only thing now blocking product work is the
 idea itself** (`Q-0001`) — `VISION.md` is still deliberately empty, and `Q-0009` stands ready to
 discard the provisional cold-chain mission if the real thesis differs.
+
+### 2026-08-27 09:30 CEST — deferred backlog recorded before context compaction
+
+Mulaydm10 explicitly parked the Supabase and Stripe connector logins. Recorded in `STATE.md`
+under a new **Deferred backlog** heading rather than left in Blocked, because the distinction
+matters to whoever reads this next: these are scheduled decisions, not obstacles. An agent that
+reports them as blockers will waste a turn asking about work that has already been triaged.
+
+The same table carries the optional items nobody should burn critical-path time on: the San
+Francisco day (2026-08-29, separate Luma registration), the blog-post prize, and starring the
+TrueForge repo for the free draw.
+
+Also worth restating here because it caused a wrong ask earlier in the session: **Supabase and
+Stripe authenticate by OAuth (`auth.type: dcr`), not by API tokens.** There is no token for
+anyone to generate. Each needs one browser login at Settings → Connectors.
+
+Context is being compacted after this entry. Durable state lives in `STATE.md` (current truth),
+this worklog (how we got here), `experiments/experiment_log.md` (`EXP-0001`–`EXP-0009`), and the
+ADRs (`ADR-0002`–`ADR-0005`). A session log with the dead ends — the things that are expensive to
+rediscover but do not belong in permanent history — is at
+`logs/session-2026-08-27-platform-setup.md` (gitignored).

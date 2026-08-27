@@ -96,6 +96,19 @@ Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event 
    (~22–30 °C), so a 2–8 °C label quarantines everything trivially while a real 15–25 °C
    controlled-room-temperature label gives a genuine spread. Decision shapes the demo.
 
+## Deferred backlog (scheduled, not blocked)
+
+Work Mulaydm10 has explicitly parked. Not blockers — do not report these as blocking, and do
+not do them unprompted.
+
+| Item | What it needs | Why it was deferred | Blocks |
+|---|---|---|---|
+| **Supabase connector** | One browser login: Settings → Connectors → supabase → Connect. Needs a Supabase project. It is **OAuth (`dcr`), not an API token** — there is no token to generate. | Deferred by Mulaydm10 2026-08-27; not on the critical path until the idea lands | Creating the full `coldcall` agent (its manifest references supabase) |
+| **Stripe connector** | Same, in **test mode only**. Also OAuth, not a token. | Same | Same |
+| **San Francisco day** | Separate Luma registration, https://luma.com/agent-harness | Optional; 2026-08-29, attendee-only OpenAI credits | Nothing |
+| **Blog post** | Publish anywhere, link in submission | Optional prize (Keychron) | Nothing |
+| **Star TrueForge repo** | https://github.com/truefoundry/trueforge — 10 seconds | Free draw entry (MX Master 3), no project needed | Nothing |
+
 ## Next intended step
 
 1. Mulaydm10: drop `OPENAI_API_KEY` and `DAYTONA_API_KEY` into `.env`, then
