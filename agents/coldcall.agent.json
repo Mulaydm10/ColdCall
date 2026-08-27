@@ -1,5 +1,5 @@
 {
-  "$comment": "ColdCall incident orchestrator. The four specialists are named in `instructions` rather than declared here because TrueForge has no subagent registry - see ADR-0004. Approval gates live on mcp_servers[] and are the real safety boundary: they hold regardless of which strand triggers the call, and regardless of what the verdict was. Stripe is gated at @all rather than @write because a test-mode read still reaches a real Stripe account. Model is openai/gpt-5: this account's key carries gpt-5/-mini/-pro, NOT the gpt-5.6-sol in TrueForge's catalog preset (EXP-0008).",
+  "$comment": "ColdCall incident orchestrator. The four specialists are named in `instructions` rather than declared here because TrueForge has no subagent registry - see ADR-0004. Approval gates live on mcp_servers[] and are the real safety boundary: they hold regardless of which strand triggers the call and regardless of what the verdict was. Stripe is gated at @all rather than @write because a test-mode read still reaches a real Stripe account. Model is openai/gpt-5: this account's key carries gpt-5/-mini/-pro, NOT the gpt-5.6-sol in TrueForge's catalog preset (EXP-0008). SCHEMA NOTES, verified against the live /api/v1/openapi.json rather than the build spec, which is wrong on both: (1) a session body is {\"agent\":{\"spec\":<this file>}}, not {\"agent\":<this file>}; (2) compaction nests under config.context_management.compaction - a top-level config.compaction key is rejected.",
   "model": {
     "name": "openai/gpt-5"
   },
@@ -48,6 +48,10 @@
   ],
   "config": {
     "iteration_limit": 200,
+    "sandbox": {
+      "enabled": true,
+      "file_downloads": true
+    },
     "dynamic_sub_agents": {
       "enabled": true
     },
@@ -57,13 +61,14 @@
     "ask_user_questions": {
       "enabled": true
     },
-    "sandbox": {
-      "enabled": true,
-      "file_downloads": true
-    },
-    "compaction": {
-      "enabled": true,
-      "compaction_threshold_tokens": 50000
+    "context_management": {
+      "compaction": {
+        "enabled": true,
+        "compaction_threshold_tokens": 120000
+      },
+      "large_tool_response": {
+        "enabled": true
+      }
     }
   }
 }
