@@ -196,6 +196,18 @@ class IncidentStore:
                             f"pre-idempotent replay before adding the uniqueness constraint",
                         ),
                     )
+            # CREATE TABLE IF NOT EXISTS will not add a column to a table that already
+            # exists, so a database written before route context would fail every seed with
+            # "no such column: route_lat". Same class as the duplicate-telemetry migration
+            # above, and the same reason it matters: telemetry is preserved across runs, so
+            # people keep their databases.
+            existing_columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(shipments)")
+            }
+            for column in ("route_lat", "route_lon"):
+                if column not in existing_columns:
+                    conn.execute(f"ALTER TABLE shipments ADD COLUMN {column} REAL")
+
             conn.executescript(SCHEMA_INDEXES)
 
     # ---- seeding -----------------------------------------------------------------

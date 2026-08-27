@@ -187,16 +187,28 @@ def fetch_ambient(
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"the weather archive returned non-JSON: {exc}") from exc
 
+    # Every shape assumption is checked before it is used. `.get` on a decoded list or string
+    # raises AttributeError, which is not in the caller's except clause — so a malformed
+    # response would have aborted a verdict that had already been computed, breaking this
+    # module's own promise that route context is never fatal.
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"archive returned {type(payload).__name__}, not an object")
     hourly = payload.get("hourly")
-    if not isinstance(hourly, dict) or "time" not in hourly or "temperature_2m" not in hourly:
+    if not isinstance(hourly, dict):
         raise RuntimeError(f"unexpected archive response shape: {str(payload)[:200]}")
+    times_raw = hourly.get("time")
+    temps_raw = hourly.get("temperature_2m")
+    if not isinstance(times_raw, list) or not isinstance(temps_raw, list):
+        raise RuntimeError(
+            f"archive response has no usable hourly series: {str(hourly)[:200]}"
+        )
 
     times: list[datetime] = []
     temps: list[float] = []
-    for raw_time, raw_temp in zip(hourly["time"], hourly["temperature_2m"], strict=False):
+    for raw_time, raw_temp in zip(times_raw, temps_raw, strict=False):
         try:
             stamp = datetime.fromisoformat(str(raw_time))
-        except ValueError:
+        except (ValueError, TypeError):
             continue
         if stamp.tzinfo is None:
             stamp = stamp.replace(tzinfo=timezone.utc)
@@ -219,7 +231,7 @@ def fetch_ambient(
 
 
 def attribute_excursion(
-    readings: list[tuple[datetime, float]],
+    readings: list[tuple[datetime | None, float]],
     ambient: AmbientSeries,
     label_upper_c: float,
     threshold_c: float = CONTAINMENT_GAP_C,
@@ -227,9 +239,15 @@ def attribute_excursion(
     """Decide whether the excursion tracked the weather or ran away from it.
 
     Args:
-        readings: ``(timestamp, internal °C)`` for the whole record. Only readings above
-            ``label_upper_c`` are attributed — the question is about the *excursion*, and
-            including in-band time would dilute the gap toward the ambient baseline.
+        readings: ``(timestamp, internal °C)`` for the whole record, where the timestamp may
+            be ``None``. Only readings above ``label_upper_c`` are attributed — the question is
+            about the *excursion*, and including in-band time would dilute the gap toward the
+            ambient baseline.
+
+            A ``None`` timestamp counts toward the excursion total but can never be matched.
+            Dropping such readings entirely would let the coverage figure describe only the
+            timestamped subset — a report claiming full coverage while a third of the hot
+            readings were never considered.
         ambient: outside air from :func:`fetch_ambient`.
         label_upper_c: the labelled maximum, which defines what counts as an excursion here.
         threshold_c: median gap above which this is a containment failure. Ours, not a
@@ -239,6 +257,14 @@ def attribute_excursion(
         A :class:`RouteContext`. Returns ``undetermined`` — never a guess — when too few
         excursion readings could be matched to an ambient observation to support a claim.
     """
+    if not math.isfinite(threshold_c) or threshold_c < 0:
+        # nan makes every `>=` comparison false, so every excursion would be reported as
+        # environmental exposure — a wrong cause, delivered confidently, from a typo.
+        raise ValueError(
+            f"containment gap threshold must be a non-negative finite number of °C, "
+            f"got {threshold_c!r}"
+        )
+
     hot = [(when, temp) for when, temp in readings if temp > label_upper_c]
     if not hot:
         return RouteContext(
@@ -255,7 +281,7 @@ def attribute_excursion(
     gaps: list[float] = []
     matched_ambient: list[float] = []
     for when, temp in hot:
-        outside = ambient.at(when)
+        outside = None if when is None else ambient.at(when)
         if outside is None:
             continue
         gaps.append(temp - outside)
@@ -266,10 +292,14 @@ def attribute_excursion(
 
     # A claim needs enough matched readings to stand on. Half is a judgement call, stated
     # rather than hidden: below it the median is being carried by a minority of the excursion.
-    if not gaps or len(gaps) < max(1, len(hot) // 2):
+    # Ceiling, not floor: with floor division, 2 matches out of 5 hot readings (40 %) passed
+    # a check meant to require half. A minority of the excursion was carrying a definitive
+    # cause, which is the opposite of what the coverage rule is for.
+    required = max(1, -(-len(hot) // 2))
+    if not gaps or len(gaps) < required:
         notes.append(
             f"Only {len(gaps)} of {len(hot)} excursion readings could be matched to an "
-            f"ambient observation — too few to attribute a cause."
+            f"ambient observation (at least {required} needed) — too few to attribute a cause."
         )
         return RouteContext(
             attribution=UNDETERMINED,

@@ -57,6 +57,15 @@ def deviation_report(
     Returns:
         Markdown. Sections the agent must complete are marked, not left blank.
     """
+    # Sections are numbered as they are emitted rather than hard-coded, because two of them
+    # are conditional. Fixed numbers meant a report *without* route context jumped from 4 to
+    # 6 — and in a regulated document a missing section number reads as a missing section,
+    # which is exactly the wrong thing for an auditor to wonder about.
+    _section_numbers = iter(range(1, 99))
+
+    def head(title: str) -> str:
+        return f"## {next(_section_numbers)}. {title}"
+
     shipment = shipment or {}
     product = product or {}
     consignees = consignees or []
@@ -77,7 +86,7 @@ def deviation_report(
         " disposition module and is re-derivable from the incident record. This is decision"
         " support; it is not a release decision.",
         "",
-        "## 1. Consignment",
+        head("Consignment"),
         "",
         "| | |",
         "|---|---|",
@@ -93,7 +102,7 @@ def deviation_report(
 
     lines += [
         "",
-        "## 2. Labelled storage conditions",
+        head("Labelled storage conditions"),
         "",
         f"- Labelled range: **{_fmt(label.get('lower_c'), ' °C', 1)} to "
         f"{_fmt(label.get('upper_c'), ' °C', 1)}**",
@@ -105,7 +114,7 @@ def deviation_report(
         lines += ["", f"> {provenance}", ""]
 
     lines += [
-        "## 3. The excursion",
+        head("The excursion"),
         "",
         "| Measure | Value |",
         "|---|---|",
@@ -117,7 +126,7 @@ def deviation_report(
         f"| Peak temperature | {_fmt(excursion.get('max_c'), ' °C', 1)} |",
         f"| Minimum temperature | {_fmt(excursion.get('min_c'), ' °C', 1)} |",
         "",
-        "## 4. Stability evaluation",
+        head("Stability evaluation"),
         "",
         "| Measure | Value | Basis |",
         "|---|---|---|",
@@ -146,7 +155,7 @@ def deviation_report(
     if isinstance(route, dict) and not route.get("error"):
         attribution = str(route.get("attribution", "undetermined")).replace("_", " ")
         lines += [
-            "## 5. Route context — why the load warmed",
+            head("Route context — why the load warmed"),
             "",
             "The disposition arithmetic says what happens to the pallet. This says what to "
             "investigate, which is a different question with a different corrective action.",
@@ -175,7 +184,7 @@ def deviation_report(
         ]
     elif isinstance(route, dict) and route.get("error"):
         lines += [
-            "## 5. Route context — why the load warmed",
+            head("Route context — why the load warmed"),
             "",
             f"_Not available: {route['error']}_ — the cause of the excursion is therefore "
             "**not established** in this record. Do not infer one from the temperature alone.",
@@ -186,7 +195,7 @@ def deviation_report(
     if isinstance(check, dict):
         agreed = check.get("agrees")
         lines += [
-            "## 6. Independent verification",
+            head("Independent verification"),
             "",
             "The disposition was computed **twice**, by deliberately different numerical "
             "routes, and the results were compared before this record was produced.",
@@ -210,11 +219,11 @@ def deviation_report(
             lines += [f"- {d}" for d in check.get("disagreements", [])]
             lines.append("")
 
-    lines += ["## 7. Basis for the disposition", ""]
+    lines += [head("Basis for the disposition"), ""]
     lines += [f"{i}. {reason}" for i, reason in enumerate(verdict.get("rationale", []), 1)]
     lines += [
         "",
-        "## 8. What is regulation and what is ColdCall policy",
+        head("What is regulation and what is ColdCall policy"),
         "",
         "| Regulation-anchored | ColdCall policy |",
         "|---|---|",
@@ -233,7 +242,7 @@ def deviation_report(
 
     if consignees:
         lines += [
-            "## 9. Affected consignees",
+            head("Affected consignees"),
             "",
             "| Consignee | Units expected |",
             "|---|---|",
@@ -243,7 +252,7 @@ def deviation_report(
         ]
         lines.append("")
 
-    lines += ["## 10. Sections to be completed", ""]
+    lines += [head("Sections to be completed"), ""]
     for section in _AGENT_SECTIONS:
         lines += [
             f"### {section}",
@@ -254,7 +263,7 @@ def deviation_report(
         ]
 
     lines += [
-        "## 11. Signature",
+        head("Signature"),
         "",
         "| | |",
         "|---|---|",

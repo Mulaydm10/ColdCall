@@ -380,23 +380,23 @@ def main(argv: list[str] | None = None) -> int:
     # disposition maths cannot; but a weather lookup failing must not cost us a verdict we
     # already computed, so the failure is reported inside the document rather than raised.
     if args.route_lat is not None and args.route_lon is not None:
+        # Keep every reading, timestamp or not. Dropping the untimestamped ones would let
+        # the coverage figure describe only the timestamped subset — a report claiming full
+        # coverage while some hot readings were never considered at all.
+        derived_stamps = _reading_stamps(args.telemetry, args.interval_minutes)
         stamps = [
             (stamp, reading.celsius)
-            for stamp, reading in zip(
-                (s for s in _reading_stamps(args.telemetry, args.interval_minutes)),
-                readings,
-                strict=False,
-            )
-            if stamp is not None
+            for stamp, reading in zip(derived_stamps, readings, strict=False)
         ]
-        if not stamps:
+        if not any(stamp is not None for stamp, _ in stamps):
             document["route_context"] = {
                 "error": "no usable timestamps in the telemetry, so weather cannot be matched"
             }
         else:
+            known = [stamp for stamp, _ in stamps if stamp is not None]
             try:
                 ambient = fetch_ambient(
-                    args.route_lat, args.route_lon, stamps[0][0], stamps[-1][0]
+                    args.route_lat, args.route_lon, min(known), max(known)
                 )
                 context = attribute_excursion(
                     stamps, ambient, float(upper), threshold_c=args.containment_gap_c

@@ -57,9 +57,9 @@ The session *is* the regulatory record. Record, up front: shipment id, lot id, p
 excursion window, and where the telemetry came from. Everything after this appends to that
 record; nothing overwrites it.
 
-### 2. Fan out — four strands, in parallel
+### 2. Fan out — five strands, in parallel
 
-Spawn these as subagents. They share your tools and your sandbox, they cannot talk to the
+Spawn all five as subagents; a strand you skip is a question nobody answered. They share your tools and your sandbox, they cannot talk to the
 operator directly, and they cannot spawn helpers of their own. One level, that is all.
 
 | Strand | The one question it answers | How |
