@@ -7,6 +7,7 @@
 #
 # Usage:  ./scripts/verify_apis.sh [--verbose]
 set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 VERBOSE=${1:-}
 PASS=0
@@ -70,6 +71,38 @@ if [[ -n "$SIZE" && "$SIZE" -gt 0 ]]; then
   PASS=$((PASS+1))
 else
   printf '  \033[31mFAIL\033[0m  %-22s could not resolve\n' "LL1 telemetry"; FAIL=$((FAIL+1))
+fi
+
+echo
+echo "Route context, through the real code path"
+# Not another curl. This calls src/coldcall/weather.py the way the agent does, at the demo
+# leg's own coordinates, so a green line here means the code works now — not merely that the
+# endpoint responds. That distinction is this repo's whole evidence rule, and a check that
+# proves the URL is up while the caller is broken is exactly the kind of vacuous pass we have
+# already had to fix three times elsewhere.
+if command -v uv >/dev/null 2>&1; then
+  ROUTE=$(cd "$ROOT" 2>/dev/null || cd "$(dirname "${BASH_SOURCE[0]}")/.."; uv run python - <<'PYEOF' 2>&1
+import sys
+from datetime import datetime, timezone
+sys.path.insert(0, "src")
+try:
+    from coldcall.weather import fetch_ambient
+    start = datetime(2021, 11, 9, 12, tzinfo=timezone.utc)
+    end = datetime(2021, 11, 10, 4, tzinfo=timezone.utc)
+    series = fetch_ambient(39.4565, -0.3465, start, end)
+    matched = series.at(datetime(2021, 11, 9, 15, 30, tzinfo=timezone.utc))
+    print(f"OK {len(series.times)} hours, {matched} C at the excursion peak hour")
+except Exception as exc:  # noqa: BLE001 - a pre-demo check reports, it does not raise
+    print(f"FAIL {type(exc).__name__}: {exc}")
+PYEOF
+)
+  if [[ "$ROUTE" == OK* ]]; then
+    printf '  \033[32mok\033[0m    %-22s %s\n' "fetch_ambient" "${ROUTE#OK }"; PASS=$((PASS+1))
+  else
+    printf '  \033[31mFAIL\033[0m  %-22s %s\n' "fetch_ambient" "${ROUTE#FAIL }"; FAIL=$((FAIL+1))
+  fi
+else
+  printf '  \033[33mwarn\033[0m  %-22s uv not found; skipping the code-path check\n' "fetch_ambient"
 fi
 
 echo

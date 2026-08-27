@@ -46,7 +46,7 @@ openFDA amoxicillin label, 20–25 °C, excursions permitted 15–30 °C.
 - **Daytona verified** — a live turn returned `Linux x86_64 3.13.15` from a real remote microVM.
 - **Git-backed skill mounts and is read** by the agent inside the sandbox.
 - **GitHub MCP — 44 tools live.** `scripts/setup_trueforge.sh`: 5 configured, 0 failed.
-  `scripts/verify_apis.sh`: 7/7 sources pass.
+  `scripts/verify_apis.sh`: 8/8 sources pass.
 
 **The disposition core — running on real data**
 

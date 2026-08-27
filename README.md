@@ -208,7 +208,7 @@ cargo, so the product label was chosen to match what the goods actually are.
 | The sandbox is genuinely remote | A live turn returned `Linux x86_64 3.13.15` from a macOS/arm64 host |
 | The gate actually stops the agent | **Deny** → it reported the denial and stopped, no retry. **Allow** → branch `incident/INC-VCC-118-A2231-…`, deviation record committed as `1c859fc` |
 | The record survives a crash | `./scripts/restart_proof.sh` — `kill -9`, restart, and a **SHA-256 digest of every event's content** unchanged: `3c470830…` before and after, over **every field of every event** |
-| The data sources work *now* | `./scripts/verify_apis.sh` calls each one and asserts on the response |
+| The data sources work *now* | `./scripts/verify_apis.sh` calls each one and asserts on the response — 8/8, and the weather check runs `fetch_ambient` itself rather than pinging a URL |
 | The root cause is evidence, not narration | 14 of 14 excursion readings matched to real ERA5 weather at the leg's own coordinates → `containment_failure` (`EXP-0013`) |
 
 Full trail in [`experiments/experiment_log.md`](experiments/experiment_log.md) (`EXP-0001`–`EXP-0012`),
