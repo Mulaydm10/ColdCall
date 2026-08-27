@@ -5,165 +5,94 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-27 11:30 CEST — **the thesis arrived and the judged path is proven.**
-ColdCall is a pharmaceutical cold-chain *disposition* agent. One incident now runs end to end:
-real excursion → four strands → deterministic maths in a Daytona microVM → approval gate →
-executed action with a checkable receipt.
-
-> **Note on this file's history.** PRs #4 and #5 merged in the order #5 then #4, so #4's older
-> `STATE.md` landed on top of #5's newer one. Nothing was lost — this rewrite supersedes both.
+Last updated: 2026-08-27 16:40 CEST — **the stack landed and the demo path is rehearsed.**
+`main` carries M1–M5. Rehearsals 3 and 4 both reach the approval gate and execute for real.
+What remains needs a human: a governance edit, three optional logins, and the video.
 
 ## Deadline
 
-Deadline: see `COMPETITION.md` → "Deadline" (single source of truth for event facts).
+See `COMPETITION.md` → "Deadline" (single source of truth for event facts).
 
-## The thesis (new — this is what changed)
+## The thesis
 
-**Detection is solved; the decision is not.** On a temperature excursion, ColdCall computes the
+**Detection is solved; the decision is not.** On a temperature excursion ColdCall computes the
 regulatory disposition — release / quarantine-retest / destroy — from deterministic,
-unit-tested Python, assembles an evidence bundle, and **halts for a human before any
-irreversible action**. The LLM gathers, orchestrates, explains and drafts. The LLM never
-decides.
+unit-tested Python, explains *why* the load warmed from a historical weather archive, computes
+the whole thing **twice** by different numerical routes, assembles an evidence bundle, and
+**halts for a human before any irreversible action**. The LLM gathers, orchestrates, explains
+and drafts. The LLM never decides.
 
-Full thesis proposed in `proposals/VISION.md`. **`VISION.md` is LOCKED and still empty** —
-Main Agent applies the proposal and logs it in `GOVERNANCE.md`.
+`VISION.md` is LOCKED and still a placeholder — the thesis is proposed in
+`proposals/VISION.md` for the Main Agent to apply and log in `GOVERNANCE.md`. That is the one
+governance item outstanding; see the table below.
 
-`Q-0001` is answered. `Q-0007` (which product label to judge against) is answered: the real
-openFDA amoxicillin label, 20–25 °C, excursions permitted 15–30 °C.
+## Done — `main` carries M1 through M5
 
-## Done
+**Process.** Public repo (MIT). **10 PRs merged, zero direct pushes to `main`.** Every merge
+carried a completed Qodo review with findings fixed or dismissed in-thread; Devin acted as
+second reviewer and merged. Across the stack Qodo raised roughly **50 findings over six
+rounds**, several of them real defects rather than lint — a regulatory bug in the core maths,
+an approval gate that could authorise a call nobody could read, and a retry that could repeat
+an irreversible action.
 
-**Process**
+**The judged path, proven end to end** (`EXP-0010`, `EXP-0017`):
 
-- Public repo (MIT); Qodo installed and reviewing. **PRs #1–#6 merged, zero direct pushes to
-  `main`.** Every merge carried a completed review with findings fixed or dismissed in-thread.
-  #6 carried four rounds of review before it landed.
+- excursion → orchestrator computes the verdict in a **real Daytona microVM** → four strands
+  fan out for context → generative-UI evidence bundle → **approval gate** → executed action
+  with a checkable receipt.
+- Latest rehearsal: deny path **168 s**, allow path **191 s**, producing branch
+  `incident/INC-20260827T162354Z-VCC-118-A2231` and commit **`6ccb0bd`** — a 5 878-byte,
+  11-section deviation record carrying route context and the independent cross-check.
+- The record survives `kill -9`: `./scripts/restart_proof.sh` compares a SHA-256 digest of
+  every event's content **and** of the harness config, and passes.
 
-**Platform, proven not asserted** (`EXP-0008`)
+**The numbers, from real data, not tuned.** Zenodo `10.5281/zenodo.7907515`, device
+`DD:33:04:13:34:CD`, judged against the real openFDA amoxicillin label with the allowance fixed
+before scoring: **MKT 24.54 °C, 64.35 % of budget consumed → `quarantine_retest`**, margin
+35.65 pp. Route context: outside air peaked at **17.3 °C** across matched readings while the
+consignment reached **27 °C** — a **12.6 °C** median gap → `containment_failure`, marked
+**`qualified`** because the GPS predates the excursion by 18.9 h.
 
-- TrueForge v0.1.4 on `:8790`. OpenAI **`gpt-5`** answering real turns (the account has
-  `gpt-5`/`-mini`/`-pro`, *not* the catalog's `gpt-5.6-sol`).
-- **Daytona verified** — a live turn returned `Linux x86_64 3.13.15` from a real remote microVM.
-- **Git-backed skill mounts and is read** by the agent inside the sandbox.
-- **GitHub MCP — 44 tools live.** `scripts/setup_trueforge.sh`: 5 configured, 0 failed.
-  `scripts/verify_apis.sh`: 8/8 sources pass.
+**230 tests green, ruff clean, `verify_apis.sh` 8/8, `setup_trueforge.sh` idempotent**
+(`5 configured, 2 skipped, 0 failed` on two consecutive runs).
 
-**The disposition core — running on real data**
+## Needs Mulaydm10 — nothing technical is blocked on it
 
-- `src/coldcall/mkt.py` — MKT (time-weighted, log-sum-exp), excursion accounting, stability
-  budget. Restored from `3e01090`; kept over the spec's Appendix C reference, which is
-  unweighted and numerically naive.
-- `src/coldcall/disposition.py` — the decision layer: `release` / `quarantine_retest` /
-  `destroy`, Arrhenius potency estimate, margin-to-threshold reporting, policy recorded
-  alongside every verdict.
-- `src/coldcall/plot.py` — excursion chart as stdlib SVG. **No matplotlib**, deliberately: the
-  payload must import against a stock sandbox interpreter.
-- `src/coldcall/cli.py` — the sandbox entry point. Derives reading durations from timestamps
-  rather than assuming a flat interval.
-- **161 tests green**, ruff clean. Sandbox-payload import is proven by subprocess under `-I`.
+Everything below needs a browser, an account, or a camera. **None of it was attempted.**
 
-**The demo case is real and was not tuned**
+| # | What | Exact steps | What it blocks |
+|---|---|---|---|
+| 1 | **Apply `proposals/VISION.md`** | Copy its body into `VISION.md` — it is LOCKED, so only you may — then add a row to `GOVERNANCE.md`'s audit table naming the file, the date and the reason. | Nothing technical. Qodo keeps re-reporting "the thesis is fabricated" until it is done: correct by its rule, wrong on the facts. |
+| 2 | **Record the ~3-minute video** | Follow `DEMO.md` → `DEMO-0001` exactly; it carries per-beat timings, the expected output at each step, and the three things to say out loud. **Reap Daytona first** (`./scripts/daytona_gc.sh --yes`) and rehearse once before rolling. | Submission. |
+| 3 | **Supabase connector** *(optional)* | TrueForge :8790 → Settings → Connectors → supabase → Connect. **OAuth (`dcr`) — a browser login, not a token to paste.** Needs a project at supabase.com. | Nothing. The incident store runs on stdlib SQLite and the demo works without it; this swaps the backend. |
+| 4 | **Stripe connector** *(optional)* | Same route, **test mode only**. Also OAuth. | Nothing — the exposure figure comes from `replay/seed.json` today. |
+| 5 | **Slack / notification webhook** *(optional)* | Create at api.slack.com/messaging/webhooks (app → Incoming Webhooks → add to a channel), then set `COLDCALL_NOTIFY_WEBHOOK` in `.env`. | Nothing — consignee notification is not part of `DEMO-0001`. |
+| 6 | **Optional prize tracks** | Star `truefoundry/trueforge` (10 s, free draw); publish a blog post anywhere and link it in the submission; SF day at luma.com/agent-harness. | Nothing. |
 
-Zenodo 7907515, device `DD:33:04:13:34:CD` — 20.3 h, 64 readings, one contiguous 231.7 min
-excursion peaking at 27 °C. Judged against the real openFDA amoxicillin label with a 6 h
-allowance fixed *before* scoring: **MKT 24.54 °C, 64.35% of budget consumed →
-`quarantine_retest`**. Selection and runners-up documented in `replay/SHIPMENT.md`.
-
-**Verified, and it constrains what we may claim:** no real openFDA label states a permitted
-excursion *duration*. Labels pairing an excursion range with hours describe post-reconstitution
-in-use stability — a different allowance. The hours figure is ColdCall policy, stamped as such
-into every emitted record.
-
-## In flight
-
-**PR #6 (M1, the disposition core) is MERGED** — Devin merged it at 11:43 UTC after Qodo
-cleared. `main` now carries the deterministic maths, and PR #7 has auto-retargeted to `main`.
-
-**Four still open: #7 → #8 → #9 → #10, in that order.** Each is based on its predecessor's branch,
-so every diff stays scoped to its own milestone and retargets automatically as its parent
-lands.
-
-Qodo raised **36 findings across four rounds**; 33 fixed, 3 dismissed in-thread with reasons.
-The dismissals are all the same rule firing on a false premise — "the thesis is fabricated" —
-which is correct on the diff but wrong on the facts: the thesis was supplied, and `VISION.md`
-reads `TODO` only because it is LOCKED. It will keep re-reporting until a human applies
-`proposals/VISION.md`.
-**Merge order: #6 → #7 → #8 → #9.** Each is based on its predecessor's branch, not `main`, so
-each diff stays scoped to its own milestone and retargets automatically as its parent lands.
-
-**M3 is complete** — one incident runs end to end against the live harness, including the
-approval gate and an executed action with a checkable receipt (`EXP-0010`). Deny → the agent
-reported the denial and stopped; allow → branch `incident/INC-VCC-118-A2231-…` with the
-deviation record committed as `1c859fc`.
-
-**M2 is complete** — the incident world exists: `src/coldcall/store.py` (Appendix B's schema in
-portable SQL over stdlib `sqlite3`), `replay/engine.py` (streams the real leg on compressed
-shipment-time and opens the incident on a sustained excursion), `src/coldcall/report.py` (the
-deviation record, numbers filled deterministically), the real `coldchain-sop` skill, and the
-orchestrator's real instructions.
+**`GITHUB_TOKEN` is required and is not optional.** Without it the connector is skipped and the
+approval gate has **no tool to call**, so the demo's centrepiece silently does not happen rather
+than failing loudly. `.env.example` and `DEMO-0001` both say so now.
 
 ## Blocked
 
-1. **Daytona's free-tier disk is full — live runs fail until it is reaped** (`EXP-0012`).
-   16 sandboxes / 48 GiB against a 30 GiB ceiling. Run **`./scripts/daytona_gc.sh --yes`**;
-   the dry run shows 15 reapable and 45 GiB recoverable. I could not do it myself: the local
-   permission classifier blocks the DELETE as a destructive external action, correctly.
-   **This is why live incident runs currently fail**, and the error message blames the network,
-   so do not go looking at networking. Setup now sets a 2-hour delete timer so it stops
-   recurring, but that does not clear the existing backlog.
+Nothing.
 
-## Deferred backlog (scheduled, not blocked)
+## In flight
 
-| Item | What it needs | Blocks |
-|---|---|---|
-| **Supabase connector** | One browser login: Settings → Connectors → supabase → Connect. **OAuth (`dcr`), not a token.** | Real inventory writes. Data layer is built behind one interface with SQLite-in-sandbox as today's default, so this is a config flip, not a rewrite. |
-| **Stripe connector** | Same, test mode only. Also OAuth. | Reship order + refund actions. Same drop-in arrangement. |
-| **`tests/README.md`** | LOCKED; its layout table names files that changed. | Nothing |
-| **San Francisco day / blog post / star TrueForge repo** | Optional prize tracks | Nothing |
-
-## The judged path, proven end to end (`EXP-0010`, `EXP-0011`)
-
-The whole loop runs: excursion → four strands in parallel → deterministic maths in a real
-Daytona microVM → generative-UI evidence bundle → **approval gate** → executed action with a
-checkable receipt.
-
-- **The verdict reproduces exactly.** Laptop and remote microVM both return MKT **24.54 °C**,
-  budget **64.35 %**, `quarantine_retest`. Same inputs, same arithmetic, different machine.
-- **The gate works both ways.** Deny → the agent reported the denial and stopped, no retry.
-  Allow → branch `incident/INC-VCC-118-A2231-…`, deviation record committed as **`1c859fc`**.
-- **The record survives `kill -9`.** `./scripts/restart_proof.sh` — 86 events and 7
-  verdict-bearing responses intact across a SIGKILL.
-- **README and `DEMO-0001` are written** against what actually ran, not against intentions.
-- **Every verdict is computed twice** (`EXP-0014`, PR #10). MKT by log-sum-exp and again by
-  textbook direct summation; excursion minutes by two routes; the verdict re-derived from the
-  independent inputs. They agree to the digit on the demo leg (difference `0.000e+00`), and the
-  tests prove the check catches a tampered primary rather than never firing. A disagreement is
-  a **stop**, not a caveat — `cli` exits 3 and the SOP forbids presenting the bundle.
-- **The agent can say *why*, not only *what*** (`EXP-0013`, PR #10). The leg's own recorded GPS
-  puts it in Valencia; ERA5 reanalysis there gives an ambient peak of 17.7 °C while the
-  consignment reached 27 °C — a median **12.6 °C** gap over 14 of 14 matched readings, so the
-  attribution is **`containment_failure`**, not a hot day. That sends the investigation to the
-  packaging rather than the lane, which is the opposite corrective action.
+`chore/preflight-m8-m9` — the rehearsal fix, `DEMO.md` drift, the honest AI disclosure,
+`.env.example` provenance, and `EXP-0017`/`EXP-0018`. Open as a PR for Qodo and Devin.
 
 ## Next intended step
 
-**Mulaydm10, in this order:**
+1. Land the M8/M9 PR once Qodo and Devin clear it.
+2. Mulaydm10 works the table above — items 1 and 2 matter; 3–6 do not.
+3. Submit.
 
-1. **`./scripts/daytona_gc.sh --yes`** — one minute, and live runs fail until it is done. See
-   Blocked above; the error it prevents blames the network, so it is easy to misdiagnose.
-2. **Merge #7 → #8 → #9.** All three are Qodo-clean and mergeable.
-3. **Apply `proposals/VISION.md`** to the LOCKED `VISION.md` and log it in `GOVERNANCE.md`.
-   Until then Qodo will keep re-reporting "the thesis is fabricated", correctly by its rule.
-4. **Re-register the skills against `main`** once #9 lands:
-   `COLDCALL_SKILL_REF=main ./scripts/setup_trueforge.sh`.
-5. **Record the ~3-minute video** against `DEMO-0001`. Rehearse twice — reap Daytona first.
-6. Optional prize tracks are in the deferred backlog.
-
-**Do not re-run platform setup.** It is configured and verified; the script is idempotent and
-exists for re-verification after a restart, not as a step.
+**Do not re-run platform setup unprompted.** It is configured and verified; the script is
+idempotent and exists for re-verification after a restart, not as a step.
 
 ## Work claims
 
 | Surface | Claimed by | Since | Status |
 |---|---|---|---|
-| _(none — autonomous run yielded 2026-08-27 14:20 CEST)_ | — | — | — |
+| _(none)_ | — | — | — |

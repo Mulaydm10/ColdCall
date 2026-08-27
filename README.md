@@ -308,17 +308,31 @@ review → follow-up review → human merge. Direct pushes to `main` do not coun
 
 ## AI assistance disclosure
 
-Required by the hackathon rules (AI coding assistants are allowed, but their use must be
-disclosed, and every participant must be able to explain the architecture and the technical
-decisions behind the submission).
+Required by the hackathon rules: AI assistants are allowed, their use must be disclosed, and
+every participant must be able to explain the architecture and the technical decisions. Taking
+that seriously means stating the scale rather than gesturing at it.
 
-- **Claude Code (Anthropic, Opus 5)** is used throughout as a pair-programmer and for repo
-  research, documentation, and scaffolding. AI-authored commits carry a
-  `Co-Authored-By: Claude` trailer, so the split is visible in `git log`.
-- **Qodo** reviews the pull requests in this repository, as the event requires; see the
-  section above for its current status and the evidence trail.
-- Architecture and technical decisions are recorded by a human in `design/decisions/`
-  (`ADR-####`) and are owned by the team, not by the assistant.
+**Three AI tools were used, at different stages.**
+
+- **Claude Code (Anthropic, Opus 5)** wrote the large majority of this repository — the
+  disposition maths, the incident store, the replay engine, the route-context and cross-check
+  modules, the tests, the scripts, and most of the prose in these documents. This is more than
+  pair-programming and the README should not imply otherwise. **65 of the 67 non-merge commits
+  on `main` carry a `Co-Authored-By: Claude` trailer**, so the extent is checkable with
+  `git log --grep='Co-Authored-By: Claude'` rather than taken on trust.
+- **Qodo** reviewed every pull request, as the event requires. It found real defects, including
+  a regulatory bug in the core maths and a case where the approval gate could authorise a call
+  nobody could read — see the section above.
+- **Devin** acted as a second reviewer and performed the merges on the PR stack.
+
+**What a human owns.** The thesis and the build specification were supplied by
+`Mulaydm10`, not inferred — and when an earlier session *did* infer a mission from the
+available tooling, it was deleted for that reason (`ADR-0006`) rather than kept because it
+happened to be close. Every design decision is recorded in `design/decisions/` (`ADR-####`)
+with the reasoning and the alternatives, every experiment in `experiments/experiment_log.md`
+(`EXP-0001`–`EXP-0018`) with what was actually observed, and merges to `main` are
+human-authorised. Those records exist so the architecture can be explained by the team rather
+than only by the tool that typed it.
 
 ## End-of-session checklist
 

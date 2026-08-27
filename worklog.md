@@ -663,3 +663,56 @@ Three design choices worth keeping in mind if this is ever extended:
 The limits are stated wherever the number appears — point weather, hourly, shade temperature,
 moving cargo — and the 5 °C threshold that separates the two attributions is ColdCall policy,
 not a regulatory value.
+
+### 2026-08-27 16:40 CEST — M8/M9: the rehearsal that caught the demo not working
+
+The stack landed, so this session was pre-flight: fresh-clone timing, walking `DEMO.md` as
+written, and rehearsing the incident run. The rehearsal is what earned the session.
+
+**The first two rehearsals never reached the approval gate.** That is the demo's centrepiece
+and the whole control-and-safety claim, and it failed twice for two different reasons that
+share a cause (`EXP-0017`).
+
+Rehearsal 1 completed — 358k tokens, 476 s — and the orchestrator ended the incident
+*believing the module had never run*, refusing to state a verdict it did not have. It was
+right to refuse: a strand **had** run the module and produced `quarantine_retest` / 24.54 °C,
+and the result never reached the parent. The SOP held; the run was still useless.
+
+Rehearsal 2 was cancelled by the harness at `server-execution-timeout`, 190k tokens, before it
+could act at all.
+
+The shared cause was too much work before the action, on a critical path that depended on a
+strand's result finding its way home. Three prompt-level changes, none touching the
+deterministic layer: **the orchestrator now runs the module itself, first, before spawning
+anything**; strands are told to answer in under 200 words *with the reason given*, that an
+essay costs the run its gate; and the instruction says plainly that an incident which runs out
+of turns before the gate has failed however good its analysis was.
+
+Rehearsals 3 and 4 both gate. Deny 168 s, allow 191 s, and the allow path left commit
+`6ccb0bd` — a real 11-section deviation record on the public repo.
+
+A third failure surfaced before either: `--repo-ref` defaults to the current branch, so an
+unpushed branch sent the sandbox to a ref that does not exist. Five strands each honestly
+reported the clone failure. The driver now checks the ref against the remote and exits 2 with
+an explanation rather than burning eight minutes discovering it.
+
+**What a fresh-clone audit found**, beyond stale numbers: `DEMO-0001` named only two required
+keys, but steps 6 and 7 need `GITHUB_TOKEN` — without it the connector is skipped and the
+approval gate has no tool to call. Following the document literally produced a run whose
+centrepiece silently did not happen. That is now called out in `DEMO.md` and `.env.example`,
+along with where each key actually comes from.
+
+**The AI-assistance disclosure was understating things and omitting a tool.** It described
+Claude Code as a pair-programmer used for "research, documentation, and scaffolding" when it
+wrote the large majority of the repository, and it did not mention Devin at all. Rewritten to
+say so, with a number that can be checked rather than taken on trust: 65 of the 67 non-merge
+commits on `main` carry the `Co-Authored-By` trailer, verifiable with one `git log --grep`.
+The rules require disclosure; gesturing at it is not disclosure.
+
+Pre-flight otherwise green (`EXP-0018`): Daytona reaped 48 GiB → 9 GiB, clearing the quota trap
+that had been blocking live runs; setup idempotent across two consecutive runs; `verify_apis`
+8/8; restart proof passing on the fresh incident with both digests stable.
+
+Everything left needs a human, and none of it was attempted — the governance edit to
+`VISION.md`, three optional OAuth logins, and the video. Each is a row in `STATE.md` with the
+exact steps.
