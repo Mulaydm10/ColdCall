@@ -377,3 +377,58 @@ class TestIdempotenceAndAtomicity:
         quarantines = [e for e in events if e["kind"] == "quarantine"]
         assert len(quarantines) == 1
         assert quarantines[0]["receipt"] == "sha:1c859fc"
+
+
+class TestSchemaMigration:
+    """A database written before telemetry was idempotent must still open."""
+
+    def test_duplicate_history_is_collapsed_rather_than_blocking_startup(
+        self, tmp_path, seed_fixture: dict
+    ) -> None:
+        """Telemetry is preserved across runs on purpose, so anyone who ran the earlier
+        non-idempotent replay has duplicate rows. Creating the unique index over them raises,
+        which would have left them unable to run the fixed version without hand-deleting
+        their database.
+        """
+        from coldcall.store import SCHEMA_TABLES
+
+        path = tmp_path / "legacy.db"
+        store = IncidentStore(path)
+        with sqlite3.connect(path) as conn:
+            conn.executescript(SCHEMA_TABLES)
+            conn.execute(
+                "INSERT INTO products (id, name, storage_min_c, storage_max_c,"
+                " excursion_allowance_hours, allowance_source, unit_value_usd)"
+                " VALUES ('P', 'p', 20, 25, 6, 'demo', 1.0)"
+            )
+            conn.execute(
+                "INSERT INTO shipments (id, product_id, lot_id, units) VALUES (?,?,?,?)",
+                (SHIPMENT_ID, "P", "L", 1),
+            )
+            for _ in range(3):  # the duplicates a pre-idempotent replay would have left
+                conn.execute(
+                    "INSERT INTO telemetry (shipment_id, ts, internal_temp_c)"
+                    " VALUES (?, '2026-01-01T00:00:00Z', 22.0)",
+                    (SHIPMENT_ID,),
+                )
+            conn.commit()
+
+        store.initialise()  # must not raise
+        assert len(store.telemetry_for(SHIPMENT_ID)) == 1
+
+    def test_a_null_temperature_raises_rather_than_being_dropped(
+        self, seeded_store: IncidentStore
+    ) -> None:
+        """`INSERT OR IGNORE` would swallow a NOT NULL violation and report it as a
+        harmless duplicate, hiding ingestion corruption behind a verdict computed on an
+        incomplete record. `ON CONFLICT (shipment_id, ts) DO NOTHING` targets only the
+        conflict that is genuinely benign.
+        """
+        with pytest.raises(sqlite3.IntegrityError):
+            with seeded_store._conn() as conn:
+                conn.execute(
+                    "INSERT INTO telemetry (shipment_id, ts, internal_temp_c)"
+                    " VALUES (?, '2026-01-01T00:00:00Z', NULL)"
+                    " ON CONFLICT (shipment_id, ts) DO NOTHING",
+                    (SHIPMENT_ID,),
+                )

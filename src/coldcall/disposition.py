@@ -274,6 +274,11 @@ class Disposition:
                 "destroy_at_pct": self.policy.destroy_at_pct,
                 "freeze_is_disqualifying": self.policy.freeze_is_disqualifying,
                 "activation_energy_j_per_mol": self.policy.activation_energy_j_per_mol,
+                # The potency estimate is only re-derivable if its inputs are recorded with
+                # it. Reporting the figure without them makes an auditable number
+                # unauditable.
+                "potency_reference_c": self.policy.potency_reference_c,
+                "potency_rate_per_day": self.policy.potency_rate_per_day,
                 "source": self.policy.source,
                 "note": (
                     "Thresholds and the excursion duration are ColdCall policy inputs, "
