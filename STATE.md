@@ -60,7 +60,7 @@ openFDA amoxicillin label, 20–25 °C, excursions permitted 15–30 °C.
   payload must import against a stock sandbox interpreter.
 - `src/coldcall/cli.py` — the sandbox entry point. Derives reading durations from timestamps
   rather than assuming a flat interval.
-- **130 tests green**, ruff clean. Sandbox-payload import is proven by subprocess under `-I`.
+- **146 tests green**, ruff clean. Sandbox-payload import is proven by subprocess under `-I`.
 
 **The demo case is real and was not tuned**
 
@@ -79,7 +79,7 @@ into every emitted record.
 **PR #6 (M1, the disposition core) is MERGED** — Devin merged it at 11:43 UTC after Qodo
 cleared. `main` now carries the deterministic maths, and PR #7 has auto-retargeted to `main`.
 
-**Three still open: #7 → #8 → #9, in that order.** Each is based on its predecessor's branch,
+**Four still open: #7 → #8 → #9 → #10, in that order.** Each is based on its predecessor's branch,
 so every diff stays scoped to its own milestone and retargets automatically as its parent
 lands.
 
@@ -134,6 +134,11 @@ checkable receipt.
 - **The record survives `kill -9`.** `./scripts/restart_proof.sh` — 86 events and 7
   verdict-bearing responses intact across a SIGKILL.
 - **README and `DEMO-0001` are written** against what actually ran, not against intentions.
+- **The agent can say *why*, not only *what*** (`EXP-0013`, PR #10). The leg's own recorded GPS
+  puts it in Valencia; real ERA5 weather there gives an ambient peak of 17.7 °C while the
+  consignment reached 27 °C — a median **12.6 °C** gap over 14 of 14 matched readings, so the
+  attribution is **`containment_failure`**, not a hot day. That sends the investigation to the
+  packaging rather than the lane, which is the opposite corrective action.
 
 ## Next intended step
 

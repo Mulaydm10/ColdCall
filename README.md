@@ -29,6 +29,13 @@ the entire project:
 result and drafts the paperwork. The verdict comes from `src/coldcall/disposition.py`, which is
 dependency-free, unit-tested, and readable by anyone who doesn't trust the agent.
 
+It also answers the question the arithmetic cannot: **why did it warm?** ColdCall pulls real
+recorded weather for the shipment's own GPS and compares it against the load. On the demo leg
+the outside air peaked at **17.7 °C** while the consignment reached **27 °C** — a median
+**12.6 °C gap**. That is not a hot day; it is a containment failure, and it sends the
+investigation to the packaging rather than to the lane. Two public datasets, correlated,
+producing a finding neither gives alone.
+
 That is a checkable claim, not a slogan. The same leg scored on a laptop and inside a remote
 Daytona microVM returns the same numbers to the digit: **MKT 24.54 °C, 64.35 % of budget
 consumed, verdict `quarantine_retest`.**
@@ -64,21 +71,25 @@ flowchart TB
 
     subgraph H["2 · TrueForge — the session IS the incident record"]
         ORCH["Incident orchestrator<br/><i>follows the coldchain-sop skill</i>"]
-        subgraph S["Four strands, in parallel"]
+        subgraph S["Strands, in parallel"]
             S1["Stability Analyst"]
+            S5["Route Analyst"]
             S2["Logistics Scout"]
             S3["Compliance Officer"]
             S4["Exposure Accountant"]
         end
-        ORCH --> S1 & S2 & S3 & S4
+        ORCH --> S1 & S5 & S2 & S3 & S4
     end
 
     subgraph D["3 · Daytona sandbox"]
         MATH["Deterministic Python<br/>MKT · stability budget ·<br/>potency estimate · SVG chart"]
-        V{{"release / quarantine_retest / destroy"}}
+        WHY["Route context<br/>real recorded weather at the<br/>leg's own GPS"]
+        V{{"release / quarantine_retest / destroy<br/>+ environmental vs containment"}}
         MATH --> V
+        WHY --> V
     end
     S1 --> MATH
+    S5 --> WHY
 
     subgraph G["4 · The human gate"]
         BUNDLE["Evidence bundle<br/>verdict · arithmetic · chart ·<br/>exposure · draft deviation report"]
@@ -167,6 +178,7 @@ Every claim below is checkable, and the honest limits are stated rather than bur
 |---|---|---|
 | Shipment telemetry | Zenodo [`10.5281/zenodo.7907515`](https://doi.org/10.5281/zenodo.7907515), CC-BY-4.0 | **Real recorded data, replayed.** Never live. One leg, chosen and documented in [`replay/SHIPMENT.md`](replay/SHIPMENT.md) with its runners-up so the choice is auditable. |
 | Product label | openFDA drug label API, set_id `e13cafe2-f226-4021-81d8-7bd1f98b5582` | **Real, keyless, re-fetchable.** "Store at 20° to 25°C; excursions permitted to 15° to 30°C." |
+| Weather on route | Open-Meteo ERA5 archive at the leg's **own recorded GPS** (39.456 N, −0.347 E — Valencia) | **Real historical measurement**, keyless. Point weather, hourly, shade temperature — limits stated wherever the number appears. |
 | Stability method | USP &lt;1079&gt; (MKT), WHO TRS-999 Annex 5 | Cited in the code and in every emitted record |
 | Excursion allowance (hours) | **Nobody's label** | **Ours.** Labelled as policy everywhere it appears. |
 | Potency figure | First-order Arrhenius model | **An estimate, not an assay.** Says so in the code, the JSON, the report and the SOP. |
@@ -197,6 +209,7 @@ cargo, so the product label was chosen to match what the goods actually are.
 | The gate actually stops the agent | **Deny** → it reported the denial and stopped, no retry. **Allow** → branch `incident/INC-VCC-118-A2231-…`, deviation record committed as `1c859fc` |
 | The record survives a crash | `./scripts/restart_proof.sh` — `kill -9`, restart, and a **SHA-256 digest of every event's content** unchanged: `3c470830…` before and after, over **every field of every event** |
 | The data sources work *now* | `./scripts/verify_apis.sh` calls each one and asserts on the response |
+| The root cause is evidence, not narration | 14 of 14 excursion readings matched to real ERA5 weather at the leg's own coordinates → `containment_failure` (`EXP-0013`) |
 
 Full trail in [`experiments/experiment_log.md`](experiments/experiment_log.md) (`EXP-0001`–`EXP-0012`),
 including the bugs that had to be fixed on the way and the ones still open.

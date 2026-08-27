@@ -623,3 +623,43 @@ own verdict is computed from.
 Rejected rather than sorted or deduplicated, both times. Silently reordering or picking a
 winner among someone's telemetry is its own integrity question, and the caller knows which of
 the two records is real.
+
+### 2026-08-27 14:55 CEST — the agent can now answer "why", and the answer is not "it was hot"
+
+The build spec lists weather on route as real data and its architecture diagram feeds it into
+the incident, but nothing in the agent flow used it. The SOP even promised that explaining
+*why* it warmed is where the agent adds value the maths cannot — with no tool to do it. That
+was the largest remaining gap against the spec, and it is now closed (`EXP-0013`, PR #10).
+
+**The dataset had GPS all along.** The raw records carry `measurements.gps`; our device has 15
+fixes clustered at 39.456 N, −0.347 E — Valencia. So the weather can be fetched for *where the
+shipment actually was*, which is the only version of this worth doing: an invented location
+produces an invented root cause.
+
+**And the answer is the interesting one.** Open-Meteo's ERA5 archive for 2021-11-09 at that
+point gives an ambient peak of **17.7 °C**, 13–17 °C through the excursion window. The
+consignment reached **27 °C** — a median **12.6 °C above outside air**, across **14 of 14**
+matched excursion readings. Attribution: **`containment_failure`**, not environmental exposure.
+
+That distinction is the whole point of building it. The two outcomes lead to *opposite*
+corrective actions — one is about the lane, the schedule and dwell time; the other about
+packaging, the reefer unit and loading procedure. A deviation record that says "the shipment
+reached 27 °C" and stops has skipped the only part an investigator can act on, and would have
+sent this one to the wrong place.
+
+Three design choices worth keeping in mind if this is ever extended:
+
+- **Opt-in and never fatal.** A weather lookup failing must not cost a verdict already
+  computed, so the failure lands inside the document rather than being raised. Without the
+  flags the output is byte-identical to before.
+- **`undetermined` is a first-class outcome.** Below half coverage it refuses to attribute and
+  says why. Forcing a cause out of two matched readings is how a bad CAPA gets written.
+- **Only out-of-band readings are attributed**, and matching is to the *nearest* hour rather
+  than the preceding one. Including in-band time would drag the median toward the ambient
+  baseline; rounding down would lag the ambient curve behind the telemetry and bias every gap
+  in the same direction. Both are quiet errors an attribution should not rest on, and both are
+  pinned by tests.
+
+The limits are stated wherever the number appears — point weather, hourly, shade temperature,
+moving cargo — and the 5 °C threshold that separates the two attributions is ColdCall policy,
+not a regulatory value.
