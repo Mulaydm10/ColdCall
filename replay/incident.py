@@ -36,6 +36,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BASE_URL = "http://localhost:8790/api/v1"
 PUBLIC_REPO = "https://github.com/Mulaydm10/ColdCall"
 
+#: Substring identifying the one failure that is reliably transient. The harness fetches
+#: git-backed skills when a sandbox starts, each strand gets its own sandbox, and Daytona's
+#: network occasionally resets the connection on a cold VM. It clears on retry every time we
+#: have seen it — but an agent that lost its SOP silently produces a plausible-looking run
+#: with no approval gate, which is the worst way for this to fail on camera.
+SANDBOX_INIT_FAILED = "Sandbox initialization failed"
+
 # ANSI, degraded to nothing when piped — this output is read on camera.
 _BOLD, _DIM, _RED, _GREEN, _YELLOW, _CYAN, _OFF = (
     ("\033[1m", "\033[2m", "\033[31m", "\033[32m", "\033[33m", "\033[36m", "\033[0m")
@@ -257,6 +264,12 @@ def render(event: dict[str, Any]) -> None:
                     print(f"\n{text.strip()}\n")
     elif kind == "tool.response":
         content = str(event.get("content", "")).lstrip()
+        if SANDBOX_INIT_FAILED in content:
+            print(
+                f"{_YELLOW}     [{where}] the sandbox could not fetch its skill "
+                f"(cold-start race){_OFF}"
+            )
+            return
         # Only a genuine error envelope. The harness returns instruction payloads through the
         # same channel, and some of them contain the word "failed" in prose — flagging those
         # as errors trains a demo audience to ignore red text, which is worse than silence.
@@ -366,12 +379,15 @@ def decide(auto: str | None) -> tuple[str, str]:
         print("  please answer 'allow' or 'deny'.")
 
 
-def run(base_url: str, spec: dict[str, Any], message: str, auto: str | None, timeout: float) -> int:
+def run_once(
+    base_url: str, spec: dict[str, Any], message: str, auto: str | None, timeout: float
+) -> tuple[int, bool]:
+    """Run one incident. Returns ``(exit_code, hit_sandbox_init_failure)``."""
     session = _post_json(f"{base_url}/sessions", {"agent": {"spec": spec}}).get("data", {})
     session_id = session.get("id")
     if not session_id:
         print(f"{_RED}session created but carried no id{_OFF}", file=sys.stderr)
-        return 1
+        return 1, False
 
     print(f"\n{_BOLD}incident session {session_id}{_OFF}")
     print(f"{_DIM}  the session IS the incident record — watch it at "
@@ -384,6 +400,7 @@ def run(base_url: str, spec: dict[str, Any], message: str, auto: str | None, tim
     turn_id = ""
 
     saw_error = False
+    sandbox_failed = False
     while True:
         pending: dict[str, Any] | None = None
         pending_calls: list[dict[str, Any]] = []
@@ -395,6 +412,10 @@ def run(base_url: str, spec: dict[str, Any], message: str, auto: str | None, tim
                     turn_id = event.get("turn_id") or turn_id
                 if event.get("type") == "turn.error" or event.get("error"):
                     saw_error = True
+                if event.get("type") == "tool.response" and SANDBOX_INIT_FAILED in str(
+                    event.get("content", "")
+                ):
+                    sandbox_failed = True
                 if event.get("type") == "tool.approval_required":
                     pending = event
                     pending_calls = resolve_pending_calls(
@@ -405,10 +426,10 @@ def run(base_url: str, spec: dict[str, Any], message: str, auto: str | None, tim
                 render(event)
         except urllib.error.HTTPError as exc:
             print(f"{_RED}turn failed: HTTP {exc.code} {exc.read().decode()[:400]}{_OFF}")
-            return 1
+            return 1, sandbox_failed
         except urllib.error.URLError as exc:
             print(f"{_RED}could not reach the harness: {exc}{_OFF}")
-            return 1
+            return 1, sandbox_failed
 
         if pending is None:
             if saw_error:
@@ -416,9 +437,9 @@ def run(base_url: str, spec: dict[str, Any], message: str, auto: str | None, tim
                 # failed incident. Reporting it as "turn complete" would let a broken demo
                 # exit 0 and look fine in CI.
                 print(f"\n{_RED}turn ended with errors — session {session_id}{_OFF}")
-                return 1
+                return 1, sandbox_failed
             print(f"\n{_GREEN}turn complete — session {session_id}{_OFF}")
-            return 0
+            return 0, sandbox_failed
 
         # Fail closed. If any pending call could not be described, the whole batch is denied
         # without asking: an operator cannot consent to an action they were never shown, and
@@ -461,6 +482,39 @@ def run(base_url: str, spec: dict[str, Any], message: str, auto: str | None, tim
         print(f"{colour}  → {status.upper()}{_OFF}\n")
 
 
+def run(
+    base_url: str,
+    spec: dict[str, Any],
+    message: str,
+    auto: str | None,
+    timeout: float,
+    attempts: int = 2,
+) -> int:
+    """Run the incident, retrying once past the transient sandbox cold-start failure.
+
+    This is not papering over a bug. The failure is in Daytona's network on a cold VM, it
+    clears on retry every time we have seen it, and the consequence of not retrying is the
+    dangerous one: the agent loses its SOP, produces a plausible-looking run, and never
+    reaches an approval gate. A demo that quietly skips its own safety beat is worse than
+    one that visibly retries.
+    """
+    for attempt in range(1, attempts + 1):
+        code, sandbox_failed = run_once(base_url, spec, message, auto, timeout)
+        if not sandbox_failed or attempt == attempts:
+            if sandbox_failed:
+                print(
+                    f"{_RED}  the sandbox failed to fetch its skill on every attempt. "
+                    f"The agent ran WITHOUT its SOP — do not trust this run.{_OFF}"
+                )
+                return 1
+            return code
+        print(
+            f"{_YELLOW}\n  retrying on a fresh session (attempt {attempt + 1} of {attempts}) — "
+            f"the skill fetch is a known cold-start race{_OFF}\n"
+        )
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         prog="python replay/incident.py",
@@ -484,6 +538,12 @@ def main(argv: list[str] | None = None) -> int:
         "only exists on main once its PR has merged.",
     )
     p.add_argument("--timeout", type=float, default=900.0)
+    p.add_argument(
+        "--attempts",
+        type=int,
+        default=2,
+        help="how many times to try past the transient sandbox cold-start failure",
+    )
     args = p.parse_args(argv)
 
     base_url = args.base_url.rstrip("/")
@@ -513,7 +573,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"{_DIM}  sandbox will clone {PUBLIC_REPO} at ref {args.repo_ref}{_OFF}")
     message = excursion_message(payload, readings, args.repo_ref)
-    return run(base_url, spec, message, args.auto, args.timeout)
+    return run(base_url, spec, message, args.auto, args.timeout, attempts=max(1, args.attempts))
 
 
 if __name__ == "__main__":

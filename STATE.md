@@ -92,7 +92,13 @@ orchestrator's real instructions.
 
 ## Blocked
 
-Nothing is blocking the critical path.
+1. **Daytona's free-tier disk is full — live runs fail until it is reaped** (`EXP-0012`).
+   16 sandboxes / 48 GiB against a 30 GiB ceiling. Run **`./scripts/daytona_gc.sh --yes`**;
+   the dry run shows 15 reapable and 45 GiB recoverable. I could not do it myself: the local
+   permission classifier blocks the DELETE as a destructive external action, correctly.
+   **This is why live incident runs currently fail**, and the error message blames the network,
+   so do not go looking at networking. Setup now sets a 2-hour delete timer so it stops
+   recurring, but that does not clear the existing backlog.
 
 ## Deferred backlog (scheduled, not blocked)
 

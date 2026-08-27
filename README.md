@@ -200,8 +200,14 @@ including the bugs that had to be fixed on the way and the ones still open.
 
 - **This is decision support.** It does not make regulated release decisions. A human QA
   director owns the release decision; the approval gate exists to enforce exactly that.
-- **The skill fetch is a cold-start race.** Each strand gets its own sandbox and each one
-  re-fetches the git-backed skill; it has failed once and cleared on retry. Rehearse twice.
+- **Sandboxes accumulate and Daytona's free tier is 30 GiB.** Each run leaves five or six
+  ~3 GiB sandboxes behind. When the ceiling is hit the harness reports a *network* error, not a
+  disk error, which sends you debugging the wrong thing while the agent silently runs without
+  its SOP. `./scripts/daytona_gc.sh` diagnoses and reaps; setup now sets a 2-hour delete timer
+  instead of 5 days.
+- **The skill fetch is also a genuine cold-start race**, independently of the quota. Each
+  strand gets its own sandbox and re-fetches the git-backed skill. `replay/incident.py` retries
+  once on a fresh session and refuses to present a run whose skill never loaded.
 - **Supabase and Stripe are wired but dark**, pending one browser OAuth login each. The data
   layer sits behind one interface with SQLite as today's working default, so authorising them
   is a backend swap rather than a rewrite. Nothing is mocked in the meantime.

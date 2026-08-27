@@ -57,6 +57,13 @@ uv sync --group dev && uv run pytest       # 118 green — the maths, before you
 ./scripts/setup_trueforge.sh               # 5 configured, 0 failed
 ```
 
+**Reap Daytona first.** This is the single most likely thing to eat a take:
+
+```sh
+./scripts/daytona_gc.sh            # dry run: shows sandboxes and disk against the 30 GiB cap
+./scripts/daytona_gc.sh --yes      # delete the stopped/archived ones
+```
+
 Then check the two things that actually break takes:
 
 - `curl -s localhost:8790/api/v1/settings/skills | jq -r '.data[].manifest.ref'` — the skill
@@ -122,8 +129,16 @@ At step 7: `PASS — the incident record survived a SIGKILL intact.`
 
 ### Known-broken edges
 
-- **The skill fetch can flake on a cold sandbox** (`EXP-0011`). Mitigation: rehearse twice; if
-  a strand reports `Sandbox initialization failed`, re-run rather than narrating around it.
+- **Daytona's disk quota is the trap, and it lies about itself** (`EXP-0012`). Each run leaves
+  five or six ~3 GiB sandboxes behind, and the 30 GiB free tier fills after a few rehearsals.
+  When it does, the harness reports `git ls-remote failed ... Connection reset by peer` —
+  identical to the transient cold-start race — so you retry, fail again, and debug networking.
+  Meanwhile the agent runs **without its SOP** and produces a plausible incident that never
+  reaches an approval gate. Run `./scripts/daytona_gc.sh --yes` before every session.
+- **The skill fetch can also genuinely flake on a cold sandbox** (`EXP-0011`), independently of
+  the quota. `replay/incident.py` now retries once on a fresh session automatically, and if the
+  skill fails on every attempt it says so and exits non-zero rather than presenting the run.
+  If you see that message, **do not narrate around it** — the run is not trustworthy.
 - **Supabase and Stripe are dark**, pending one OAuth login each. The incident driver drops
   unconfigured connectors and says so on screen. If asked: the data layer is behind one
   interface with SQLite as today's default — a backend swap, not a rewrite. Do not claim
