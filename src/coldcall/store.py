@@ -31,12 +31,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-__all__ = ["SCHEMA", "IncidentStore", "TelemetryTick"]
+__all__ = ["SCHEMA_INDEXES", "SCHEMA_TABLES", "IncidentStore", "TelemetryTick"]
 
 #: Appendix B of the build spec, in portable SQL. Deliberately free of Postgres-only syntax
 #: (no ``generated always as identity``, no ``timestamptz``) so the same DDL seeds SQLite
 #: today and Supabase the moment its connector is authorised.
-SCHEMA = """
+SCHEMA_TABLES = """
 CREATE TABLE IF NOT EXISTS products (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -68,9 +68,7 @@ CREATE TABLE IF NOT EXISTS telemetry (
   door_open INTEGER DEFAULT 0,
   route_stage TEXT
 );
--- UNIQUE, not merely indexed: one shipment cannot have two readings at the same
--- instant, and this is what makes record_ticks idempotent across demo re-runs.
-CREATE UNIQUE INDEX IF NOT EXISTS telemetry_shipment_ts ON telemetry(shipment_id, ts);
+
 
 CREATE TABLE IF NOT EXISTS consignees (
   id TEXT PRIMARY KEY,
@@ -108,6 +106,15 @@ CREATE TABLE IF NOT EXISTS incident_events (
   detail TEXT,
   receipt TEXT
 );
+"""
+
+#: Indexes are applied separately from the tables so that ``initialise`` can collapse
+#: duplicate telemetry left by a pre-idempotent replay *before* the uniqueness constraint
+#: goes on. Creating them together would make the migration impossible.
+SCHEMA_INDEXES = """
+-- UNIQUE, not merely indexed: one shipment cannot have two readings at the same instant,
+-- and this is what makes record_ticks idempotent across demo re-runs.
+CREATE UNIQUE INDEX IF NOT EXISTS telemetry_shipment_ts ON telemetry(shipment_id, ts);
 CREATE INDEX IF NOT EXISTS incident_events_incident ON incident_events(incident_id, id);
 """
 
@@ -155,8 +162,37 @@ class IncidentStore:
             conn.close()
 
     def initialise(self) -> None:
+        """Create the schema, migrating a database written before telemetry was idempotent.
+
+        The unique index cannot be created over existing duplicate `(shipment_id, ts)` rows,
+        and telemetry is deliberately preserved across runs — so anyone who ran the earlier,
+        non-idempotent replay would have hit ``IntegrityError`` here and been unable to run
+        the fixed version at all without deleting their database by hand. Duplicates are
+        collapsed to the earliest row for each instant before the index goes on.
+        """
         with self._conn() as conn:
-            conn.executescript(SCHEMA)
+            conn.executescript(SCHEMA_TABLES)
+            existing = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='index'"
+                " AND name='telemetry_shipment_ts'"
+            ).fetchone()
+            if existing is None:
+                removed = conn.execute(
+                    "DELETE FROM telemetry WHERE id NOT IN ("
+                    "  SELECT MIN(id) FROM telemetry GROUP BY shipment_id, ts)"
+                ).rowcount
+                if removed > 0:
+                    conn.execute(
+                        "INSERT INTO incident_events (incident_id, ts, kind, detail, receipt)"
+                        " SELECT DISTINCT i.id, ?, 'migration', ?, 'schema-migration'"
+                        " FROM incidents i",
+                        (
+                            _now(),
+                            f"collapsed {removed} duplicate telemetry row(s) left by a "
+                            f"pre-idempotent replay before adding the uniqueness constraint",
+                        ),
+                    )
+            conn.executescript(SCHEMA_INDEXES)
 
     # ---- seeding -----------------------------------------------------------------
 
@@ -229,9 +265,16 @@ class IncidentStore:
             # The store deliberately preserves telemetry across re-seeds, so without this a
             # second replay duplicated every reading — and duplicated readings silently
             # inflate time-at-temperature, which is exactly the number the verdict turns on.
+            #
+            # `ON CONFLICT (...) DO NOTHING` rather than `INSERT OR IGNORE`, deliberately.
+            # OR IGNORE swallows every constraint class — a NOT NULL or CHECK violation would
+            # be dropped and counted as a harmless duplicate, hiding ingestion corruption
+            # behind a verdict computed on an incomplete record. This targets the one
+            # conflict that is genuinely benign and lets every other kind raise.
             cursor = conn.executemany(
-                "INSERT OR IGNORE INTO telemetry (shipment_id, ts, internal_temp_c,"
-                " ambient_temp_c, door_open, route_stage) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO telemetry (shipment_id, ts, internal_temp_c,"
+                " ambient_temp_c, door_open, route_stage) VALUES (?, ?, ?, ?, ?, ?)"
+                " ON CONFLICT (shipment_id, ts) DO NOTHING",
                 rows,
             )
             return cursor.rowcount if cursor.rowcount >= 0 else len(rows)
