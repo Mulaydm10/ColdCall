@@ -63,6 +63,27 @@ _BOLD, _DIM, _RED, _GREEN, _YELLOW, _CYAN, _OFF = (
 )
 
 
+def _ref_exists_on_remote(ref: str) -> bool:
+    """Whether the sandbox will actually be able to clone this ref.
+
+    The sandbox clones from GitHub, not from the working tree, so a local-only branch fails
+    there and nowhere earlier. That wasted a rehearsal: five strands ran, each reported the
+    clone failure honestly, and the run reached no approval gate — a correct agent producing
+    a useless run because the driver handed it an address that does not exist.
+    """
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "ls-remote", "--exit-code", "--heads", PUBLIC_REPO, ref],
+            cwd=REPO_ROOT, capture_output=True, text=True, timeout=30,
+        )
+        return result.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        # Cannot tell. Do not block the run on a check that itself failed.
+        return True
+
+
 def _current_branch() -> str:
     """The branch the sandbox should clone. Falls back to main outside a git checkout."""
     import subprocess
@@ -216,6 +237,13 @@ by hand, then complete the narrative sections it marks as yours:
       --shipment-id {payload.get('shipment_id', '')} \\
       --incident-id "$INCIDENT_ID" \\
       --out /work/deviation.md
+
+## Order of work — the gate is the point, so get there
+
+Run the module **yourself** first, in your own sandbox, before spawning any strand. Report its
+JSON verbatim. Only then fan out for context, and tell each strand to answer in **under 200
+words** — the harness will stop you after a limited number of turns, and an incident that runs
+out before reaching the approval gate has failed however good its analysis was.
 
 ## Then execute the disposition — and expect to be stopped
 
@@ -628,6 +656,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"could not load the agent manifest: {exc}", file=sys.stderr)
         return 2
 
+    if not _ref_exists_on_remote(args.repo_ref):
+        print(
+            f"{_RED}ref '{args.repo_ref}' does not exist on {PUBLIC_REPO}.{_OFF}\n"
+            f"  The sandbox clones from GitHub, not from your working tree, so the agent "
+            f"would run without the disposition module and reach no verdict.\n"
+            f"  Push the branch, or pass --repo-ref main.",
+            file=sys.stderr,
+        )
+        return 2
     print(f"{_DIM}  sandbox will clone {PUBLIC_REPO} at ref {args.repo_ref}{_OFF}")
     message = excursion_message(payload, readings, args.repo_ref)
     return run(base_url, spec, message, args.auto, args.timeout, attempts=max(1, args.attempts))

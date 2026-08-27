@@ -57,14 +57,24 @@ The session *is* the regulatory record. Record, up front: shipment id, lot id, p
 excursion window, and where the telemetry came from. Everything after this appends to that
 record; nothing overwrites it.
 
-### 2. Fan out — five strands, in parallel
+### 2. Run the module YOURSELF, before fanning out
 
-Spawn all five as subagents; a strand you skip is a question nobody answered. They share your tools and your sandbox, they cannot talk to the
+Do this first, in your own sandbox, and do not delegate it. Everything downstream depends on
+the verdict, and a verdict that lives only inside a strand is one you may never receive: a
+strand can compute it correctly and you can still end the incident believing the module never
+ran. That has happened. Get the number, then spend the strands on context around it.
+
+Report the JSON verbatim before you spawn anything.
+
+### 3. Fan out — the remaining strands, in parallel
+
+Spawn these as subagents. **Keep each answer under 200 words** — you have a limited budget of
+turns before the harness stops you, and a strand that writes an essay costs you the approval
+gate at the end. None of them re-runs the disposition module; you already have the verdict. They share your tools and your sandbox, they cannot talk to the
 operator directly, and they cannot spawn helpers of their own. One level, that is all.
 
 | Strand | The one question it answers | How |
 |---|---|---|
-| 🔬 **Stability Analyst** | *Is the material still within its stability budget?* | Fetch the product profile. Run the module above in the sandbox. Return the verdict JSON verbatim and the chart path. **Do not modify the module.** |
 | 🚚 **Logistics Scout** | *If we hold it, where does it go, and what replaces it?* | Query qualified storage by distance; draft a reship plan with its ETA assumption stated as an assumption. |
 | 🌡️ **Route Analyst** | *Why did it warm?* | Re-run the module with `--route-lat/--route-lon`. It fetches real recorded weather at the shipment's own coordinates and reports whether the load tracked the outside air or ran away from it. **Report its attribution verbatim; never infer a cause from the temperature alone.** If the output sets `qualified: true`, the coordinate is a *last-known position* rather than one observed during the excursion — say so in the same breath as the attribution, with the gap from `location_evidence`. A reader who sees only `attribution` would never know. |
 | 📋 **Compliance Officer** | *What does the deviation record have to say?* | Draft it from the verdict JSON. Cite WHO TRS-999 Annex 5 and the product's own label provenance. Never cite a section you have not been given. |
@@ -72,7 +82,7 @@ operator directly, and they cannot spawn helpers of their own. One level, that i
 
 Strands report findings. **No strand executes an action.** Actions happen only after step 4.
 
-### 3. Assemble the evidence bundle
+### 4. Assemble the evidence bundle
 
 The bundle is what the human reads before signing. It must carry, in this order:
 
@@ -94,7 +104,7 @@ The bundle is what the human reads before signing. It must carry, in this order:
 A bundle missing any of these is not ready. Say what is missing rather than presenting a
 partial bundle as complete.
 
-### 4. Stop for the human
+### 5. Stop for the human
 
 Every write to inventory, every order, every notification, and every commit is irreversible.
 The harness will pause you. **Present the evidence bundle before the pause, not after** — an
@@ -106,7 +116,7 @@ State plainly what will be irreversible, and in what units the loss is measured 
 next-most-conservative alternative instead — usually quarantine-and-retest, which is the only
 verdict that leaves every option open. Then stop again.
 
-### 5. Execute and close
+### 6. Execute and close
 
 Only after approval. Run each action, and **verify each receipt** — a database row, an order
 id, a message id, a commit sha. An action without a receipt did not happen, whatever the API
