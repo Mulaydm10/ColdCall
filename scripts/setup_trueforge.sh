@@ -16,7 +16,24 @@ set -uo pipefail
 
 DRY=${1:-}
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-[[ -f "$ROOT/.env" ]] && set -a && . "$ROOT/.env" && set +a
+# Load .env WITHOUT clobbering what the caller already exported. `set -a && . .env` does the
+# opposite, and that cost real debugging time: .env pins COLDCALL_SKILL_REF=main, so
+# `COLDCALL_SKILL_REF=my-branch ./scripts/setup_trueforge.sh` silently registered the skill
+# against main anyway — and reported "ok", because the PUT genuinely succeeded with the wrong
+# ref. Standard dotenv semantics are the other way round: the environment wins over the file.
+if [[ -f "$ROOT/.env" ]]; then
+  while IFS='=' read -r _key _value; do
+    _key="${_key#"${_key%%[![:space:]]*}"}"          # ltrim
+    _key="${_key%"${_key##*[![:space:]]}"}"          # rtrim
+    [[ -z "$_key" || "$_key" == \#* ]] && continue
+    [[ "$_key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    [[ -n "${!_key+x}" ]] && continue                # already in the environment: leave it
+    _value="${_value%\"}"; _value="${_value#\"}"
+    _value="${_value%\'}"; _value="${_value#\'}"
+    export "$_key=$_value"
+  done < "$ROOT/.env"
+  unset _key _value
+fi
 
 TF=${TRUEFORGE_URL:-http://localhost:8790}
 MODEL_ID=${COLDCALL_MODEL_ID:-gpt-5.6-sol}
