@@ -415,3 +415,18 @@ comes next. `Q-0009` closes as discarded. `Q-0001` is now the only real blocker.
 
 `tests/README.md` is LOCKED and its layout table still names the deleted test files. Proposed to
 Main Agent, not applied.
+
+### 2026-08-27 11:00 CEST — docs, memory and session log squared away before compaction
+
+Closing the loop on the reset. `STATE.md` rewritten for the post-reset reality; `Q-0009` closed
+as discarded; the session log extended with the dead ends from this stretch — the classifier
+blocking `git rm`, the four leftovers a grep audit caught after the "main" reset was thought
+complete, and the latent `gpt-5-6-sol` manifest bug that would have failed at agent creation.
+
+Durable state for whoever picks this up: `STATE.md` (current truth), this worklog (how we got
+here), `experiments/experiment_log.md` (`EXP-0001`–`EXP-0009`), the ADRs (`ADR-0002`–`ADR-0006`),
+and `logs/session-2026-08-27-platform-setup.md` (gitignored dead ends).
+
+**The next session's job is to ask for the idea and wait for it.** Not to build, not to re-verify
+the platform, not to infer a mission from the tools — that mistake is what `ADR-0006` exists to
+undo.

@@ -85,8 +85,9 @@ supplied, not purely to the project name; what was invented on top of it was the
 
 ## In flight
 
-- Nothing being actively edited. PR #4 carries the documentation of all of the above and is
-  awaiting its follow-up review and a human merge. Awaiting the idea.
+- Nothing being actively edited. **Two PRs open, both awaiting a human merge:** #4 (docs;
+  re-review returned 0 bugs) and #5 (the `ADR-0006` mission reset, based on #4's branch rather
+  than `main` so the diff stays clean — merge #4 first). Awaiting the idea.
 
 ## Blocked
 
@@ -124,7 +125,7 @@ The harness is already configured and working — `OPENAI_API_KEY` and `DAYTONA_
 run on a Daytona microVM. **Do not repeat that setup.** Re-run the script only to re-verify after
 a machine restart; it is idempotent.
 
-1. Merge PR #4 (re-review: **0 bugs**) and the mission-reset PR.
+1. Merge PR #4 (re-review: **0 bugs**), then PR #5.
 2. Mulaydm10: supply the idea → `VISION.md`, then `DEMO-0001`.
 3. Re-register the `repo-evidence` skill against `main`, and write the agent's real
    instructions once the thesis exists.
