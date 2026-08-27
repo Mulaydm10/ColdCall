@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -34,7 +35,16 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BASE_URL = "http://localhost:8790/api/v1"
-PUBLIC_REPO = "https://github.com/Mulaydm10/ColdCall"
+#: The repository the incident actually WRITES to — the audit branch and the committed
+#: deviation record. Also what the sandbox clones, so the demo has a single-repo story.
+#:
+#: This is deliberately NOT `COLDCALL_SKILL_REPO`. That one controls where TrueForge fetches
+#: skills from, which is a different question: borrowing it here let a preflight green-light a
+#: token that could push to a fork configured for skill loading while the incident wrote
+#: somewhere else entirely. `scripts/verify_apis.sh` reads this same variable, so the thing
+#: checked and the thing written to cannot drift apart.
+DEFAULT_ACTION_REPO = "https://github.com/Mulaydm10/ColdCall"
+PUBLIC_REPO = os.environ.get("COLDCALL_ACTION_REPO") or DEFAULT_ACTION_REPO
 
 #: The demo leg's own recorded coordinates (Valencia, Spain), read from the dataset's GPS
 #: measurements rather than assumed — see replay/SHIPMENT.md. Route context is only honest if
@@ -61,6 +71,42 @@ _BOLD, _DIM, _RED, _GREEN, _YELLOW, _CYAN, _OFF = (
     if sys.stdout.isatty()
     else ("", "", "", "", "", "", "")
 )
+
+
+def _ref_exists_on_remote(ref: str) -> bool:
+    """Whether the sandbox will actually be able to clone this ref.
+
+    The sandbox clones from GitHub, not from the working tree, so a local-only branch fails
+    there and nowhere earlier. That wasted a rehearsal: five strands ran, each reported the
+    clone failure honestly, and the run reached no approval gate — a correct agent producing
+    a useless run because the driver handed it an address that does not exist.
+
+    **Fails open.** ``git ls-remote --exit-code`` returns 2 for "no such ref" and 128 for a
+    transport failure — no network, DNS down, GitHub unreachable. Only 2 means the ref is
+    genuinely absent; treating anything non-zero as absent would block a legitimate run
+    because the checker itself could not reach the internet. A pre-flight check that turns its
+    own outage into your error is worse than no pre-flight check.
+
+    Both branches and tags are queried, since ``--heads`` alone would reject a valid tag.
+    """
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "ls-remote", "--exit-code", "--heads", "--tags", PUBLIC_REPO, ref],
+            cwd=REPO_ROOT, capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return True  # cannot tell; do not block on a check that itself failed
+    if result.returncode == 2:
+        return False
+    if result.returncode not in (0, 2):
+        print(
+            f"{_YELLOW}  could not verify ref '{ref}' against the remote "
+            f"(git exit {result.returncode}); continuing anyway{_OFF}",
+            file=sys.stderr,
+        )
+    return True
 
 
 def _current_branch() -> str:
@@ -216,6 +262,13 @@ by hand, then complete the narrative sections it marks as yours:
       --shipment-id {payload.get('shipment_id', '')} \\
       --incident-id "$INCIDENT_ID" \\
       --out /work/deviation.md
+
+## Order of work — the gate is the point, so get there
+
+Run the module **yourself** first, in your own sandbox, before spawning any strand. Report its
+JSON verbatim. Only then fan out for context, and tell each strand to answer in **under 200
+words** — the harness will stop you after a limited number of turns, and an incident that runs
+out before reaching the approval gate has failed however good its analysis was.
 
 ## Then execute the disposition — and expect to be stopped
 
@@ -628,6 +681,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"could not load the agent manifest: {exc}", file=sys.stderr)
         return 2
 
+    if not _ref_exists_on_remote(args.repo_ref):
+        print(
+            f"{_RED}ref '{args.repo_ref}' does not exist on {PUBLIC_REPO}.{_OFF}\n"
+            f"  The sandbox clones from GitHub, not from your working tree, so the agent "
+            f"would run without the disposition module and reach no verdict.\n"
+            f"  Push the branch, or pass --repo-ref main.",
+            file=sys.stderr,
+        )
+        return 2
     print(f"{_DIM}  sandbox will clone {PUBLIC_REPO} at ref {args.repo_ref}{_OFF}")
     message = excursion_message(payload, readings, args.repo_ref)
     return run(base_url, spec, message, args.auto, args.timeout, attempts=max(1, args.attempts))

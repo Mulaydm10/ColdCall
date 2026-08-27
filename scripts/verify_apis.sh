@@ -112,6 +112,56 @@ else
 fi
 
 echo
+echo "Credentialed API"
+# GITHUB_TOKEN is the one credential whose absence is SILENT: without it the connector is
+# skipped, the approval gate has no tool to call, and the demo's centrepiece does not happen
+# while every command still exits 0. A pre-flight that checks five keyless endpoints and not
+# this one is checking the things that were never going to fail.
+GH_TOKEN_VALUE=$(awk -F= '/^GITHUB_TOKEN=/{sub(/^GITHUB_TOKEN=/,""); gsub(/^["'"'"']|["'"'"']$/,""); print; exit}' \
+                 "$ROOT/.env" 2>/dev/null)
+GH_TOKEN_VALUE=${GITHUB_TOKEN:-$GH_TOKEN_VALUE}
+if [[ -z "$GH_TOKEN_VALUE" ]]; then
+  printf '  \033[31mFAIL\033[0m  %-22s GITHUB_TOKEN unset — the approval gate will have no tool to call\n' "GitHub token"
+  FAIL=$((FAIL+1))
+else
+  # Ask about the REPO, not about /user. `/user` proves the token authenticates; it says
+  # nothing about whether this token may push HERE — and a fine-grained PAT with no repo
+  # access, or a classic one with only read:user, sails through an identity check and then
+  # fails at the post-approval commit, which is the demo's receipt. That is the vacuous-check
+  # family this repo has already had to fix twice: verifying less than the name implies.
+  #
+  # `.permissions` is only present on an authenticated response, and works for both classic
+  # and fine-grained tokens — unlike the X-OAuth-Scopes header, which fine-grained PATs do
+  # not send at all.
+  # COLDCALL_ACTION_REPO, not COLDCALL_SKILL_REPO. Skill source and audit target are
+  # different questions, and borrowing the former for this check was a bug: point
+  # COLDCALL_SKILL_REPO at a fork and the preflight green-lit a token that could push there
+  # while replay/incident.py wrote to the canonical repo. Both now read this one variable.
+  GH_REPO_SLUG=${COLDCALL_ACTION_REPO:-https://github.com/Mulaydm10/ColdCall}
+  GH_REPO_SLUG=${GH_REPO_SLUG#https://github.com/}
+  GH_REPO_SLUG=${GH_REPO_SLUG%.git}
+  GH_BODY=$(curl -sS -m 20 -H "Authorization: Bearer $GH_TOKEN_VALUE" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/$GH_REPO_SLUG")
+  GH_PUSH=$(printf '%s' "$GH_BODY" | jq -r '.permissions.push // false')
+  GH_LOGIN=$(curl -sS -m 20 -H "Authorization: Bearer $GH_TOKEN_VALUE" \
+             -H 'Accept: application/vnd.github+json' https://api.github.com/user \
+             | jq -r '.login // empty')
+  if [[ "$GH_PUSH" == "true" ]]; then
+    printf '  \033[32mok\033[0m    %-22s %s can push to %s\n' \
+      "GitHub token" "${GH_LOGIN:-token}" "$GH_REPO_SLUG"
+    PASS=$((PASS+1))
+  elif [[ -z "$GH_LOGIN" ]]; then
+    printf '  \033[31mFAIL\033[0m  %-22s token present but rejected by api.github.com\n' "GitHub token"
+    FAIL=$((FAIL+1))
+  else
+    printf '  \033[31mFAIL\033[0m  %-22s %s authenticates but CANNOT PUSH to %s — the commit after approval will fail\n' \
+      "GitHub token" "$GH_LOGIN" "$GH_REPO_SLUG"
+    FAIL=$((FAIL+1))
+  fi
+fi
+
+echo
 echo "Local harness"
 CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:8790/ || echo 000)
 if [[ "$CODE" == "200" ]]; then
