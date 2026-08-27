@@ -66,9 +66,24 @@ tally() {
   printf '%s %s\n' "$events" "$verdicts"
 }
 
+# Counts alone do not prove anything survived: an event stream with the same cardinality but
+# replaced content would pass. So the real assertion is over a digest of the ordered content
+# of every event in every turn — id, type, thread and payload. `sort` on the turn list keeps
+# the digest stable if the API ever returns turns in a different order.
+digest() {
+  local turn
+  for turn in $(curl -s "$API/sessions/$SESSION/turns" | jq -r '.data[].id' | sort); do
+    curl -s "$API/sessions/$SESSION/turns/$turn/events" \
+      | jq -S -c '[.data[] | {id, type, thread_id, content: (.content|tostring),
+                              tool_calls: (.tool_calls // [] | tostring)}]'
+  done | shasum -a 256 | awk '{print $1}'
+}
+
 read -r BEFORE_EVENTS BEFORE_VERDICT <<<"$(tally)"
+BEFORE_DIGEST=$(digest)
 
 echo "  before:  $BEFORE_TURNS turn(s), $BEFORE_EVENTS events, $BEFORE_VERDICT verdict-bearing response(s)"
+echo "           content digest ${BEFORE_DIGEST:0:16}…"
 
 # A proof that finds nothing to lose proves nothing.
 [[ "$BEFORE_VERDICT" -gt 0 ]] \
@@ -77,11 +92,26 @@ otherwise this check passes by comparing 0 against 0"
 
 # ---- kill -------------------------------------------------------------------------------
 
-PIDS=$(pgrep -f '[t]rueforge' || true)
-[[ -n "$PIDS" ]] || die "could not find a running trueforge process to kill"
+# Target the process actually LISTENING ON THE PORT, not every command line matching
+# "trueforge". A developer with an editor, a log tail, or a second checkout open would
+# otherwise have unrelated processes SIGKILLed by a script they ran to check persistence.
+PORT=${TF##*:}
+PORT=${PORT%%/*}
+PIDS=$(lsof -nP -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | sort -u || true)
+[[ -n "$PIDS" ]] || die "nothing is listening on port $PORT — cannot identify the harness to kill"
+
+# Refuse to kill something that is not the harness. `npx` runs it under node, and killing an
+# unrelated service that happens to hold this port would be a genuinely destructive surprise.
+for pid in $PIDS; do
+  cmd=$(ps -o command= -p "$pid" 2>/dev/null || true)
+  case "$cmd" in
+    *trueforge*|*node*) ;;
+    *) die "pid $pid on port $PORT does not look like TrueForge (\`$cmd\`) — refusing to kill it" ;;
+  esac
+done
 
 echo
-red "  killing the harness mid-incident (pids: $(echo "$PIDS" | tr '\n' ' '))"
+red "  killing the harness mid-incident (pids on :$PORT: $(echo "$PIDS" | tr '\n' ' '))"
 # SIGKILL, deliberately: a graceful shutdown that flushes cleanly proves much less than an
 # abrupt one. This is the version of the claim worth making on camera.
 # shellcheck disable=SC2086
@@ -115,14 +145,21 @@ green "  harness is back up"
 echo
 AFTER_TURNS=$(curl -s "$API/sessions/$SESSION/turns" | jq '.data | length')
 read -r AFTER_EVENTS AFTER_VERDICT <<<"$(tally)"
+AFTER_DIGEST=$(digest)
 
 echo "  after:   $AFTER_TURNS turn(s), $AFTER_EVENTS events, $AFTER_VERDICT verdict-bearing response(s)"
+echo "           content digest ${AFTER_DIGEST:0:16}…"
 echo
 
 FAILED=0
 [[ "$AFTER_TURNS"   == "$BEFORE_TURNS"   ]] || { red "  turns lost:  $BEFORE_TURNS -> $AFTER_TURNS"; FAILED=1; }
 [[ "$AFTER_EVENTS"  == "$BEFORE_EVENTS"  ]] || { red "  events lost: $BEFORE_EVENTS -> $AFTER_EVENTS"; FAILED=1; }
 [[ "$AFTER_VERDICT" == "$BEFORE_VERDICT" ]] || { red "  verdict lost: $BEFORE_VERDICT -> $AFTER_VERDICT"; FAILED=1; }
+# The assertion that actually matters. Equal counts with different content is exactly the
+# silent-corruption case the counts above cannot see.
+[[ "$AFTER_DIGEST" == "$BEFORE_DIGEST" ]] \
+  || { red "  event CONTENT changed across the restart:"; \
+       red "    before $BEFORE_DIGEST"; red "    after  $AFTER_DIGEST"; FAILED=1; }
 
 # Configuration has to survive too. An incident record with no model provider is a museum
 # piece — you could read it, but you could not continue the investigation.

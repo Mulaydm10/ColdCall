@@ -116,13 +116,19 @@ Not a checklist — each row is a place the system would break if the feature we
 ## Quickstart
 
 Needs **Node 22+** (TrueForge segfaults on Node 20) and [`uv`](https://docs.astral.sh/uv/).
-Nothing is installed globally.
+Python floor is **3.11**; we develop on 3.12, which is what the command below pins. Nothing is
+installed globally.
+
+**Step 1 runs in its own terminal and stays running.** It is a server, not a setup step —
+everything after it goes in a second terminal.
 
 ```sh
-# 1. The harness
+# Terminal 1 — leave this running
 npx @truefoundry/trueforge                 # → http://localhost:8790
+```
 
-# 2. This project
+```sh
+# Terminal 2 — everything else
 git clone https://github.com/Mulaydm10/ColdCall && cd ColdCall
 uv venv --python 3.12 .venv && uv sync --group dev
 uv run pytest                              # the maths, proven before you trust it
@@ -184,7 +190,7 @@ cargo, so the product label was chosen to match what the goods actually are.
 | The maths is deterministic and reproducible | Same leg, same verdict on a laptop and in a remote microVM: MKT 24.54 °C, 64.35 %, `quarantine_retest` |
 | The sandbox is genuinely remote | A live turn returned `Linux x86_64 3.13.15` from a macOS/arm64 host |
 | The gate actually stops the agent | **Deny** → it reported the denial and stopped, no retry. **Allow** → branch `incident/INC-VCC-118-A2231-…`, deviation record committed as `1c859fc` |
-| The record survives a crash | `./scripts/restart_proof.sh` — `kill -9`, restart, 86 events and 7 verdict-bearing responses intact |
+| The record survives a crash | `./scripts/restart_proof.sh` — `kill -9`, restart, and a **SHA-256 digest of every event's content** unchanged: `5ac4ba64…` before and after |
 | The data sources work *now* | `./scripts/verify_apis.sh` calls each one and asserts on the response |
 
 Full trail in [`experiments/experiment_log.md`](experiments/experiment_log.md) (`EXP-0001`–`EXP-0011`),

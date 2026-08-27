@@ -46,8 +46,13 @@ Run these **before** recording. All are idempotent and none take arguments you h
 about.
 
 ```sh
-npx @truefoundry/trueforge                 # harness up on :8790, Node 22+
-uv sync --group dev && uv run pytest       # 107 green — the maths, before you trust it
+# Terminal 1 — the harness is a server. Start it, leave it running, do not wait on it.
+npx @truefoundry/trueforge                 # up on :8790, Node 22+
+```
+
+```sh
+# Terminal 2 — the checks
+uv sync --group dev && uv run pytest       # 118 green — the maths, before you trust it
 ./scripts/verify_apis.sh                   # every external source, hit for real
 ./scripts/setup_trueforge.sh               # 5 configured, 0 failed
 ```
