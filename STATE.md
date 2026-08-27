@@ -137,10 +137,17 @@ checkable receipt.
 
 ## Next intended step
 
-1. Record the ~3-minute video against `DEMO-0001`. Rehearse twice — see the cold-start caveat.
-2. Land the milestone PRs in order and re-register the skills against `main` afterwards.
-3. Apply `proposals/VISION.md` to the LOCKED `VISION.md` and log it in `GOVERNANCE.md`.
-4. Optional prize tracks in the deferred backlog.
+**Mulaydm10, in this order:**
+
+1. **`./scripts/daytona_gc.sh --yes`** — one minute, and live runs fail until it is done. See
+   Blocked above; the error it prevents blames the network, so it is easy to misdiagnose.
+2. **Merge #7 → #8 → #9.** All three are Qodo-clean and mergeable.
+3. **Apply `proposals/VISION.md`** to the LOCKED `VISION.md` and log it in `GOVERNANCE.md`.
+   Until then Qodo will keep re-reporting "the thesis is fabricated", correctly by its rule.
+4. **Re-register the skills against `main`** once #9 lands:
+   `COLDCALL_SKILL_REF=main ./scripts/setup_trueforge.sh`.
+5. **Record the ~3-minute video** against `DEMO-0001`. Rehearse twice — reap Daytona first.
+6. Optional prize tracks are in the deferred backlog.
 
 **Do not re-run platform setup.** It is configured and verified; the script is idempotent and
 exists for re-verification after a restart, not as a step.
@@ -149,4 +156,4 @@ exists for re-verification after a restart, not as a step.
 
 | Surface | Claimed by | Since | Status |
 |---|---|---|---|
-| `src/coldcall/`, `tests/`, `replay/`, `scripts/`, docs | Claude (autonomous run) | 2026-08-27 | active |
+| _(none — autonomous run yielded 2026-08-27 14:20 CEST)_ | — | — | — |
