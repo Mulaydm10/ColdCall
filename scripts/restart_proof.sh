@@ -79,6 +79,22 @@ digest() {
   done | shasum -a 256 | awk '{print $1}'
 }
 
+# Same reasoning as `digest`, applied to config instead of events: a count survives losing
+# any object as long as some other object takes its place, so `MODELS -gt 0` and `SKILLS -gt 0`
+# are exactly the vacuous-pass shape this script exists to rule out — losing coldchain-sop
+# while repo-evidence survives leaves SKILLS at 1, still nonzero, still a PASS. Hash the
+# canonicalized payload instead, the same as the event digest above.
+config_digest() {
+  { fetch "$API/models" | jq -S -c '.data'; fetch "$API/settings/skills" | jq -S -c '.data'; } \
+    | shasum -a 256 | awk '{print $1}'
+}
+
+# The one skill an incident session cannot continue without, named explicitly rather than
+# left to a count: `select` on a lost skill yields nothing, so an empty result IS the loss.
+sop_manifest() {
+  fetch "$API/settings/skills" | jq -S -c '.data[] | select(.name=="coldchain-sop")'
+}
+
 
 # ---- before -----------------------------------------------------------------------------
 
@@ -109,6 +125,10 @@ TALLY_BEFORE=$(tally) || exit 1
 read -r BEFORE_EVENTS BEFORE_VERDICT <<<"$TALLY_BEFORE"
 BEFORE_DIGEST=$(digest) || exit 1
 [[ -n "$BEFORE_DIGEST" ]] || die "the pre-restart digest came back empty; refusing to compare"
+BEFORE_CONFIG_DIGEST=$(config_digest) || exit 1
+[[ -n "$BEFORE_CONFIG_DIGEST" ]] || die "the pre-restart config digest came back empty; refusing to compare"
+BEFORE_SOP=$(sop_manifest) || exit 1
+[[ -n "$BEFORE_SOP" ]] || die "coldchain-sop is not registered before the restart — nothing to prove survives"
 
 echo "  before:  $BEFORE_TURNS turn(s), $BEFORE_EVENTS events, $BEFORE_VERDICT verdict-bearing response(s)"
 echo "           content digest ${BEFORE_DIGEST:0:16}…"
@@ -182,6 +202,8 @@ TALLY_AFTER=$(tally) || exit 1
 read -r AFTER_EVENTS AFTER_VERDICT <<<"$TALLY_AFTER"
 AFTER_DIGEST=$(digest) || exit 1
 [[ -n "$AFTER_DIGEST" ]] || die "the post-restart digest came back empty; refusing to compare"
+AFTER_CONFIG_DIGEST=$(config_digest) || exit 1
+AFTER_SOP=$(sop_manifest) || exit 1
 
 echo "  after:   $AFTER_TURNS turn(s), $AFTER_EVENTS events, $AFTER_VERDICT verdict-bearing response(s)"
 echo "           content digest ${AFTER_DIGEST:0:16}…"
@@ -202,8 +224,14 @@ FAILED=0
 MODELS=$(fetch "$API/models" | jq '.data | length') || exit 1
 SKILLS=$(fetch "$API/settings/skills" | jq '.data | length') || exit 1
 echo "  config:  $MODELS model(s), $SKILLS skill(s) still registered"
-[[ "$MODELS" -gt 0 ]] || { red "  model provider lost"; FAILED=1; }
-[[ "$SKILLS" -gt 0 ]] || { red "  skills lost"; FAILED=1; }
+# Counts above are for a human watching, not the gate: they cannot tell "lost X, gained Y"
+# apart from "kept X". The digest can, and the coldchain-sop check names the one config
+# object an incident session cannot continue without.
+[[ "$AFTER_CONFIG_DIGEST" == "$BEFORE_CONFIG_DIGEST" ]] \
+  || { red "  config CONTENT changed across the restart:"; \
+       red "    before $BEFORE_CONFIG_DIGEST"; red "    after  $AFTER_CONFIG_DIGEST"; FAILED=1; }
+[[ -n "$AFTER_SOP" ]] || { red "  coldchain-sop skill lost"; FAILED=1; }
+[[ "$AFTER_SOP" == "$BEFORE_SOP" ]] || { red "  coldchain-sop manifest changed across the restart"; FAILED=1; }
 
 echo
 if [[ "$FAILED" -eq 0 ]]; then
