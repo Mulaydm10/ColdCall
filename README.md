@@ -135,10 +135,11 @@ Needs **Node 22+** (TrueForge segfaults on Node 20) and [`uv`](https://docs.astr
 Python floor is **3.11**; we develop on 3.12, which is what the command below pins. Nothing is
 installed globally.
 
-The shell scripts also use **`curl`**, **`jq`**, **`python3`**, and — for the restart proof
-only — **`lsof`** and **`shasum`**. All but `jq` ship with macOS and most Linux distributions;
-`jq` is `brew install jq` or `apt install jq`. Each script checks for what it needs and says
-so by name rather than failing halfway through.
+The shell scripts additionally need **`curl`** and **`jq`**, plus **`lsof`** and **`shasum`**
+for the restart proof only. Of these, **only `jq` usually needs installing** —
+`brew install jq` or `apt install jq`; the rest ship with macOS and with most Linux
+distributions. `verify_apis.sh`, `restart_proof.sh` and `daytona_gc.sh` each check for `jq` up
+front and name it rather than failing halfway through; `setup_trueforge.sh` uses only `curl`.
 
 **Step 1 runs in its own terminal and stays running.** It is a server, not a setup step —
 everything after it goes in a second terminal.
