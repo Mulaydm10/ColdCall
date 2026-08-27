@@ -1,0 +1,33 @@
+# tru — root .gitignore
+# Stack is explicitly undecided (see design/decisions/ADR-0002-stack-selection.md). The
+# language-runtime patterns below are pre-emptive hygiene for whichever stack gets picked —
+# their presence is not a stack commitment; do not read them as one.
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Secrets — hackathons run on API keys; never commit one
+.env
+.env.*
+!.env.example
+secrets*
+*.key
+*.pem
+
+# Common language-runtime artifacts (harmless if unused; see note above)
+__pycache__/
+*.pyc
+.venv/
+venv/
+node_modules/
+dist/
+build/
+.next/
+*.log
+
+# Gitignored working directories are governed by their own local .gitignore
+# (logs/, scratch/) using the whitelist pattern — see those files, not this one.

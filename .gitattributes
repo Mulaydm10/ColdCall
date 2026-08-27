@@ -1,0 +1,15 @@
+# Normalize line endings for text; declare common binaries explicitly so they're never
+# accidentally text-diffed or LF-mangled.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.mp4 binary
+*.mov binary
