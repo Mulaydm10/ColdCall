@@ -75,6 +75,7 @@ empty cells. No resampling, no interpolation, no rounding.
 """
 
 import csv
+import os
 import sys
 from pathlib import Path
 
@@ -91,18 +92,22 @@ raw_dir = dest_dir / "raw"
 for ship in ("S1", "S2", "S3", "S4", "S5", "S6"):
     frame = pd.read_parquet(raw_dir / f"{ship}_aligned_strict_linear_with_labels.parquet")
     out = dest_dir / f"{ship}.csv"
-    with out.open("w", newline="", encoding="utf-8") as handle:
+    # Write to a temp path and rename: an interrupted conversion must never leave a
+    # truncated CSV at the final path, where a later fetch run would accept it as done.
+    tmp = out.with_suffix(".csv.tmp")
+    with tmp.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(["ts", *SENSORS])
         for row in frame[["Time", *SENSORS]].itertuples(index=False):
             ts = pd.Timestamp(row[0]).strftime("%Y-%m-%dT%H:%M:%S")
             cells = ["" if pd.isna(v) else f"{float(v):.1f}" for v in row[1:]]
             writer.writerow([ts, *cells])
+    os.replace(tmp, out)
     print(f"wrote {out} ({len(frame)} rows)")
 PYEOF
 
 echo "converting parquet -> csv ..."
-uv run --no-project --quiet \
+uv run --project "$REPO_ROOT" --python 3.12 --quiet \
   --with "pandas>=2.2,<3" --with "pyarrow>=17,<22" \
   python "$CONVERT" "$DEST_DIR"
 echo "ok: $DEST_DIR/S1.csv .. S6.csv"
