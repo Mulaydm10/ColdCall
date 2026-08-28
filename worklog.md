@@ -820,3 +820,13 @@ not just deep" section — 206 legs / 5 real datasets / 0 FAIL/DRIFT, per-datase
 breakdown (counts taken from `corpus/results.json`, not from memory), the demo-input pin, and
 the regression-pins-not-ground-truth caveat — linking to `corpus/RESULTS.md` and
 `corpus/README.md`. Documentation only; no code change.
+
+## 2026-08-28 — 19:35 UTC — Devin: VISION.md applied on Mulaydm10's instruction (PR #15)
+
+Mulaydm10 instructed in chat ("solve this first") that the standing proposal be applied, so
+`proposals/VISION.md`'s body now replaces the all-TODO scaffold in the LOCKED `VISION.md`,
+verbatim. The edit is logged in `GOVERNANCE.md`'s audit table as Mulaydm10 (via Devin, on
+their behalf), matching the existing "via Claude" precedent; `Q-0001` is resolved in
+`research/open_questions.md`. This closes the gap where a judge following the read order hit
+"the thesis is TODO" before any code — and the finding Qodo re-reported on every PR.
+Documentation only; human merge still required.
