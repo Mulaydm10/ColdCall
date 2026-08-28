@@ -6,8 +6,8 @@ this file and `worklog.md` disagree about what is currently true, this file wins
 explains how we got here.**
 
 Last updated: 2026-08-28 — **the build is finished and the project is in its demo phase.**
-`main` is at `7aca120`. PRs #1–#11 all merged, **no open PRs, no work in flight**. Everything
-that remains needs a human.
+`main` is at `7aca120`. PRs #1–#11 all merged. The only open PR is **#12**, this
+documentation handoff itself — no code is in flight. Everything that remains needs a human.
 
 ## Deadline
 
@@ -22,9 +22,11 @@ review with findings fixed or dismissed in-thread, and Devin as second reviewer.
 
 **The judged path is proven, not asserted** (`EXP-0010`, `EXP-0017`):
 
-excursion → the orchestrator computes the verdict in a **real Daytona microVM** → four strands
-fan out for context → generative-UI evidence bundle → **approval gate** → executed action with
-a checkable receipt. Deny stops the agent; allow produced branch
+excursion → the orchestrator computes the verdict in a **real Daytona microVM** → strands fan
+out across the four specialist roles for context → generative-UI evidence bundle → **approval
+gate** → executed action with a checkable receipt. Four roles is the design; the number of
+strands a given run actually spawns has varied 0–5 (`EXP-0019`) and is not guaranteed — see the
+traps below. Deny stops the agent; allow produced branch
 `incident/INC-20260827T162354Z-VCC-118-A2231` and commit **`6ccb0bd`** — a 5 878-byte,
 11-section deviation record. The record survives `kill -9`.
 
@@ -69,7 +71,8 @@ Nothing.
 
 ## In flight
 
-Nothing. No open PRs.
+**PR #12** — this handoff, documentation only. It is the last thing not on `main`; once it
+merges, `main` carries the final state. No code work is in flight.
 
 ## Next intended step
 

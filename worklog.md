@@ -717,7 +717,7 @@ Everything left needs a human, and none of it was attempted — the governance e
 `VISION.md`, three optional OAuth logins, and the video. Each is a row in `STATE.md` with the
 exact steps.
 
-### 2026-08-28 — the build closed; PR #11 merged and the project moved to its demo phase
+### 2026-08-28 16:20 CEST — the build closed; PR #11 merged and the project moved to its demo phase
 
 `main` is at `7aca120` with **eleven PRs merged and zero direct pushes**. No open PRs, nothing
 in flight. 230 tests green, ruff clean, `verify_apis.sh` 9/9.
@@ -753,6 +753,6 @@ receive. Then the wording that fixed the timeout made the model skip the fan-out
 that was reworded to say the two are not a trade.
 
 **Everything remaining needs a human**, and none of it was attempted: the governance edit
-applying `proposals/VISION.md` to the LOCKED `VISION.md`, three optional OAuth logins, and the
-video. `STATE.md` carries the list with exact steps, plus the two rehearsal traps that will eat
+applying `proposals/VISION.md` to the LOCKED `VISION.md`, the video, and four optional items —
+two OAuth connectors (Supabase, Stripe), a Slack **webhook**, and the prize-track actions. `STATE.md` carries the list with exact steps, plus the two rehearsal traps that will eat
 a take — reap Daytona first, and rehearse until one run shows both the fan-out and the gate.
