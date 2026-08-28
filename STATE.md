@@ -6,8 +6,8 @@ this file and `worklog.md` disagree about what is currently true, this file wins
 explains how we got here.**
 
 Last updated: 2026-08-28 — **the build is finished and the project is in its demo phase.**
-PRs #1–#12 all merged. The only open PR is **#13**, the multi-dataset robustness corpus —
-the last code in flight. Everything else that remains needs a human.
+PRs #1–#13 all merged — `main` now carries the corpus. The only open PR is **#14**, a
+README corpus-results section, documentation only. Everything else that remains needs a human.
 
 ## Deadline
 
@@ -15,9 +15,9 @@ See `COMPETITION.md` → "Deadline" (single source of truth for event facts).
 
 ## Where this stands
 
-**Code complete.** 230 tests green, ruff clean, `scripts/verify_apis.sh` **9/9**,
+**Code complete.** 287 tests green, ruff clean, `scripts/verify_apis.sh` **9/9**,
 `scripts/setup_trueforge.sh` idempotent (`5 configured, 2 skipped, 0 failed` on consecutive
-runs). Eleven PRs merged with zero direct pushes to `main`; every one carried a completed Qodo
+runs). Thirteen PRs merged with zero direct pushes to `main`; every one carried a completed Qodo
 review with findings fixed or dismissed in-thread, and Devin as second reviewer.
 
 **The judged path is proven, not asserted** (`EXP-0010`, `EXP-0017`):
@@ -71,20 +71,14 @@ Nothing.
 
 ## In flight
 
-`feat/corpus-benchmark` (Devin, PR #13) — a multi-dataset robustness corpus: the deterministic
-CLI run unmodified over **206 legs across 5 real public datasets** (Zenodo LL1 pharma logger 48,
-strawberry truck 54, mango air-cargo 62, COVID ULT container tests 39, SOFIE food-chain 3),
-0 FAIL/DRIFT, independent cross-check agreeing on every leg. All five datasets integrated.
-All five Qodo findings on #13 fixed with tests: round 1 (demo-window fidelity, silent pin
-drops, timeout handling — 4796af5) and round 2 (strawberry CSV conversion now atomic
-temp-then-rename; converter runs via the project env with `--python 3.12` — d90c617), all
-threads resolved in-thread with evidence. Evidence in `corpus/RESULTS.md`; verdicts are
-regression pins, see `corpus/README.md`. All six Qodo findings across three rounds fixed or
-addressed with evidence, all review threads resolved. Awaiting a human merge.
+`docs/readme-corpus-results` (Devin, PR #14) — README gains a "Run wide, not just deep"
+section surfacing the corpus results (206 legs / 5 real datasets / 0 FAIL/DRIFT, verdict
+breakdown per dataset) with links to `corpus/RESULTS.md` and `corpus/README.md`.
+Documentation only.
 
 ## Next intended step
 
-1. Mulaydm10 merges PR #13 (the corpus).
+1. Mulaydm10 merges PR #14 (README corpus section) once Qodo clears it.
 2. Mulaydm10 works items 1 and 2 above. 3–6 are optional and block nothing.
 3. Submit.
 
@@ -96,4 +90,5 @@ not as steps.
 
 | Surface | Claimed by | Since | Status |
 |---|---|---|---|
-| `corpus/` (all five datasets, harness, PR #13) | Devin | 2026-08-25 07:10 UTC | done — awaiting Qodo re-review + merge |
+| `corpus/` (all five datasets, harness, PR #13) | Devin | 2026-08-25 07:10 UTC | done — merged |
+| `README.md` corpus section (PR #14) | Devin | 2026-08-28 18:55 UTC | in review |

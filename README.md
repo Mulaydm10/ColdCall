@@ -236,6 +236,26 @@ cargo, so the product label was chosen to match what the goods actually are.
 Full trail in [`experiments/experiment_log.md`](experiments/experiment_log.md) (`EXP-0001`–`EXP-0012`),
 including the bugs that had to be fixed on the way and the ones still open.
 
+## Run wide, not just deep: the corpus
+
+The demo replays one shipment. The corpus runs the same unmodified CLI over **206 legs from
+5 real public datasets** in different cold-chain domains — **0 failures, the independent
+cross-check agreeing on every leg**, and all three verdict classes reached on real recordings:
+
+| Dataset | Domain | Legs | Verdicts |
+|---|---|---:|---|
+| Zenodo LL1 ([`10.5281/zenodo.7907515`](https://doi.org/10.5281/zenodo.7907515)) | Pharma logger telemetry | 48 | 10 release / 11 quarantine_retest / 27 destroy |
+| Strawberry ([arXiv 2103.12895](https://arxiv.org/abs/2103.12895)) | Refrigerated truck, 6 shipments × 9 probes | 54 | 2 release / 12 quarantine_retest / 40 destroy |
+| Mango air cargo ([`10.57745/F9UJGQ`](https://doi.org/10.57745/F9UJGQ)) | Air freight, Bangkok → Paris, 31 cartons | 62 | 62 destroy |
+| COVID ULT ([`10.6084/m9.figshare.14888121`](https://doi.org/10.6084/m9.figshare.14888121)) | Ultra-low-temp container tests, −90…−60 °C | 39 | 39 destroy |
+| SOFIE ([`10.5281/zenodo.4392841`](https://doi.org/10.5281/zenodo.4392841)) | EU food-chain pilot | 3 | 1 release / 2 destroy |
+
+The demo's exact 64-reading input is regression-pinned in the corpus (`quarantine_retest`,
+MKT 24.54 °C) next to the same journey's full span, which scores `destroy`. Verdicts are
+**regression pins, not regulatory ground truth** — what each source does and does not support
+is written down per dataset. Full tables in [`corpus/RESULTS.md`](corpus/RESULTS.md); scope,
+caveats and how to reproduce in [`corpus/README.md`](corpus/README.md).
+
 ## Honest limits
 
 - **This is decision support.** It does not make regulated release decisions. A human QA
