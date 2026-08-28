@@ -41,8 +41,14 @@ context as the demo leg, so the same profile is the honest choice.
   logger recorded between silences", which may merge dwell and transport.
 - **A finding this corpus surfaced about the demo itself**: the demo's 64-reading `VCC-118`
   leg (device `…34:CD` from 2021-11-09 08:23) was bounded not by a real logger silence but by
-  the end of the demo's 2.9 MB sample. In this wider sample the same journey continues
+  the end of the demo's ~3 MB sample. In this wider sample the same journey continues
   uninterrupted to 2021-11-14 22:34 (617 readings, leg `1334CD-20211109-0823`) and the full
   journey scores `destroy` — more warm time, more budget spent. The demo's
   `quarantine_retest` is the correct verdict *for the 20.3 h window it replays* and stays
   pinned as such in `tests/`; the corpus scores the whole journey.
+- The source file is **not time-ordered**, so the demo's time window holds more readings than
+  the demo's own sample could see: 12 additional in-range readings (all 23–24 °C) fall inside
+  the window but beyond the demo sample's byte 3,000,001. That is why the corpus pins two
+  legs for the window: `…-demo-input` (the demo's exact 64 readings, reconstructed from the
+  same byte range, `quarantine_retest`) and `…-demo-window` (all 76 readings the 20 MB sample
+  has inside the same bounds, also `quarantine_retest` — the extra readings are in-range).

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-28T15:57:32+00:00",
+  "generated_at": "2026-08-28T16:11:03+00:00",
   "datasets": [
     {
       "slug": "zenodo-ll1",
@@ -255,6 +255,20 @@
           "crosscheck_agrees": true,
           "status": "ok",
           "n_readings": 76,
+          "check": "PASS"
+        },
+        {
+          "leg_id": "1334CD-20211109-0823-demo-input",
+          "exit_code": 0,
+          "verdict": "quarantine_retest",
+          "mkt_c": 24.54,
+          "budget_consumed_pct": 64.35,
+          "excursion_minutes": 231.66666666666666,
+          "max_c": 27.0,
+          "min_c": 23.0,
+          "crosscheck_agrees": true,
+          "status": "ok",
+          "n_readings": 64,
           "check": "PASS"
         },
         {

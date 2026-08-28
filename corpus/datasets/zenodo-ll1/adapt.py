@@ -33,13 +33,22 @@ GAP_MINUTES = 180.0  # same journey-cut threshold replay/SHIPMENT.md documents
 MIN_READINGS = 8  # fewer carries almost no duration evidence
 MIN_DURATION_MINUTES = 120.0  # a "journey" shorter than 2 h is a logger check-in
 
-# The exact window DEMO-0001 replays (replay/SHIPMENT.md): device ‴34:CD, 64 readings. Its end
-# was the demo sample's last byte, not a logger silence — the journey continues to 11-14 in
-# this wider sample — so it is emitted here as an explicit extra leg to keep the demo verdict
-# (quarantine_retest) regression-pinned by the corpus alongside the full journey's.
+# The window DEMO-0001 replays (replay/SHIPMENT.md): device ‴34:CD. Two related legs are
+# emitted for it, because they are not the same evidence:
+#
+# ``-demo-input``  — the demo's exact 64-reading input, byte-for-byte: readings inside the
+#   window that lie within the first DEMO_SAMPLE_BYTES of the source file, the same range
+#   request SHIPMENT.md derived the leg from. This is the leg that regression-pins the demo
+#   verdict (quarantine_retest) against the input the demo actually replays.
+# ``-demo-window`` — every reading this wider sample holds inside the same time bounds
+#   (76: the file is not time-ordered, so 12 in-range readings the demo's 3 MB range never
+#   reached also fall in the window). The demo's end was the demo sample's last byte, not a
+#   logger silence — the journey continues to 11-14 — so the full journey is scored too.
 DEMO_WINDOW_DEVICE = "DD:33:04:13:34:CD"
 DEMO_WINDOW_START = "2021-11-09T08:23:09+00:00"
 DEMO_WINDOW_END = "2021-11-10T04:42:10+00:00"
+DEMO_SAMPLE_BYTES = 3_000_001  # SHIPMENT.md's range request: bytes 0-3000000
+DEMO_INPUT_READINGS = 64  # what DEMO-0001 replays; drift here means the pin is not the demo
 
 
 def cut_legs(points: list[TelemetryPoint]) -> list[list[TelemetryPoint]]:
@@ -63,6 +72,34 @@ def cut_legs(points: list[TelemetryPoint]) -> list[list[TelemetryPoint]]:
         if len(leg) >= MIN_READINGS
         and (leg[-1].at - leg[0].at).total_seconds() / 60.0 >= MIN_DURATION_MINUTES
     ]
+
+
+def _demo_input_leg() -> list[TelemetryPoint]:
+    """Reproduce DEMO-0001's exact input: the demo-window readings the demo's own
+    3 MB range request could see. Warns rather than guesses if the count drifts."""
+    prefix_path = DATA_DIR / "_demo_prefix.json"
+    with RAW.open("rb") as src:
+        prefix_path.write_bytes(src.read(DEMO_SAMPLE_BYTES))
+    try:
+        points = sorted(
+            (
+                p
+                for p in iter_telemetry(prefix_path)
+                if p.device == DEMO_WINDOW_DEVICE
+                and DEMO_WINDOW_START <= p.at.isoformat() <= DEMO_WINDOW_END
+            ),
+            key=lambda p: p.at,
+        )
+    finally:
+        prefix_path.unlink(missing_ok=True)
+    if len(points) != DEMO_INPUT_READINGS:
+        print(
+            f"warning: demo-input reconstruction has {len(points)} readings, "
+            f"expected {DEMO_INPUT_READINGS} (replay/SHIPMENT.md) — the pin below is "
+            "NOT the demo's input",
+            file=sys.stderr,
+        )
+    return points
 
 
 def main() -> int:
@@ -89,6 +126,9 @@ def main() -> int:
             ]
             if window:
                 emit.append((window, "-demo-window"))
+            demo_input = _demo_input_leg()
+            if demo_input:
+                emit.append((demo_input, "-demo-input"))
         for leg, suffix in emit:
             start = leg[0].at.astimezone(timezone.utc)
             leg_id = f"{device.replace(':', '')[-6:]}-{start:%Y%m%d-%H%M}{suffix}"

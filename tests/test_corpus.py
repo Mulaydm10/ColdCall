@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -60,6 +63,19 @@ class TestCutLegs:
         assert at_30[0].celsius == 29.5
 
 
+class TestDemoInputLeg:
+    def test_demo_input_is_exactly_the_demo_leg(self):
+        # DEMO-0001 replays exactly 64 readings (replay/SHIPMENT.md). The corpus pin is only
+        # a pin of the demo if it reconstructs that input reading-for-reading.
+        if not adapt.RAW.exists():
+            pytest.skip("zenodo-ll1 raw sample not fetched (corpus/datasets/zenodo-ll1/fetch.sh)")
+        leg = adapt._demo_input_leg()
+        assert len(leg) == adapt.DEMO_INPUT_READINGS == 64
+        assert leg[0].at.isoformat() == adapt.DEMO_WINDOW_START
+        assert leg[-1].at.isoformat() == adapt.DEMO_WINDOW_END
+        assert all(a.at < b.at for a, b in zip(leg[:-1], leg[1:], strict=True))
+
+
 class TestRunLeg:
     POLICY = {"allowed_excursion_hours": 6, "retest_at_pct": 50.0, "destroy_at_pct": 100.0}
     PROFILE = REPO_ROOT / "data" / "product_profile.json"
@@ -88,6 +104,67 @@ class TestRunLeg:
         assert row["status"] == "error"
         assert row["exit_code"] == 2
         assert row["detail"]  # stderr preserved: that is the actionable part
+
+    def test_timeout_is_an_error_row_not_a_crash(self, tmp_path, monkeypatch):
+        def _hang(cmd, **kwargs):
+            raise subprocess.TimeoutExpired(cmd, kwargs["timeout"])
+
+        monkeypatch.setattr(runner.subprocess, "run", _hang)
+        row = runner._run_leg(
+            self._leg_file(tmp_path, [22.0] * 20), self.PROFILE, self.POLICY, "t-hang"
+        )
+        assert row["status"] == "error"
+        assert row["exit_code"] is None
+        assert "timed out" in row["detail"]
+
+
+class TestRunDataset:
+    def _dataset(self, tmp_path: Path, expected_legs: dict) -> Path:
+        data_dir = tmp_path / "data"
+        (data_dir / "legs").mkdir(parents=True)
+        leg = [
+            {"ts": (T0 + timedelta(minutes=10 * i)).isoformat(), "temp_c": 22.0}
+            for i in range(20)
+        ]
+        (data_dir / "legs" / "present.json").write_text(json.dumps(leg), encoding="utf-8")
+        (data_dir / "manifest.json").write_text(
+            json.dumps(
+                {"legs": [{"id": "present", "file": "legs/present.json", "n": len(leg)}]}
+            ),
+            encoding="utf-8",
+        )
+        dataset_dir = tmp_path / "dataset"
+        dataset_dir.mkdir()
+        (dataset_dir / "config.json").write_text(
+            json.dumps(
+                {
+                    "slug": "t",
+                    "data_dir": str(data_dir),
+                    "profile": str(REPO_ROOT / "data" / "product_profile.json"),
+                    "policy": {"allowed_excursion_hours": 6},
+                }
+            ),
+            encoding="utf-8",
+        )
+        (dataset_dir / "expected.json").write_text(
+            json.dumps({"legs": expected_legs}), encoding="utf-8"
+        )
+        return dataset_dir
+
+    def test_pinned_leg_dropped_by_the_adapter_is_a_fail_row(self, tmp_path):
+        # A reviewed pin whose leg vanished from the manifest must fail the run, not
+        # silently shrink the corpus.
+        expected = {
+            "present": {"verdict": "release"},
+            "ghost": {"verdict": "destroy"},
+        }
+        outcome = runner.run_dataset(self._dataset(tmp_path, expected))
+        by_id = {row["leg_id"]: row for row in outcome["legs"]}
+        assert by_id["present"]["check"] == "PASS"
+        assert by_id["ghost"]["check"] == "FAIL"
+        assert by_id["ghost"]["status"] == "error"
+        assert by_id["ghost"]["pinned"] == "destroy"
+        assert "absent from manifest" in by_id["ghost"]["detail"]
 
 
 class TestMarkdown:

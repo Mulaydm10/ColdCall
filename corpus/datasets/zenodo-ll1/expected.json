@@ -1,5 +1,5 @@
 {
-  "_note": "Regression pins, not ground truth (corpus/README.md). Reviewed 2026-08-25: all 47 legs computed with exit 0, cross-check agreeing on every leg; verdict spread (release/quarantine_retest/destroy) matches the per-device exposure replay/SHIPMENT.md describes; the demo window reproduces DEMO-0001s quarantine_retest.",
+  "_note": "Regression pins, not ground truth (corpus/README.md). Reviewed 2026-08-25: all 48 legs computed with exit 0, cross-check agreeing on every leg; verdict spread (release/quarantine_retest/destroy) matches the per-device exposure replay/SHIPMENT.md describes; -demo-input is DEMO-0001's exact 64-reading input and reproduces its quarantine_retest, -demo-window is every wider-sample reading in the same bounds (76).",
   "legs": {
     "D40703-20211218-0853": {
       "verdict": "release"
@@ -51,6 +51,9 @@
     },
     "1334CD-20211216-0838": {
       "verdict": "destroy"
+    },
+    "1334CD-20211109-0823-demo-input": {
+      "verdict": "quarantine_retest"
     },
     "1334CD-20211109-0823-demo-window": {
       "verdict": "quarantine_retest"

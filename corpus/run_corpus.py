@@ -60,14 +60,23 @@ def _run_leg(
     if policy.get("no_freeze_rule"):
         cmd.append("--no-freeze-rule")
 
-    proc = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=300,
-        cwd=REPO_ROOT,
-        env={"PYTHONPATH": str(REPO_ROOT / "src"), "PATH": "/usr/bin:/bin"},
-    )
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            cwd=REPO_ROOT,
+            env={"PYTHONPATH": str(REPO_ROOT / "src"), "PATH": "/usr/bin:/bin"},
+        )
+    except subprocess.TimeoutExpired as exc:
+        # One hung leg must not abort the rest of the corpus — it becomes a FAIL row.
+        return {
+            "leg_id": leg_id,
+            "exit_code": None,
+            "status": "error",
+            "detail": f"CLI timed out after {exc.timeout:g}s",
+        }
 
     row: dict[str, Any] = {"leg_id": leg_id, "exit_code": proc.returncode}
     if proc.returncode in (0, 3):
@@ -131,6 +140,21 @@ def run_dataset(dataset_dir: Path) -> dict[str, Any] | None:
             f"  {row['check']:<5} {leg['id']:<40} {row.get('verdict') or row['status']}",
             flush=True,
         )
+
+    # A pinned leg the adapter no longer emits is a regression, not a clean run: a parser
+    # change that silently drops reviewed legs must not shrink the corpus and still exit 0.
+    manifest_ids = {leg["id"] for leg in manifest["legs"]}
+    for missing_id in sorted(set(expected) - manifest_ids):
+        row = {
+            "leg_id": missing_id,
+            "exit_code": None,
+            "status": "error",
+            "detail": "pinned leg absent from manifest — adapter dropped a reviewed leg",
+            "pinned": expected[missing_id].get("verdict"),
+            "check": "FAIL",
+        }
+        rows.append(row)
+        print(f"  FAIL  {missing_id:<40} missing (pinned {row['pinned']})", flush=True)
 
     return {"slug": config["slug"], "title": config.get("title", config["slug"]), "legs": rows}
 
