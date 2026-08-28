@@ -740,6 +740,46 @@ journey. Documented in `corpus/datasets/zenodo-ll1/DATASET.md`.
 ruff clean. Next: strawberry / mango air-cargo / COVID ULT / SOFIE datasets via delegated
 sessions on `corpus/<slug>` branches, integrated and re-run here.
 
+### 2026-08-28 16:20 CEST — the build closed; PR #11 merged and the project moved to its demo phase
+
+`main` is at `7aca120` with **eleven PRs merged and zero direct pushes**. No open PRs, nothing
+in flight. 230 tests green, ruff clean, `verify_apis.sh` 9/9.
+
+**What the last three review rounds were actually about**, because the pattern is worth
+carrying forward more than the individual fixes: **each finding was a defect in something added
+to fix the previous finding.** A GitHub preflight was added because the credential whose
+absence is silent went unchecked — and it checked `/user`, proving identity where
+*authorization* was needed, so a minimally-scoped token passed green and the post-approval
+commit would have failed. Fixing that, a fork-friendliness change pointed the check at
+`COLDCALL_SKILL_REPO` while `replay/incident.py` wrote to a hard-coded repo — reintroducing the
+exact divergence the check existed to prevent. Skill source and audit target are different
+questions; borrowing one for the other was the bug.
+
+Both are now behind one `COLDCALL_ACTION_REPO` read by both sides, so there is nothing left to
+drift. The habit that caught these was verifying every fix **from the failure side** — pointing
+the check at a repo I can read but not write, and confirming it fails — rather than confirming
+the happy path.
+
+**M8/M9 in one line each.** Fresh-clone audit found `DEMO-0001` named only two required keys
+while steps 6–7 need `GITHUB_TOKEN`, so following the document literally produced a run whose
+centrepiece silently did not happen. The AI-assistance disclosure was understating its subject
+and omitted Devin entirely; it now states the scale with a number that can be checked — 65 of
+67 non-merge commits carry the trailer. Pre-flight is green across the board and recorded as
+`EXP-0018`.
+
+**The rehearsal earned the session** (`EXP-0017`, `EXP-0019`). The first two runs never reached
+the approval gate — one because the orchestrator ended the incident believing the module had
+never run when a strand *had* run it and the result never came home, one cancelled by the
+harness at `server-execution-timeout`. The fix was to have the orchestrator run the module
+itself before spawning anything: a verdict that lives only inside a strand is one it may never
+receive. Then the wording that fixed the timeout made the model skip the fan-out entirely, so
+that was reworded to say the two are not a trade.
+
+**Everything remaining needs a human**, and none of it was attempted: the governance edit
+applying `proposals/VISION.md` to the LOCKED `VISION.md`, the video, and four optional items —
+two OAuth connectors (Supabase, Stripe), a Slack **webhook**, and the prize-track actions. `STATE.md` carries the list with exact steps, plus the two rehearsal traps that will eat
+a take — reap Daytona first, and rehearse until one run shows both the fan-out and the gate.
+
 ## 2026-08-28 — 16:30 UTC — Devin: five-dataset corpus integrated, 206 legs, 0 FAIL/DRIFT (PR #13)
 
 Fixed Qodo's three findings on #13 (all verified real): the `-demo-window` leg held 76
