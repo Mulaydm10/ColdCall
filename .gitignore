@@ -64,3 +64,6 @@ data/*.db-shm
 data/*.db
 data/*.db-wal
 data/*.db-shm
+
+# Corpus benchmark data: re-fetchable via corpus/datasets/<slug>/fetch.sh (see corpus/README.md)
+data/corpus/

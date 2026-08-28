@@ -5,9 +5,10 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-27 16:40 CEST — **the stack landed and the demo path is rehearsed.**
-`main` carries M1–M5. Rehearsals 3 and 4 both reach the approval gate and execute for real.
-What remains needs a human: a governance edit, three optional logins, and the video.
+Last updated: 2026-08-25 08:20 UTC — **`main` carries M1–M5 + M8/M9 (PR #11 merged); the
+corpus benchmark is in flight.** Rehearsals 3 and 4 both reach the approval gate and execute
+for real. Remaining human items: the governance edit, optional logins, and the video. New
+work: a multi-dataset robustness corpus (`corpus/`) on branch `feat/corpus-benchmark`.
 
 ## Deadline
 
@@ -79,12 +80,15 @@ Nothing.
 
 ## In flight
 
-`chore/preflight-m8-m9` — the rehearsal fix, `DEMO.md` drift, the honest AI disclosure,
-`.env.example` provenance, and `EXP-0017`/`EXP-0018`. Open as a PR for Qodo and Devin.
+`feat/corpus-benchmark` (Devin) — a multi-dataset robustness corpus: the deterministic CLI run
+unmodified over real public recordings from several domains (Zenodo LL1 widened to 47 legs —
+done; strawberry / mango air-cargo / COVID ULT / SOFIE food-chain in progress via delegated
+sessions on branches `corpus/<slug>`). Evidence in `corpus/RESULTS.md`; verdicts are
+regression pins, see `corpus/README.md`. Lands via Qodo-reviewed PR(s).
 
 ## Next intended step
 
-1. Land the M8/M9 PR once Qodo and Devin clear it.
+1. Land the corpus PR(s) once Qodo and Devin clear them.
 2. Mulaydm10 works the table above — items 1 and 2 matter; 3–6 do not.
 3. Submit.
 
@@ -95,4 +99,5 @@ idempotent and exists for re-verification after a restart, not as a step.
 
 | Surface | Claimed by | Since | Status |
 |---|---|---|---|
-| _(none)_ | — | — | — |
+| `corpus/` harness + `corpus/datasets/zenodo-ll1/` | Devin | 2026-08-25 07:10 UTC | active |
+| `corpus/datasets/{strawberry,mango-aircargo,covid-ult,sofie-foodchain}/` | Devin child sessions (branches `corpus/<slug>`) | 2026-08-25 08:20 UTC | active |

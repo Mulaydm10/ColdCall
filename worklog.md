@@ -716,3 +716,26 @@ that had been blocking live runs; setup idempotent across two consecutive runs; 
 Everything left needs a human, and none of it was attempted — the governance edit to
 `VISION.md`, three optional OAuth logins, and the video. Each is a row in `STATE.md` with the
 exact steps.
+
+## 2026-08-25 08:25 UTC — Devin: corpus benchmark, part 1 (harness + zenodo-ll1)
+
+Branch `feat/corpus-benchmark`. New surface: `corpus/` — the deterministic CLI run unmodified
+over many real recordings from public datasets, as a robustness benchmark (see
+`corpus/README.md` for what it is and, more importantly, what it does not claim). The runner
+invokes `python -m coldcall.cli` as a subprocess — the exact sandbox entry point — and compares
+every verdict against reviewed regression pins in each dataset's `expected.json`.
+
+First dataset: the demo's own Zenodo 7907515 source, widened from one hand-picked leg to a
+20 MB range sample — 26k readings, 7 devices, **47 legs cut on >3 h logger silences, all three
+verdicts represented (10 release / 10 quarantine_retest / 27 destroy), cross-check agreeing on
+every leg, 0 errors**.
+
+One finding worth recording: the demo's `VCC-118` leg was bounded by the demo sample's last
+byte, not by a logger silence — in the wider sample the same journey runs on to 2021-11-14 and
+scores `destroy` over its full span. The demo verdict is correct for the window it replays and
+is now regression-pinned by the corpus as its own leg (`…-demo-window`), next to the full
+journey. Documented in `corpus/datasets/zenodo-ll1/DATASET.md`.
+
+236 tests green (+6 for the harness: leg cutting, duplicate-instant rule, runner error rows),
+ruff clean. Next: strawberry / mango air-cargo / COVID ULT / SOFIE datasets via delegated
+sessions on `corpus/<slug>` branches, integrated and re-run here.
