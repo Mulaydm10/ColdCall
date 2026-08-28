@@ -1,0 +1,13 @@
+{
+  "slug": "strawberry",
+  "title": "Strawberry cold-chain truck transport — 6 shipments x 9 trailer probes (Abdella, Brecht & Uysal)",
+  "data_dir": "data/corpus/strawberry",
+  "profile": "corpus/datasets/strawberry/profile.json",
+  "policy": {
+    "allowed_excursion_hours": 24,
+    "retest_at_pct": 50.0,
+    "destroy_at_pct": 100.0,
+    "no_freeze_rule": true
+  },
+  "policy_note": "allowed_excursion_hours 24: a benchmark assumption, not a published figure — no produce-handling source states a permitted number of hours out of band (see profile.json). It is calibrated against the two published strawberry numbers that do exist in USDA AH-66: ~7 days of storage life at 0 C, and 'begin cooling within 1 h of harvest'. Every leg in this dataset opens in the field at ambient (23-36 C) and stays warm through pallet build-up and forced-air precooling — 2-5 h in five of the six shipments, ~43 h in S1 — so an allowance of a few hours would condemn all 54 legs on normal, expected harvest handling and measure nothing. 24 h is roughly one seventh of the 7-day life at 0 C: it absorbs a normal precool without comment while still leaving sustained warm transit to accumulate. retest_at_pct 50 / destroy_at_pct 100: ColdCall defaults, unchanged, so this dataset stays comparable with zenodo-ll1. no_freeze_rule true: strawberries are explicitly not chilling-sensitive in AH-66 and should be held 'as cold as possible without freezing', so the band floor of 0 C is an optimum rather than a damage threshold, and disqualifying a leg for a -0.3 C reading from a logger with tenth-of-a-degree resolution would be noise, not a finding — sub-zero time still spends the 24 h allowance, it just cannot condemn a leg on its own. Full reasoning, and the freeze events the data really does contain, are in DATASET.md."
+}

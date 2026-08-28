@@ -1,0 +1,12 @@
+{
+  "slug": "mango-aircargo",
+  "title": "Recherche Data Gouv 10.57745/F9UJGQ — mango air cargo, Thailand to France",
+  "data_dir": "data/corpus/mango-aircargo",
+  "profile": "corpus/datasets/mango-aircargo/profile.json",
+  "policy": {
+    "allowed_excursion_hours": 12,
+    "retest_at_pct": 50.0,
+    "destroy_at_pct": 100.0
+  },
+  "policy_note": "Band: 10-13 C from USDA Agriculture Handbook 66's mango chapter (see profile.json for the verbatim quote and retrieval date) — horticultural guidance for mature-green fruit, not a regulatory limit and not a pharmaceutical label. No excursion envelope is configured because no published one exists for mango, so the disposition falls back to the storage band. The 12 h allowance is a ColdCall benchmark assumption, NOT a published figure: it is sized to the ground-handling reality of air freight (this shipment's own non-flight segments — packing house, cold store, road transport, BKK platform, tarmac, loading, CDG storage, road to INRAE — total ~43 h, of which the actively cooled cold-storage step is ~20 h), so 12 h out of band is a generous allowance rather than a strict one. The freeze rule stays ON, re-read as chilling injury: Handbook 66 reports injury below 10 C in most mango cultivars. It never fires on this dataset — no reading is below 10 C — so it changes no verdict here."
+}

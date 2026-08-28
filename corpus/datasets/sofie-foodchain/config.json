@@ -1,0 +1,13 @@
+{
+  "slug": "sofie-foodchain",
+  "title": "SOFIE EU H2020 — table-grape transport and warehouse telemetry",
+  "data_dir": "data/corpus/sofie-foodchain",
+  "profile": "corpus/datasets/sofie-foodchain/profile.json",
+  "policy": {
+    "allowed_excursion_hours": 2,
+    "retest_at_pct": 50.0,
+    "destroy_at_pct": 100.0,
+    "no_freeze_rule": true
+  },
+  "policy_note": "Food benchmark policy, not regulation or a product label. The -1 to 0 C band comes from the FAO table-grape post-harvest compendium. A 2 h allowance is ColdCall's explicit benchmark assumption: one sustained distribution-leg-scale interval out of band spends the budget. Retest at 50% and destroy at 100% are ColdCall policy thresholds. no_freeze_rule avoids treating every reading just below the optimum -1 C bound as proof of freezing; FAO reports the highest berry freezing point as -2.1 C and notes that it varies with soluble solids, while below-band time still consumes budget."
+}
