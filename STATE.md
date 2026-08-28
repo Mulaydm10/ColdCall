@@ -83,10 +83,12 @@ Nothing.
 `feat/corpus-benchmark` (Devin, PR #13) — a multi-dataset robustness corpus: the deterministic
 CLI run unmodified over **206 legs across 5 real public datasets** (Zenodo LL1 pharma logger 48,
 strawberry truck 54, mango air-cargo 62, COVID ULT container tests 39, SOFIE food-chain 3),
-0 FAIL/DRIFT, independent cross-check agreeing on every leg. All five datasets integrated;
-Qodo's three findings on #13 (demo-window fidelity, silent pin drops, timeout handling) fixed
-with regression tests. Evidence in `corpus/RESULTS.md`; verdicts are regression pins, see
-`corpus/README.md`. Awaiting Qodo re-review, then a human merge.
+0 FAIL/DRIFT, independent cross-check agreeing on every leg. All five datasets integrated.
+All five Qodo findings on #13 fixed with tests: round 1 (demo-window fidelity, silent pin
+drops, timeout handling — 4796af5) and round 2 (strawberry CSV conversion now atomic
+temp-then-rename; converter runs via the project env with `--python 3.12` — d90c617), all
+threads resolved in-thread with evidence. Evidence in `corpus/RESULTS.md`; verdicts are
+regression pins, see `corpus/README.md`. Awaiting Qodo's next pass, then a human merge.
 
 ## Next intended step
 
