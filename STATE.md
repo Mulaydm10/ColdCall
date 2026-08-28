@@ -6,8 +6,10 @@ this file and `worklog.md` disagree about what is currently true, this file wins
 explains how we got here.**
 
 Last updated: 2026-08-28 — **the build is finished and the project is in its demo phase.**
-PRs #1–#13 all merged — `main` now carries the corpus. The only open PR is **#14**, a
-README corpus-results section, documentation only. Everything else that remains needs a human.
+PRs #1–#14 all merged — `main` carries the corpus and the README results section. The only
+open PR is **#15**, which applies `proposals/VISION.md` into the LOCKED `VISION.md` on
+Mulaydm10's explicit instruction (logged in `GOVERNANCE.md`). Everything else that remains
+needs a human.
 
 ## Deadline
 
@@ -17,7 +19,7 @@ See `COMPETITION.md` → "Deadline" (single source of truth for event facts).
 
 **Code complete.** 287 tests green, ruff clean, `scripts/verify_apis.sh` **9/9**,
 `scripts/setup_trueforge.sh` idempotent (`5 configured, 2 skipped, 0 failed` on consecutive
-runs). Thirteen PRs merged with zero direct pushes to `main`; every one carried a completed Qodo
+runs). Fourteen PRs merged with zero direct pushes to `main`; every one carried a completed Qodo
 review with findings fixed or dismissed in-thread, and Devin as second reviewer.
 
 **The judged path is proven, not asserted** (`EXP-0010`, `EXP-0017`):
@@ -42,7 +44,7 @@ Everything here needs a browser, an account, or a camera. **None of it has been 
 
 | # | What | Exact steps | What it blocks |
 |---|---|---|---|
-| 1 | **Apply `proposals/VISION.md`** | Copy its body into `VISION.md` — it is LOCKED, so only you may — then add a row to `GOVERNANCE.md`'s audit table naming the file, the date and the reason. | Nothing technical. Qodo keeps re-reporting "the thesis is fabricated" until it is done: correct by its rule, wrong on the facts. |
+| 1 | ~~**Apply `proposals/VISION.md`**~~ **Done via PR #15** — applied on your explicit instruction, logged in `GOVERNANCE.md`; you merge the PR. | — | — |
 | 2 | **Record the ~3-minute video** | `DEMO.md` → `DEMO-0001` has per-beat timings, the expected output at each step, and the three things to say out loud. **Read the two traps below first.** | Submission. |
 | 3 | **Supabase connector** *(optional)* | TrueForge :8790 → Settings → Connectors → supabase → Connect. **OAuth (`dcr`) — a browser login, not a token.** Needs a project at supabase.com. | Nothing. The store runs on stdlib SQLite; this swaps the backend. |
 | 4 | **Stripe connector** *(optional)* | Same route, **test mode only**. Also OAuth. | Nothing — the exposure figure comes from `replay/seed.json`. |
@@ -71,15 +73,14 @@ Nothing.
 
 ## In flight
 
-`docs/readme-corpus-results` (Devin, PR #14) — README gains a "Run wide, not just deep"
-section surfacing the corpus results (206 legs / 5 real datasets / 0 FAIL/DRIFT, verdict
-breakdown per dataset) with links to `corpus/RESULTS.md` and `corpus/README.md`.
-Documentation only.
+`docs/apply-vision` (Devin, PR #15) — applies `proposals/VISION.md` verbatim into `VISION.md`,
+resolving `Q-0001`; audit row added to `GOVERNANCE.md`. Authorized by Mulaydm10 in chat
+("solve this first"). Documentation only.
 
 ## Next intended step
 
-1. Mulaydm10 merges PR #14 (README corpus section) once Qodo clears it.
-2. Mulaydm10 works items 1 and 2 above. 3–6 are optional and block nothing.
+1. Mulaydm10 merges PR #15 (VISION.md applied).
+2. Mulaydm10 records the video (item 2 above). 3–6 are optional and block nothing.
 3. Submit.
 
 **Do not re-run platform setup unprompted**, and do not re-verify the platform unprompted — it
@@ -91,4 +92,5 @@ not as steps.
 | Surface | Claimed by | Since | Status |
 |---|---|---|---|
 | `corpus/` (all five datasets, harness, PR #13) | Devin | 2026-08-25 07:10 UTC | done — merged |
-| `README.md` corpus section (PR #14) | Devin | 2026-08-28 18:55 UTC | in review |
+| `README.md` corpus section (PR #14) | Devin | 2026-08-28 18:55 UTC | done — merged |
+| `VISION.md` apply (PR #15) | Devin (authorized by Mulaydm10) | 2026-08-28 19:30 UTC | in review |
