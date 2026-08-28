@@ -754,3 +754,15 @@ Then merged the four delegated dataset branches (`corpus/strawberry`, `corpus/ma
 by any of them — fetched, adapted and ran everything locally: **206 legs across 5 datasets,
 0 FAIL/DRIFT, cross-check agreeing on every leg**. 287 tests green, ruff clean. See EXP-0020
 for what the corpus showed. Awaiting Qodo re-review on #13.
+
+## 2026-08-28 — 17:05 UTC — Devin: Qodo round 2 on #13 — strawberry fetch hardening
+
+Qodo's follow-up review on #13 re-listed the three already-fixed findings (demo-input fidelity,
+dropped pins, timeout — all fixed in 4796af5, status posted in-thread) and raised two new ones,
+both in `corpus/datasets/strawberry/fetch.sh`, both valid and fixed in d90c617: (1) the
+parquet→csv converter now writes each CSV to a temp path and `os.replace()`s it, so an
+interrupted conversion can never leave a truncated CSV that later runs accept as done; (2) the
+converter runs through the project environment (`uv run --project --python 3.12`) instead of
+`--no-project`, keeping pandas/pyarrow as an ephemeral `--with` overlay. Re-verified end to end:
+CSVs deleted and regenerated via fetch, full corpus 206 legs / 0 FAIL/DRIFT, 287 tests, ruff
+clean. Awaiting Qodo's next pass, then a human merge.
