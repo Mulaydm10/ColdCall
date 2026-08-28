@@ -1,0 +1,14 @@
+{
+  "_note": "Regression pins, not ground truth (corpus/README.md). Reviewed 2026-08-28: all 3 warehouse-room legs exited 0 with independent cross-check agreement. Every RoomA reading (25.01-26.0 C) and every RoomC reading (21.0-22.0 C) is above the FAO -1 to 0 C benchmark band, yielding 1103.806 out-of-range minutes and destroy at 919.84% of the 2 h benchmark budget. Every RoomB reading (-1.0-0.0 C) is in band, yielding 0 excursion minutes and release. Independent hand checks reproduced the timestamp-derived duration, out-of-range minutes, and peaks for RoomA and RoomB.",
+  "legs": {
+    "warehouse-rooma-20200923-1403-1": {
+      "verdict": "destroy"
+    },
+    "warehouse-roomb-20200923-1403-1": {
+      "verdict": "release"
+    },
+    "warehouse-roomc-20200923-1403-1": {
+      "verdict": "destroy"
+    }
+  }
+}
