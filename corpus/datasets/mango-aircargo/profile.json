@@ -1,0 +1,16 @@
+{
+  "name": "Mango, mature-green (Mangifera indica L. cv. 'Nam Dok Mai Si-Thong')",
+  "domain": "food / fresh produce — air cargo",
+  "storage_min_c": 10,
+  "storage_max_c": 13,
+  "storage_and_handling_verbatim": "Storage at 10 to 13 \u00b0C (50 to 55 \u00b0F) with 85 to 90% RH should give a shelf-life of 14 to 28 days for mature green fruit, depending on variety. Ripe fruit can be stored at 7 to 8 \u00b0C (45 to 46 \u00b0F). [...] Chilling Sensitivity: Chilling susceptibility varies with cultivar; 'Haden' and 'Keitt' are particularly susceptible. Most cultivars show injury below 10 \u00b0C (50 \u00b0F), especially if fruit have just reached maturity.",
+  "provenance": "USDA Agricultural Research Service, Agriculture Handbook 66, 'The Commercial Storage of Fruits, Vegetables, and Florist and Nursery Stocks' (revised edition), Mango chapter, section 'Optimum Storage Conditions' and 'Chilling Sensitivity' (p. 408). Retrieved and quoted verbatim on 2026-08-28 from https://www.ars.usda.gov/ARSUserFiles/oc/np/CommercialStorage/CommercialStorage.pdf (3,762,512 bytes as downloaded). The 10-13 \u00b0C band is the handbook's own figure for mature-green fruit, not a ColdCall assumption. It is horticultural handling guidance for the commodity in general, NOT a specification for this shipment, this cultivar, or any regulatory requirement.",
+  "excursion_band_finding": {
+    "question": "Does a published source state a permitted excursion band (a wider temperature envelope) for mango transport?",
+    "answer": "None found. Handbook 66 states an optimum storage range, a ripening optimum (20-23 \u00b0C), a lower range for ripe fruit (7-8 \u00b0C) and a chilling-injury threshold (below 10 \u00b0C) \u2014 it does not define an 'excursions permitted to X-Y \u00b0C' envelope of the kind a drug label carries. Inventing one would change the verdict path (coldcall.disposition rule 2 only fires when an envelope is stated).",
+    "conclusion": "excursion_min_c / excursion_max_c are deliberately absent. coldcall.disposition then falls back to the storage band, which it documents as the conservative reading for a source that states no excursion range."
+  },
+  "chilling_injury_note": "The freeze rule stays enabled for this profile, re-read as a chilling-injury rule: Handbook 66 records injury below 10 \u00b0C in most cultivars, so time under the band minimum is a product-integrity question rather than a budget item \u2014 the same shape the rule already has. No reading in this dataset falls below 10 \u00b0C, so the rule never fires here; it is kept because disabling it would be a claim about mango that the handbook contradicts.",
+  "verified": true,
+  "verified_note": "Band and chilling threshold read directly out of the handbook PDF text on 2026-08-28; the quote above is the handbook's wording, not a paraphrase. NOT a pharmaceutical label and NOT regulatory validation \u2014 see corpus/datasets/mango-aircargo/DATASET.md."
+}

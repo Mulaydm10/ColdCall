@@ -1,0 +1,191 @@
+{
+  "_note": "Regression pins, not ground truth (corpus/README.md). Reviewed 2026-08-28: all 62 legs computed with exit 0 and the independent cross-check agreeing on every one. Every leg is `destroy`, and that is the honest reading of this record rather than a flat result: the consignment never entered mango's 10-13 C recommended band at all \u2014 the coldest reading across all 62 channels is 13.1 C and most sit between 17 and 32 C \u2014 so all 3,335 recorded minutes are out of band on every leg, 463.2% of the 12 h benchmark allowance. Spot-checked by hand against the raw files: box-1-3-12-mangoes (667 readings x 5 min = 3,335 min including the median-interval tail, peak 31.6 C, min 17.1 C, MKT 22.26 C) and box-4-1-1-air (peak 32.1 C, min 18.1 C, MKT 23.92 C) both reproduce the CLI's minutes, peak and MKT exactly. What varies across legs, and is what this dataset actually pins, is MKT and peak per carton position (see corpus/RESULTS.md): 21.49-25.28 C between the coolest and warmest instrumented channels, peaks 31.5-32.6 C.",
+  "legs": {
+    "box-1-1-1-air": {
+      "verdict": "destroy"
+    },
+    "box-1-1-1-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-1-1-12-air": {
+      "verdict": "destroy"
+    },
+    "box-1-1-12-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-1-1-7-air": {
+      "verdict": "destroy"
+    },
+    "box-1-1-7-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-1-3-1-air": {
+      "verdict": "destroy"
+    },
+    "box-1-3-1-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-1-3-12-air": {
+      "verdict": "destroy"
+    },
+    "box-1-3-12-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-1-3-7-air": {
+      "verdict": "destroy"
+    },
+    "box-1-3-7-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-1-4-1-air": {
+      "verdict": "destroy"
+    },
+    "box-1-4-1-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-1-4-12-air": {
+      "verdict": "destroy"
+    },
+    "box-1-4-12-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-1-4-7-air": {
+      "verdict": "destroy"
+    },
+    "box-1-4-7-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-2-1-1-air": {
+      "verdict": "destroy"
+    },
+    "box-2-1-1-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-2-1-12-air": {
+      "verdict": "destroy"
+    },
+    "box-2-1-12-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-2-1-7-air": {
+      "verdict": "destroy"
+    },
+    "box-2-1-7-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-2-2-1-air": {
+      "verdict": "destroy"
+    },
+    "box-2-2-1-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-2-2-10-air": {
+      "verdict": "destroy"
+    },
+    "box-2-2-10-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-2-2-12-air": {
+      "verdict": "destroy"
+    },
+    "box-2-2-12-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-2-2-3-air": {
+      "verdict": "destroy"
+    },
+    "box-2-2-3-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-2-2-6-air": {
+      "verdict": "destroy"
+    },
+    "box-2-2-6-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-2-4-1-air": {
+      "verdict": "destroy"
+    },
+    "box-2-4-1-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-2-4-7-air": {
+      "verdict": "destroy"
+    },
+    "box-2-4-7-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-3-1-12-air": {
+      "verdict": "destroy"
+    },
+    "box-3-1-12-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-3-2-1-air": {
+      "verdict": "destroy"
+    },
+    "box-3-2-1-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-3-2-10-air": {
+      "verdict": "destroy"
+    },
+    "box-3-2-10-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-3-2-3-air": {
+      "verdict": "destroy"
+    },
+    "box-3-2-3-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-3-2-7-air": {
+      "verdict": "destroy"
+    },
+    "box-3-2-7-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-3-3-12-air": {
+      "verdict": "destroy"
+    },
+    "box-3-3-12-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-4-1-1-air": {
+      "verdict": "destroy"
+    },
+    "box-4-1-1-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-4-1-7-air": {
+      "verdict": "destroy"
+    },
+    "box-4-1-7-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-4-2-1-air": {
+      "verdict": "destroy"
+    },
+    "box-4-2-1-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-4-2-7-air": {
+      "verdict": "destroy"
+    },
+    "box-4-2-7-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-4-4-1-air": {
+      "verdict": "destroy"
+    },
+    "box-4-4-1-mangoes": {
+      "verdict": "destroy"
+    },
+    "box-4-4-7-air": {
+      "verdict": "destroy"
+    },
+    "box-4-4-7-mangoes": {
+      "verdict": "destroy"
+    }
+  }
+}
