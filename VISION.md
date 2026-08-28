@@ -1,6 +1,6 @@
-# VISION — ColdCall
-
 > **LOCKED governing file.** Do not edit in place. See `GOVERNANCE.md`.
+
+# VISION — ColdCall
 
 ## The thesis
 
