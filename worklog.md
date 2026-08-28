@@ -806,3 +806,17 @@ converter runs through the project environment (`uv run --project --python 3.12`
 `--no-project`, keeping pandas/pyarrow as an ephemeral `--with` overlay. Re-verified end to end:
 CSVs deleted and regenerated via fetch, full corpus 206 legs / 0 FAIL/DRIFT, 287 tests, ruff
 clean. Awaiting Qodo's next pass, then a human merge.
+
+## 2026-08-28 — 19:00 UTC — Devin: PR #13 merged; README gains the corpus results (PR #14)
+
+Mulaydm10 merged #12 (docs handoff) then #13 (the corpus) — the merge conflict between the two
+on `STATE.md`/`worklog.md` was resolved on the corpus branch first (046166c: STATE reconciled
+to the demo-phase snapshot with #13 as the one open code PR; worklog entries interleaved
+chronologically, nothing edited). `main` now carries all thirteen PRs, 287 tests green.
+
+New branch `docs/readme-corpus-results` (PR #14): the top-level README had no mention of the
+corpus, so judges reading only the README would miss the breadth evidence. Added a "Run wide,
+not just deep" section — 206 legs / 5 real datasets / 0 FAIL/DRIFT, per-dataset verdict
+breakdown (counts taken from `corpus/results.json`, not from memory), the demo-input pin, and
+the regression-pins-not-ground-truth caveat — linking to `corpus/RESULTS.md` and
+`corpus/README.md`. Documentation only; no code change.
