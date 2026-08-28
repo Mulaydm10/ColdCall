@@ -739,3 +739,18 @@ journey. Documented in `corpus/datasets/zenodo-ll1/DATASET.md`.
 236 tests green (+6 for the harness: leg cutting, duplicate-instant rule, runner error rows),
 ruff clean. Next: strawberry / mango air-cargo / COVID ULT / SOFIE datasets via delegated
 sessions on `corpus/<slug>` branches, integrated and re-run here.
+
+## 2026-08-28 — 16:30 UTC — Devin: five-dataset corpus integrated, 206 legs, 0 FAIL/DRIFT (PR #13)
+
+Fixed Qodo's three findings on #13 (all verified real): the `-demo-window` leg held 76
+readings, not DEMO-0001's 64, because the source JSON is not time-ordered — a new
+`-demo-input` leg reconstructs the demo's exact input from its 3,000,001-byte sample range
+(64 readings, MKT 24.54 °C, `quarantine_retest`, pinned + asserted); a pinned leg the adapter
+stops emitting is now a FAIL row, not a silent shrink; `subprocess.TimeoutExpired` becomes a
+structured error row instead of aborting the corpus.
+
+Then merged the four delegated dataset branches (`corpus/strawberry`, `corpus/mango-aircargo`,
+`corpus/covid-ult`, `corpus/sofie-foodchain`) — purely additive, no shared-core change needed
+by any of them — fetched, adapted and ran everything locally: **206 legs across 5 datasets,
+0 FAIL/DRIFT, cross-check agreeing on every leg**. 287 tests green, ruff clean. See EXP-0020
+for what the corpus showed. Awaiting Qodo re-review on #13.

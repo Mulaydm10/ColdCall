@@ -80,11 +80,13 @@ Nothing.
 
 ## In flight
 
-`feat/corpus-benchmark` (Devin) — a multi-dataset robustness corpus: the deterministic CLI run
-unmodified over real public recordings from several domains (Zenodo LL1 widened to 47 legs —
-done; strawberry / mango air-cargo / COVID ULT / SOFIE food-chain in progress via delegated
-sessions on branches `corpus/<slug>`). Evidence in `corpus/RESULTS.md`; verdicts are
-regression pins, see `corpus/README.md`. Lands via Qodo-reviewed PR(s).
+`feat/corpus-benchmark` (Devin, PR #13) — a multi-dataset robustness corpus: the deterministic
+CLI run unmodified over **206 legs across 5 real public datasets** (Zenodo LL1 pharma logger 48,
+strawberry truck 54, mango air-cargo 62, COVID ULT container tests 39, SOFIE food-chain 3),
+0 FAIL/DRIFT, independent cross-check agreeing on every leg. All five datasets integrated;
+Qodo's three findings on #13 (demo-window fidelity, silent pin drops, timeout handling) fixed
+with regression tests. Evidence in `corpus/RESULTS.md`; verdicts are regression pins, see
+`corpus/README.md`. Awaiting Qodo re-review, then a human merge.
 
 ## Next intended step
 
@@ -99,5 +101,4 @@ idempotent and exists for re-verification after a restart, not as a step.
 
 | Surface | Claimed by | Since | Status |
 |---|---|---|---|
-| `corpus/` harness + `corpus/datasets/zenodo-ll1/` | Devin | 2026-08-25 07:10 UTC | active |
-| `corpus/datasets/{strawberry,mango-aircargo,covid-ult,sofie-foodchain}/` | Devin child sessions (branches `corpus/<slug>`) | 2026-08-25 08:20 UTC | active |
+| `corpus/` (all five datasets, harness, PR #13) | Devin | 2026-08-25 07:10 UTC | done — awaiting Qodo re-review + merge |
