@@ -1,0 +1,167 @@
+{
+  "_note": "Regression pins, not ground truth (corpus/README.md). Reviewed 2026-08-28: all 54 legs computed with exit 0 and the CLI's cross-check agreeing on every one. Verdict spread 40 destroy / 12 quarantine_retest / 2 release. Two legs were re-derived by hand from the leg JSON (same duration rule: each reading carries the gap to the next, capped at 240 min, the last carries the median gap). S4-Rear_Top: 792 readings over 131.83 h, 270.0 min outside 0-4 C = 18.75% of the 24 h allowance, peak 24.8 C, min -0.4 C, MKT 3.10 C -> release, matching the CLI exactly. S2-Front_Top: 115 readings over 19.00 h, 260.0 min out (240 above, 20 below) = 18.06%, peak 26.5 C, MKT 10.92 C -> quarantine_retest, also matching; this leg is under the 50% retest line and is quarantined solely because MKT 10.92 C exceeds the 4 C band ceiling, which is the intended behaviour of the MKT rule in src/coldcall/disposition.py, not drift. The 40 destroy verdicts are expected: every record starts in the field at ambient (23-36 C) and most loggers keep reporting well past DC arrival, so cumulative time above 4 C exceeds 24 h for most probes -- see DATASET.md.",
+  "legs": {
+    "S1-Front_Top": {
+      "verdict": "destroy"
+    },
+    "S1-Front_Middle": {
+      "verdict": "destroy"
+    },
+    "S1-Middle_Top": {
+      "verdict": "destroy"
+    },
+    "S1-Middle_Middle": {
+      "verdict": "destroy"
+    },
+    "S1-Rear_Top-20190312-1230": {
+      "verdict": "destroy"
+    },
+    "S1-Rear_Top-20190328-1430": {
+      "verdict": "quarantine_retest"
+    },
+    "S1-Rear_Middle": {
+      "verdict": "destroy"
+    },
+    "S1-Rear_Bottom": {
+      "verdict": "destroy"
+    },
+    "S2-Front_Top": {
+      "verdict": "quarantine_retest"
+    },
+    "S2-Front_Middle": {
+      "verdict": "destroy"
+    },
+    "S2-Front_Bottom": {
+      "verdict": "destroy"
+    },
+    "S2-Middle_Top": {
+      "verdict": "destroy"
+    },
+    "S2-Middle_Middle": {
+      "verdict": "quarantine_retest"
+    },
+    "S2-Middle_Bottom": {
+      "verdict": "quarantine_retest"
+    },
+    "S2-Rear_Top": {
+      "verdict": "destroy"
+    },
+    "S2-Rear_Middle": {
+      "verdict": "destroy"
+    },
+    "S2-Rear_Bottom": {
+      "verdict": "destroy"
+    },
+    "S3-Front_Top": {
+      "verdict": "destroy"
+    },
+    "S3-Front_Middle": {
+      "verdict": "quarantine_retest"
+    },
+    "S3-Front_Bottom-20190709-0900": {
+      "verdict": "quarantine_retest"
+    },
+    "S3-Front_Bottom-20190717-0150": {
+      "verdict": "destroy"
+    },
+    "S3-Middle_Top": {
+      "verdict": "destroy"
+    },
+    "S3-Middle_Middle": {
+      "verdict": "destroy"
+    },
+    "S3-Middle_Bottom": {
+      "verdict": "quarantine_retest"
+    },
+    "S3-Rear_Top": {
+      "verdict": "destroy"
+    },
+    "S3-Rear_Middle": {
+      "verdict": "destroy"
+    },
+    "S3-Rear_Bottom": {
+      "verdict": "destroy"
+    },
+    "S4-Front_Top": {
+      "verdict": "destroy"
+    },
+    "S4-Front_Middle": {
+      "verdict": "destroy"
+    },
+    "S4-Front_Bottom": {
+      "verdict": "destroy"
+    },
+    "S4-Middle_Top": {
+      "verdict": "destroy"
+    },
+    "S4-Middle_Middle": {
+      "verdict": "destroy"
+    },
+    "S4-Middle_Bottom": {
+      "verdict": "destroy"
+    },
+    "S4-Rear_Top": {
+      "verdict": "release"
+    },
+    "S4-Rear_Middle": {
+      "verdict": "destroy"
+    },
+    "S4-Rear_Bottom": {
+      "verdict": "destroy"
+    },
+    "S5-Front_Top": {
+      "verdict": "quarantine_retest"
+    },
+    "S5-Front_Middle": {
+      "verdict": "release"
+    },
+    "S5-Front_Bottom": {
+      "verdict": "destroy"
+    },
+    "S5-Middle_Top": {
+      "verdict": "quarantine_retest"
+    },
+    "S5-Middle_Middle": {
+      "verdict": "destroy"
+    },
+    "S5-Middle_Bottom": {
+      "verdict": "quarantine_retest"
+    },
+    "S5-Rear_Top": {
+      "verdict": "destroy"
+    },
+    "S5-Rear_Middle": {
+      "verdict": "quarantine_retest"
+    },
+    "S5-Rear_Bottom": {
+      "verdict": "destroy"
+    },
+    "S6-Front_Top": {
+      "verdict": "destroy"
+    },
+    "S6-Front_Middle": {
+      "verdict": "destroy"
+    },
+    "S6-Front_Bottom": {
+      "verdict": "quarantine_retest"
+    },
+    "S6-Middle_Top": {
+      "verdict": "destroy"
+    },
+    "S6-Middle_Middle": {
+      "verdict": "destroy"
+    },
+    "S6-Middle_Bottom": {
+      "verdict": "destroy"
+    },
+    "S6-Rear_Top": {
+      "verdict": "destroy"
+    },
+    "S6-Rear_Middle": {
+      "verdict": "destroy"
+    },
+    "S6-Rear_Bottom": {
+      "verdict": "destroy"
+    }
+  }
+}

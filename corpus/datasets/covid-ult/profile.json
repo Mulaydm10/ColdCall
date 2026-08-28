@@ -1,0 +1,16 @@
+{
+  "product": "COMIRNATY (COVID-19 Vaccine, mRNA) single-dose vials — ultra-low-temperature storage condition",
+  "storage_min_c": -90,
+  "storage_max_c": -60,
+  "storage_and_handling_verbatim": "Alternatively, single-dose vials may be stored in an ultra-low temperature freezer at -90\u00baC to -60\u00baC (-130\u00baF to -76\u00baF). Do not store vials at -25\u00b0C to -15\u00b0C (-13\u00b0F to 5\u00b0F).",
+  "source_document": "FDA-approved full prescribing information for COMIRNATY, Section 16 HOW SUPPLIED/STORAGE AND HANDLING, \"Storage Prior to Use — Single-Dose Vials\". Document footer LAB-1490-16.2, revised 8/2026.",
+  "source_url": "https://www.fda.gov/media/151707/download",
+  "retrieved": "2026-08-28",
+  "retrieved_md5": "55edfece518bdd227371ea04276a2f19",
+  "excursion_min_c": null,
+  "excursion_max_c": null,
+  "excursion_band_note": "Deliberately absent. The label states no permitted EXCURSION envelope around the ULT band — it states separate alternative STORAGE conditions (2-8 \u00b0C for up to 10 weeks once thawed; 8-25 \u00b0C total time out of refrigeration not to exceed 12 h), and explicitly forbids -25 to -15 \u00b0C for these vials. Treating an alternative storage condition as an excursion envelope would invent a stability claim the label does not make, so the storage band is scored on its own and coldcall's beyond-envelope rule stays inactive.",
+  "allowance_source": "ColdCall benchmark assumption (12 h) anchored to the only cumulative time-out-of-condition figure the COMIRNATY label states \u2014 NOT a ULT stability budget",
+  "provenance": "The -90 to -60 \u00b0C band is published label text, quoted verbatim above from the FDA prescribing information retrieved 2026-08-28 (md5 55edfece518bdd227371ea04276a2f19 of the PDF at the source_url). The excursion ALLOWANCE HOURS in config.json are NOT from this or any label: real thermal-stability budgets for this product are manufacturer data that is not published. See config.json's policy_note.",
+  "not_regulatory_validation": "Scoring recorded container-test thermocouples against this label band is a benchmark of the arithmetic, not a regulatory disposition of any vaccine lot. The recordings are dry-ice packages in a laboratory refrigerated-container test at ORNL/Carrier; no vaccine was present."
+}

@@ -1,0 +1,149 @@
+{
+  "_note": "Regression pins, not ground truth (corpus/README.md). Reviewed 2026-08-25: all 48 legs computed with exit 0, cross-check agreeing on every leg; verdict spread (release/quarantine_retest/destroy) matches the per-device exposure replay/SHIPMENT.md describes; -demo-input is DEMO-0001's exact 64-reading input and reproduces its quarantine_retest, -demo-window is every wider-sample reading in the same bounds (76).",
+  "legs": {
+    "D40703-20211218-0853": {
+      "verdict": "release"
+    },
+    "5F0A6C-20211001-1627": {
+      "verdict": "destroy"
+    },
+    "5F0A6C-20211006-1402": {
+      "verdict": "destroy"
+    },
+    "5F0A6C-20211018-1446": {
+      "verdict": "destroy"
+    },
+    "5F0A6C-20211021-1521": {
+      "verdict": "destroy"
+    },
+    "5F0A6C-20211027-1723": {
+      "verdict": "release"
+    },
+    "5F0A6C-20211028-1535": {
+      "verdict": "destroy"
+    },
+    "5F0A6C-20211103-1247": {
+      "verdict": "destroy"
+    },
+    "5F0A6C-20211216-0838": {
+      "verdict": "quarantine_retest"
+    },
+    "1334BA-20211108-1748": {
+      "verdict": "quarantine_retest"
+    },
+    "1334BA-20211109-0839": {
+      "verdict": "destroy"
+    },
+    "1334BA-20211216-0853": {
+      "verdict": "destroy"
+    },
+    "1334C6-20211109-0823": {
+      "verdict": "destroy"
+    },
+    "1334C6-20211216-0838": {
+      "verdict": "release"
+    },
+    "1334CD-20211108-1748": {
+      "verdict": "quarantine_retest"
+    },
+    "1334CD-20211109-0823": {
+      "verdict": "destroy"
+    },
+    "1334CD-20211216-0838": {
+      "verdict": "destroy"
+    },
+    "1334CD-20211109-0823-demo-input": {
+      "verdict": "quarantine_retest"
+    },
+    "1334CD-20211109-0823-demo-window": {
+      "verdict": "quarantine_retest"
+    },
+    "1334D4-20211108-1748": {
+      "verdict": "quarantine_retest"
+    },
+    "1334D4-20211109-0823": {
+      "verdict": "destroy"
+    },
+    "1334D4-20211216-0838": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211001-1152": {
+      "verdict": "quarantine_retest"
+    },
+    "8D7397-20211005-1526": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211006-1436": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211008-1215": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211011-1203": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211013-1441": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211014-1427": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211015-1411": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211018-1521": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211019-1241": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211020-1124": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211021-1124": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211022-1143": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211024-0430": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211025-1653": {
+      "verdict": "release"
+    },
+    "8D7397-20211026-1208": {
+      "verdict": "release"
+    },
+    "8D7397-20211027-1526": {
+      "verdict": "release"
+    },
+    "8D7397-20211028-1559": {
+      "verdict": "release"
+    },
+    "8D7397-20211029-1048": {
+      "verdict": "destroy"
+    },
+    "8D7397-20211102-1316": {
+      "verdict": "release"
+    },
+    "8D7397-20211103-1318": {
+      "verdict": "release"
+    },
+    "8D7397-20211104-1025": {
+      "verdict": "release"
+    },
+    "8D7397-20211105-1259": {
+      "verdict": "quarantine_retest"
+    },
+    "8D7397-20211108-1711": {
+      "verdict": "quarantine_retest"
+    },
+    "8D7397-20211109-1248": {
+      "verdict": "quarantine_retest"
+    },
+    "8D7397-20211216-0917": {
+      "verdict": "quarantine_retest"
+    }
+  }
+}

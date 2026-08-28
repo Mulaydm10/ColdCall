@@ -1,0 +1,12 @@
+{
+  "slug": "zenodo-ll1",
+  "title": "Zenodo 7907515 — pharma logistics logger telemetry (LL1)",
+  "data_dir": "data/corpus/zenodo-ll1",
+  "profile": "data/product_profile.json",
+  "policy": {
+    "allowed_excursion_hours": 6,
+    "retest_at_pct": 50.0,
+    "destroy_at_pct": 100.0
+  },
+  "policy_note": "Same ColdCall demo policy DEMO-0001 uses: the 20-25 C band and 15-30 C excursion envelope come from the real openFDA Amoxicillin label in data/product_profile.json; the 6 h allowance is our configurable demo assumption (no public label states one — see the profile's excursion_duration_finding)."
+}

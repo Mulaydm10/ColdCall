@@ -1,0 +1,122 @@
+{
+  "_note": "Regression pins, not ground truth (corpus/README.md). Reviewed 2026-08-28: all 39 legs computed with exit 0 and the independent cross-check agreeing on every one. Every leg is destroy, and that is the honest reading of the source rather than a policy artefact: both tests are dry-ice endurance runs deliberately taken to depletion, so every package ends far above the -60 C label maximum \u2014 the least-exposed leg (test1-b3) spends 809.3 min above it and the worst (test2-B19, whose package never reached the band at all, peak-cold -54.24 C) is out of range for its entire 13944-min record. Hand-checked two legs against an independent pass over the emitted legs: test1-b3 min -80.951 C / max -31.255 C / 809.33 min above -60 C = 112.4% of the 12 h allowance; test2-B19 13944.0 min out of range = 1936.7%. Both match the CLI to the digit. No leg goes below the -90 C minimum anywhere in the dataset (coldest reading -84.031 C), so the freeze rule never fires.",
+  "legs": {
+    "test1-b1": {
+      "verdict": "destroy"
+    },
+    "test1-b2": {
+      "verdict": "destroy"
+    },
+    "test1-b3": {
+      "verdict": "destroy"
+    },
+    "test1-b4": {
+      "verdict": "destroy"
+    },
+    "test1-b5": {
+      "verdict": "destroy"
+    },
+    "test1-b6": {
+      "verdict": "destroy"
+    },
+    "test1-b7": {
+      "verdict": "destroy"
+    },
+    "test1-b8": {
+      "verdict": "destroy"
+    },
+    "test1-b9": {
+      "verdict": "destroy"
+    },
+    "test1-b10": {
+      "verdict": "destroy"
+    },
+    "test1-b11": {
+      "verdict": "destroy"
+    },
+    "test1-b12": {
+      "verdict": "destroy"
+    },
+    "test1-b13": {
+      "verdict": "destroy"
+    },
+    "test1-b14": {
+      "verdict": "destroy"
+    },
+    "test1-b15": {
+      "verdict": "destroy"
+    },
+    "test1-b16": {
+      "verdict": "destroy"
+    },
+    "test1-b17": {
+      "verdict": "destroy"
+    },
+    "test1-b18": {
+      "verdict": "destroy"
+    },
+    "test1-b19": {
+      "verdict": "destroy"
+    },
+    "test1-b20": {
+      "verdict": "destroy"
+    },
+    "test2-B1": {
+      "verdict": "destroy"
+    },
+    "test2-B3": {
+      "verdict": "destroy"
+    },
+    "test2-B4": {
+      "verdict": "destroy"
+    },
+    "test2-B5": {
+      "verdict": "destroy"
+    },
+    "test2-B6": {
+      "verdict": "destroy"
+    },
+    "test2-B7": {
+      "verdict": "destroy"
+    },
+    "test2-B8": {
+      "verdict": "destroy"
+    },
+    "test2-B9": {
+      "verdict": "destroy"
+    },
+    "test2-B10": {
+      "verdict": "destroy"
+    },
+    "test2-B11": {
+      "verdict": "destroy"
+    },
+    "test2-B12": {
+      "verdict": "destroy"
+    },
+    "test2-B13": {
+      "verdict": "destroy"
+    },
+    "test2-B14": {
+      "verdict": "destroy"
+    },
+    "test2-B15": {
+      "verdict": "destroy"
+    },
+    "test2-B16": {
+      "verdict": "destroy"
+    },
+    "test2-B17": {
+      "verdict": "destroy"
+    },
+    "test2-B18": {
+      "verdict": "destroy"
+    },
+    "test2-B19": {
+      "verdict": "destroy"
+    },
+    "test2-B20": {
+      "verdict": "destroy"
+    }
+  }
+}

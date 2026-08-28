@@ -717,6 +717,29 @@ Everything left needs a human, and none of it was attempted — the governance e
 `VISION.md`, three optional OAuth logins, and the video. Each is a row in `STATE.md` with the
 exact steps.
 
+## 2026-08-25 08:25 UTC — Devin: corpus benchmark, part 1 (harness + zenodo-ll1)
+
+Branch `feat/corpus-benchmark`. New surface: `corpus/` — the deterministic CLI run unmodified
+over many real recordings from public datasets, as a robustness benchmark (see
+`corpus/README.md` for what it is and, more importantly, what it does not claim). The runner
+invokes `python -m coldcall.cli` as a subprocess — the exact sandbox entry point — and compares
+every verdict against reviewed regression pins in each dataset's `expected.json`.
+
+First dataset: the demo's own Zenodo 7907515 source, widened from one hand-picked leg to a
+20 MB range sample — 26k readings, 7 devices, **47 legs cut on >3 h logger silences, all three
+verdicts represented (10 release / 10 quarantine_retest / 27 destroy), cross-check agreeing on
+every leg, 0 errors**.
+
+One finding worth recording: the demo's `VCC-118` leg was bounded by the demo sample's last
+byte, not by a logger silence — in the wider sample the same journey runs on to 2021-11-14 and
+scores `destroy` over its full span. The demo verdict is correct for the window it replays and
+is now regression-pinned by the corpus as its own leg (`…-demo-window`), next to the full
+journey. Documented in `corpus/datasets/zenodo-ll1/DATASET.md`.
+
+236 tests green (+6 for the harness: leg cutting, duplicate-instant rule, runner error rows),
+ruff clean. Next: strawberry / mango air-cargo / COVID ULT / SOFIE datasets via delegated
+sessions on `corpus/<slug>` branches, integrated and re-run here.
+
 ### 2026-08-28 16:20 CEST — the build closed; PR #11 merged and the project moved to its demo phase
 
 `main` is at `7aca120` with **eleven PRs merged and zero direct pushes**. No open PRs, nothing
@@ -756,3 +779,30 @@ that was reworded to say the two are not a trade.
 applying `proposals/VISION.md` to the LOCKED `VISION.md`, the video, and four optional items —
 two OAuth connectors (Supabase, Stripe), a Slack **webhook**, and the prize-track actions. `STATE.md` carries the list with exact steps, plus the two rehearsal traps that will eat
 a take — reap Daytona first, and rehearse until one run shows both the fan-out and the gate.
+
+## 2026-08-28 — 16:30 UTC — Devin: five-dataset corpus integrated, 206 legs, 0 FAIL/DRIFT (PR #13)
+
+Fixed Qodo's three findings on #13 (all verified real): the `-demo-window` leg held 76
+readings, not DEMO-0001's 64, because the source JSON is not time-ordered — a new
+`-demo-input` leg reconstructs the demo's exact input from its 3,000,001-byte sample range
+(64 readings, MKT 24.54 °C, `quarantine_retest`, pinned + asserted); a pinned leg the adapter
+stops emitting is now a FAIL row, not a silent shrink; `subprocess.TimeoutExpired` becomes a
+structured error row instead of aborting the corpus.
+
+Then merged the four delegated dataset branches (`corpus/strawberry`, `corpus/mango-aircargo`,
+`corpus/covid-ult`, `corpus/sofie-foodchain`) — purely additive, no shared-core change needed
+by any of them — fetched, adapted and ran everything locally: **206 legs across 5 datasets,
+0 FAIL/DRIFT, cross-check agreeing on every leg**. 287 tests green, ruff clean. See EXP-0020
+for what the corpus showed. Awaiting Qodo re-review on #13.
+
+## 2026-08-28 — 17:05 UTC — Devin: Qodo round 2 on #13 — strawberry fetch hardening
+
+Qodo's follow-up review on #13 re-listed the three already-fixed findings (demo-input fidelity,
+dropped pins, timeout — all fixed in 4796af5, status posted in-thread) and raised two new ones,
+both in `corpus/datasets/strawberry/fetch.sh`, both valid and fixed in d90c617: (1) the
+parquet→csv converter now writes each CSV to a temp path and `os.replace()`s it, so an
+interrupted conversion can never leave a truncated CSV that later runs accept as done; (2) the
+converter runs through the project environment (`uv run --project --python 3.12`) instead of
+`--no-project`, keeping pandas/pyarrow as an ephemeral `--with` overlay. Re-verified end to end:
+CSVs deleted and regenerated via fetch, full corpus 206 legs / 0 FAIL/DRIFT, 287 tests, ruff
+clean. Awaiting Qodo's next pass, then a human merge.

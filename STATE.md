@@ -6,8 +6,8 @@ this file and `worklog.md` disagree about what is currently true, this file wins
 explains how we got here.**
 
 Last updated: 2026-08-28 — **the build is finished and the project is in its demo phase.**
-`main` is at `7aca120`. PRs #1–#11 all merged. The only open PR is **#12**, this
-documentation handoff itself — no code is in flight. Everything that remains needs a human.
+PRs #1–#12 all merged. The only open PR is **#13**, the multi-dataset robustness corpus —
+the last code in flight. Everything else that remains needs a human.
 
 ## Deadline
 
@@ -71,13 +71,22 @@ Nothing.
 
 ## In flight
 
-**PR #12** — this handoff, documentation only. It is the last thing not on `main`; once it
-merges, `main` carries the final state. No code work is in flight.
+`feat/corpus-benchmark` (Devin, PR #13) — a multi-dataset robustness corpus: the deterministic
+CLI run unmodified over **206 legs across 5 real public datasets** (Zenodo LL1 pharma logger 48,
+strawberry truck 54, mango air-cargo 62, COVID ULT container tests 39, SOFIE food-chain 3),
+0 FAIL/DRIFT, independent cross-check agreeing on every leg. All five datasets integrated.
+All five Qodo findings on #13 fixed with tests: round 1 (demo-window fidelity, silent pin
+drops, timeout handling — 4796af5) and round 2 (strawberry CSV conversion now atomic
+temp-then-rename; converter runs via the project env with `--python 3.12` — d90c617), all
+threads resolved in-thread with evidence. Evidence in `corpus/RESULTS.md`; verdicts are
+regression pins, see `corpus/README.md`. All six Qodo findings across three rounds fixed or
+addressed with evidence, all review threads resolved. Awaiting a human merge.
 
 ## Next intended step
 
-1. Mulaydm10 works items 1 and 2 above. 3–6 are optional and block nothing.
-2. Submit.
+1. Mulaydm10 merges PR #13 (the corpus).
+2. Mulaydm10 works items 1 and 2 above. 3–6 are optional and block nothing.
+3. Submit.
 
 **Do not re-run platform setup unprompted**, and do not re-verify the platform unprompted — it
 is configured and proven. The scripts are idempotent and exist for re-checking after a restart,
@@ -87,4 +96,4 @@ not as steps.
 
 | Surface | Claimed by | Since | Status |
 |---|---|---|---|
-| _(none)_ | — | — | — |
+| `corpus/` (all five datasets, harness, PR #13) | Devin | 2026-08-25 07:10 UTC | done — awaiting Qodo re-review + merge |
