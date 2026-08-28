@@ -1,0 +1,12 @@
+{
+  "slug": "covid-ult",
+  "title": "figshare 14888121 — ultra-low-temperature COVID-19 vaccine container tests (ORNL/Carrier)",
+  "data_dir": "data/corpus/covid-ult",
+  "profile": "corpus/datasets/covid-ult/profile.json",
+  "policy": {
+    "allowed_excursion_hours": 12,
+    "retest_at_pct": 50.0,
+    "destroy_at_pct": 100.0
+  },
+  "policy_note": "Band: -90 to -60 C, the ULT storage condition in COMIRNATY's FDA prescribing information (quoted verbatim in profile.json). No excursion envelope is configured because the label states none for ULT storage. Allowance: 12 h, a ColdCall BENCHMARK ASSUMPTION — no public source states how long these vials may sit above -60 C, because that is manufacturer stability data. It is anchored to the one cumulative time-out-of-condition figure the same label does state (total time out of refrigeration between 8 and 25 C must not exceed 12 h) purely so the number has a documented origin rather than being picked to produce a pleasing verdict spread; it is not a ULT budget and must not be cited as one. Nothing here turns on it: the least-exposed leg spends 13.5 h above -60 C and the worst 232 h, so every allowance below ~13.5 h yields the same 39 destroy verdicts (checked 2026-08-28). Freeze rule left ON (default): the labelled minimum is -90 C and the coldest reading anywhere in this dataset is -84.03 C, so no leg has any below-minimum time and the rule never fires — keeping the labelled -90 C is therefore both the literal reading of the label and inert on this data, which is why no_freeze_rule was not set. Had any package gone below -90 C the rule would need re-arguing: 'freeze' is a meaningless failure mode for a product whose storage condition is already -90 C, and the coldcall freeze rule exists for products that must not freeze."
+}
