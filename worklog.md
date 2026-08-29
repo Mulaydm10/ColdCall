@@ -830,3 +830,20 @@ their behalf), matching the existing "via Claude" precedent; `Q-0001` is resolve
 `research/open_questions.md`. This closes the gap where a judge following the read order hit
 "the thesis is TODO" before any code — and the finding Qodo re-reported on every PR.
 Documentation only; human merge still required.
+
+## 2026-08-29 — 07:50 UTC — Devin: fresh-clone audit; stale judge-facing docs fixed
+
+A full adversarial re-audit against the judging rubric, from a fresh clone (nothing reused
+from earlier checkouts): `uv sync --group dev` → `uv run pytest` → 286 passed, 1 skipped
+(the zenodo-ll1 raw-sample pin, which needs `fetch.sh` first — raw data is gitignored by
+design), `ruff check` clean, README/DEMO relative links all resolve, no bare excepts in
+`src/coldcall/`, `setup_trueforge.sh --dry-run` fails only for the expected reason on a cold
+machine (no TrueForge at :8790).
+
+The audit found one class of real risk: judge-facing docs still describing the pre-thesis
+repo. CLAUDE.md's opening line said "what it does is TODO, the idea is pending" and its
+layout table said `src/coldcall/` is "currently empty of domain logic" with a 2-test suite —
+false since PR #7 and directly contradicting the merged VISION.md. README's Qodo-dismissal
+note still said in the present tense that `VISION.md` reads TODO, false since PR #15 merged.
+STATE.md still described #15 as the one open PR. All fixed in this entry's branch;
+documentation only, no code change.

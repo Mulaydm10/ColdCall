@@ -5,10 +5,13 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-28 — **the build is finished and the project is in its demo phase.**
-PRs #1–#14 all merged — `main` carries the corpus and the README results section. The only
-open PR is **#15**, which applies `proposals/VISION.md` into the LOCKED `VISION.md` on
-Mulaydm10's explicit instruction (logged in `GOVERNANCE.md`). Everything else that remains
+Last updated: 2026-08-29 — **the build is finished and the project is in its demo phase.**
+PRs #1–#15 all merged — `main` carries the corpus, the README results section, and the
+applied thesis in `VISION.md` (PR #15, authorized by Mulaydm10, logged in `GOVERNANCE.md`).
+No PRs are open. A fresh-clone audit on 2026-08-29 re-verified the whole suite from scratch:
+`uv sync --group dev` → `uv run pytest` → **286 passed, 1 skipped** (the skip is the
+zenodo-ll1 raw-sample pin, which needs `corpus/datasets/zenodo-ll1/fetch.sh` first — by
+design, raw data is gitignored), `uv run ruff check .` clean. Everything else that remains
 needs a human.
 
 ## Deadline
@@ -17,9 +20,9 @@ See `COMPETITION.md` → "Deadline" (single source of truth for event facts).
 
 ## Where this stands
 
-**Code complete.** 287 tests green, ruff clean, `scripts/verify_apis.sh` **9/9**,
+**Code complete.** 287 tests (all green once the zenodo sample is fetched), ruff clean, `scripts/verify_apis.sh` **9/9**,
 `scripts/setup_trueforge.sh` idempotent (`5 configured, 2 skipped, 0 failed` on consecutive
-runs). Fourteen PRs merged with zero direct pushes to `main`; every one carried a completed Qodo
+runs). Fifteen PRs merged with zero direct pushes to `main`; every one carried a completed Qodo
 review with findings fixed or dismissed in-thread, and Devin as second reviewer.
 
 **The judged path is proven, not asserted** (`EXP-0010`, `EXP-0017`):
@@ -44,7 +47,7 @@ Everything here needs a browser, an account, or a camera. **None of it has been 
 
 | # | What | Exact steps | What it blocks |
 |---|---|---|---|
-| 1 | ~~**Apply `proposals/VISION.md`**~~ **Done via PR #15** — applied on your explicit instruction, logged in `GOVERNANCE.md`; you merge the PR. | — | — |
+| 1 | ~~**Apply `proposals/VISION.md`**~~ **Done — PR #15 merged.** | — | — |
 | 2 | **Record the ~3-minute video** | `DEMO.md` → `DEMO-0001` has per-beat timings, the expected output at each step, and the three things to say out loud. **Read the two traps below first.** | Submission. |
 | 3 | **Supabase connector** *(optional)* | TrueForge :8790 → Settings → Connectors → supabase → Connect. **OAuth (`dcr`) — a browser login, not a token.** Needs a project at supabase.com. | Nothing. The store runs on stdlib SQLite; this swaps the backend. |
 | 4 | **Stripe connector** *(optional)* | Same route, **test mode only**. Also OAuth. | Nothing — the exposure figure comes from `replay/seed.json`. |
@@ -73,15 +76,14 @@ Nothing.
 
 ## In flight
 
-`docs/apply-vision` (Devin, PR #15) — applies `proposals/VISION.md` verbatim into `VISION.md`,
-resolving `Q-0001`; audit row added to `GOVERNANCE.md`. Authorized by Mulaydm10 in chat
-("solve this first"). Documentation only.
+Stale-docs audit fix (Devin) — documentation only: CLAUDE.md no longer says the thesis is
+pending or `src/coldcall/` empty, README's Qodo-dismissal note now records that `VISION.md`
+has since been applied (PR #15), and this file reflects post-#15 reality.
 
 ## Next intended step
 
-1. Mulaydm10 merges PR #15 (VISION.md applied).
-2. Mulaydm10 records the video (item 2 above). 3–6 are optional and block nothing.
-3. Submit.
+1. Mulaydm10 records the video (item 2 above). 3–6 are optional and block nothing.
+2. Submit.
 
 **Do not re-run platform setup unprompted**, and do not re-verify the platform unprompted — it
 is configured and proven. The scripts are idempotent and exist for re-checking after a restart,
@@ -93,4 +95,5 @@ not as steps.
 |---|---|---|---|
 | `corpus/` (all five datasets, harness, PR #13) | Devin | 2026-08-25 07:10 UTC | done — merged |
 | `README.md` corpus section (PR #14) | Devin | 2026-08-28 18:55 UTC | done — merged |
-| `VISION.md` apply (PR #15) | Devin (authorized by Mulaydm10) | 2026-08-28 19:30 UTC | in review |
+| `VISION.md` apply (PR #15) | Devin (authorized by Mulaydm10) | 2026-08-28 19:30 UTC | done — merged |
+| Stale-docs audit fix (CLAUDE.md/README/STATE) | Devin | 2026-08-29 07:45 UTC | in review |
