@@ -1,7 +1,8 @@
 # ColdCall — cold-start entry point
 
 Event: **The Agent Harness Hackathon** (WeMakeDevs × TrueFoundry × Qodo) — full facts in
-`COMPETITION.md`. Project: **ColdCall** — what it does is TODO(Mulaydm10), the idea is pending.
+`COMPETITION.md`. Project: **ColdCall** — a cold-chain disposition responder; the applied
+thesis lives in `VISION.md`.
 This is an **agentic hackathon** repo worked by humans and AI agents concurrently, under
 deadline pressure. If you are an agent picking this up cold, read this file fully, then follow
 the read order below. Do not ask a human anything this repo can already answer you.
@@ -55,8 +56,9 @@ Only the canonical file may allocate a new number.
 
 | Path | What |
 |---|---|
-| `src/coldcall/` | Dependency-free Python, uploaded into the sandbox — so it must import against a stock interpreter. **Currently empty of domain logic**: the inferred mission was cleared in `ADR-0006` and real logic waits on the thesis. |
-| `tests/` | pytest suite. 2 tests — the green baseline plus a guard that fails if domain logic reappears before `VISION.md` is real. |
+| `src/coldcall/` | Dependency-free Python, uploaded into the sandbox — so it must import against a stock interpreter. The domain logic: `replay` (telemetry), `mkt` + `disposition` (the verdict maths), `crosscheck` (independent re-derivation), `store` (SQLite incidents), `weather`/`report`/`plot`/`cli`. |
+| `tests/` | pytest suite (287 tests) — disposition maths, store invariants, replay, cross-check, and the corpus regression pins. |
+| `corpus/` | The generalization benchmark: 5 public datasets, 206 real legs, adapters + expected-outcome fixtures + `RESULTS.md`. |
 | `agents/coldcall.agent.json` | The agent manifest: model, instructions, MCP servers with their approval gates, skills, harness features |
 | `skills/repo-evidence/` | Git-backed `SKILL.md` the harness loads at runtime |
 | `scripts/` | Idempotent setup + a real pre-demo API check |
@@ -147,7 +149,8 @@ comment `/agentic_review` on it.
 - Never invent a thesis, rubric detail, or result to fill a gap — leave it `TODO(Mulaydm10)`.
 - **Domain logic follows the thesis; it never precedes it** (`ADR-0006`). Do not infer what
   ColdCall does from the tools, APIs or dataset wired up here — they say what is *possible*,
-  never what is *wanted*. Until `VISION.md` is real, ask.
+  never what is *wanted*. The thesis is applied in `VISION.md` (PR #15); if a change seems to
+  fall outside it, ask.
 - `DEMO.md` must stay runnable at all times once a demo path exists — it is what judges see.
 
 ## Vendor-neutral twin

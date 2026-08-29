@@ -327,9 +327,10 @@ review → follow-up review → human merge. Direct pushes to `main` do not coun
 
 - **Dismissed, with reasons in-thread:** one rule fired repeatedly claiming the thesis was
   fabricated. Correct on the diff, wrong on the facts — the thesis was supplied by the Main
-  Agent, and `VISION.md` reads `TODO` only because it is a LOCKED governing file an agent may
-  not edit. The thesis is proposed in `proposals/VISION.md` for a human to apply, which is
-  exactly what that rule should enforce.
+  Agent, and `VISION.md` read `TODO` at the time only because it is a LOCKED governing file an
+  agent may not edit. The thesis was staged in `proposals/VISION.md` and has since been applied
+  into `VISION.md` on the Main Agent's authorization (PR #15, logged in `GOVERNANCE.md`) —
+  which is exactly the process that rule should enforce.
 - **PR history:** [all pull requests](https://github.com/Mulaydm10/ColdCall/pulls?q=is%3Apr) ·
   [PR #6's trail](https://github.com/Mulaydm10/ColdCall/pull/6) shows four rounds of review,
   our reasoning on each finding, and the follow-up review against the final code before a

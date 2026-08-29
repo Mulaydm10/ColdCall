@@ -5,7 +5,7 @@ agent and a human) using different words for the same thing.
 
 | Term | Meaning |
 |---|---|
-| ColdCall | This project's name. What it does is TODO(Mulaydm10) until `VISION.md` is filled. Repo: https://github.com/Mulaydm10/ColdCall |
+| ColdCall | This project's name: a cold-chain disposition responder — the applied thesis is in `VISION.md`. Repo: https://github.com/Mulaydm10/ColdCall |
 | TrueForge | TrueFoundry's open-source agent harness — the mandatory runtime for this event. `npx @truefoundry/trueforge` → :8790. |
 | Qodo | The mandatory AI code-review platform: every substantive change merges only through a Qodo-reviewed PR. |
 | The three beats | The on-camera requirements for any demo: a real MCP tool reached, code run in the sandbox, a pause for human approval. See `DEMO.md`. |
