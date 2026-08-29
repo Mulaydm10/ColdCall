@@ -8,7 +8,8 @@ explains how we got here.**
 Last updated: 2026-08-29 — **the build is finished and the project is in its demo phase.**
 PRs #1–#15 all merged — `main` carries the corpus, the README results section, and the
 applied thesis in `VISION.md` (PR #15, authorized by Mulaydm10, logged in `GOVERNANCE.md`).
-No PRs are open. A fresh-clone audit on 2026-08-29 re-verified the whole suite from scratch:
+The one open PR is **#16** — this stale-docs audit, documentation only. A fresh-clone audit
+on 2026-08-29 re-verified the whole suite from scratch:
 `uv sync --group dev` → `uv run pytest` → **286 passed, 1 skipped** (the skip is the
 zenodo-ll1 raw-sample pin, which needs `corpus/datasets/zenodo-ll1/fetch.sh` first — by
 design, raw data is gitignored), `uv run ruff check .` clean. Everything else that remains
