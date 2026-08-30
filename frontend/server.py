@@ -13,6 +13,7 @@ import json
 import secrets
 import sys
 import threading
+import traceback
 from contextlib import redirect_stdout
 from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -38,8 +39,12 @@ verdict_cache: dict = {}
 MAX_BODY = 4096
 
 
-def _field(value: object, limit: int) -> str:
-    text = " ".join(str(value or "").split())[:limit]
+def _field(value: object, limit: int) -> str | None:
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        return None
+    text = " ".join(value.split())[:limit]
     return text.replace(" - ", " \u2013 ")
 
 
@@ -132,8 +137,9 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             decision = req.get("decision")
             by = _field(req.get("by"), 80)
-            if decision not in ("allow", "deny") or not by:
-                self._json({"error": "decision (allow|deny) and by are required"}, 400)
+            reason = _field(req.get("reason"), 200)
+            if decision not in ("allow", "deny") or not by or reason is None:
+                self._json({"error": "decision (allow|deny) and a string by are required"}, 400)
                 return
             with lock:
                 inc = store.incident(INC)
@@ -158,7 +164,7 @@ class Handler(SimpleHTTPRequestHandler):
                     )
                     store.close_incident(INC, by)
                 else:
-                    reason = _field(req.get("reason"), 200) or "unspecified"
+                    reason = reason or "unspecified"
                     store.record_action(
                         INC, "deny_fallback",
                         f"DENY by {by} - reason: {reason} - conservative fallback: "
@@ -167,6 +173,7 @@ class Handler(SimpleHTTPRequestHandler):
                     )
                 self._json({"receipt": receipt, "incident": store.incident(INC)})
         except Exception:  # keep the demo server alive on bad input
+            traceback.print_exc(file=sys.stderr)
             self._json({"error": "internal error"}, 500)
 
     def log_message(self, fmt, *args):

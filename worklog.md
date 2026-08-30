@@ -876,3 +876,11 @@ Fixture text aligned to the canonical run (MKT 24.54 °C, 64.35 % — was 24.51/
 draft). `frontend/README.md` + `STATE.md`: launch documented as `uv run frontend/server.py`.
 Verified: ruff clean, full pytest green, live curl checks (400/413/409 paths, tricky ` - `
 names round-trip), fresh store boots gate-open.
+
+## 2026-08-30 14:40 UTC — Qodo follow-up review on PR #17: two Mediums fixed
+
+Follow-up review on a1e107f flagged two Mediums, both fixed: `by`/`reason` must now be JSON
+strings (arrays/numbers/objects → 400, no coerced audit attribution), and the decision
+handler's generic 500 now prints the traceback to stderr so store failures are diagnosable
+from server output. Verified live: 400 on non-string fields, allow → 200, second decision →
+409, ruff clean.
