@@ -67,3 +67,8 @@ data/*.db-shm
 
 # Corpus benchmark data: re-fetchable via corpus/datasets/<slug>/fetch.sh (see corpus/README.md)
 data/corpus/
+
+# Frontend runtime state: rebuilt by frontend/server.py on startup from replay/seed.json
+# and the deterministic CLI — committing it would ship stale demo decisions.
+frontend/data/coldcall.db
+frontend/data/verdict.json

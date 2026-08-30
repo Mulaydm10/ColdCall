@@ -5,10 +5,13 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-29 — **the build is finished and the project is in its demo phase.**
-PRs #1–#15 all merged — `main` carries the corpus, the README results section, and the
+Last updated: 2026-08-30 — **the build is finished and the project is in its demo phase.**
+The demo frontend now lives in `frontend/` (see `frontend/README.md`): eight routes over the
+real incident store via a stdlib-only local server (`python3 frontend/server.py`), with a
+graceful static fallback for hosted deploys (Vercel-ready, `frontend/vercel.json`).
+PRs #1–#16 all merged — `main` carries the corpus, the README results section, and the
 applied thesis in `VISION.md` (PR #15, authorized by Mulaydm10, logged in `GOVERNANCE.md`).
-The one open PR is **#16** — this stale-docs audit, documentation only. A fresh-clone audit
+A fresh-clone audit
 on 2026-08-29 re-verified the whole suite from scratch:
 `uv sync --group dev` → `uv run pytest` → **286 passed, 1 skipped** (the skip is the
 zenodo-ll1 raw-sample pin, which needs `corpus/datasets/zenodo-ll1/fetch.sh` first — by

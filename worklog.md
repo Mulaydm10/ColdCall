@@ -847,3 +847,17 @@ false since PR #7 and directly contradicting the merged VISION.md. README's Qodo
 note still said in the present tense that `VISION.md` reads TODO, false since PR #15 merged.
 STATE.md still described #15 as the one open PR. All fixed in this entry's branch;
 documentation only, no code change.
+
+## 2026-08-30 — 10:40 UTC — Devin: demo frontend committed to the repo (`frontend/`)
+
+The frontend built over the last sessions moves from a VM-local working copy into the repo,
+under `frontend/`. Eight routes (Home, Overview, How it works, Console, Incidents, Evidence,
+Decision room, Sources) in a single-page site with the Modernist design system; a stdlib-only
+local server (`frontend/server.py`) serves it over the real `src/coldcall` SQLite store —
+bootstrap seeds from `replay/seed.json`, replays the recorded demo leg, and records the
+verdict computed by the same deterministic CLI the sandbox runs. Allow/Deny in the Decision
+room write real receipts and survive restarts. The site degrades gracefully with no API
+(recorded DEMO-0001 fixtures), so it can also be hosted statically — `frontend/vercel.json`
+included for a Vercel deploy. Runtime store files are gitignored. Verified both modes before
+commit: live (`/api/state` returns the persisted verdict, MKT 24.54 °C, gate open) and static
+(page renders, Decision room + Console + live map work, only the expected `/api` 404s).
