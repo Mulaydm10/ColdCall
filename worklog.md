@@ -906,3 +906,14 @@ beat (clip + narration + caption + trim/rate), rendered to
 Recording-only mitigations were applied to the *local working copy* (finite landing playback,
 reduced WebGL cost) because the VM's software renderer choked Chrome; deliberately NOT pushed —
 the deployed site keeps the committed looping animation. STATE.md updated to reflect all this.
+
+## 2026-08-30 · 17:20 UTC — submitted
+
+Final demo video re-rendered (3:04): opening caption restyled dark and repositioned clear of
+the caption card (frame-by-frame re-export), and the TrueForge beat replaced with a fresh live
+dark-mode run captured from the console — streaming reasoning, the four specialist sub-agents,
+and the run held at the tool-approval bar. The ColdCall agent was saved into TrueForge's
+Agents Library via the API (filtered to the MCP servers configured in this instance). Video
+uploaded to YouTube (https://youtu.be/AvxvkImHsoM, unlisted, verified playable without login)
+and the submission form filled and sent before the deadline: repo + Vercel deploy + video +
+TrueForge/Qodo written answers. PR #19 (previous STATE/worklog) merged.

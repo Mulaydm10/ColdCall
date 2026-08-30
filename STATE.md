@@ -5,7 +5,11 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-30 (later) — **build finished, demo video rendered, submission is what remains.**
+Last updated: 2026-08-30 (evening) — **SUBMITTED.** The project was handed in through the event
+form before the 20:00 London deadline: repo link, deployed link (Vercel), and the demo video
+on YouTube (https://youtu.be/AvxvkImHsoM, 3:04, unlisted). Final video includes a fresh live
+dark-mode TrueForge run (reasoning, sub-agent fan-out, approval hold) and the ColdCall agent
+saved in the Agents Library. Nothing further is owed to the event except awaiting results.
 The frontend is deployed publicly at **https://coldcall-sepia.vercel.app** (static demo mode;
 live mode runs locally per `frontend/README.md`). A live TrueForge agent run was verified
 end-to-end on 2026-08-30 using the **local sandbox fallback** (no Daytona key in this
