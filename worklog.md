@@ -884,3 +884,25 @@ strings (arrays/numbers/objects → 400, no coerced audit attribution), and the 
 handler's generic 500 now prints the traceback to stderr so store failures are diagnosable
 from server output. Verified live: 400 on non-string fields, allow → 200, second decision →
 409, ruff clean.
+
+## 2026-08-30 15:35 UTC — demo video produced end to end (Devin)
+
+Live TrueForge rehearsal verified first (session 01m19b3zrf8mw8kjrxd78wrnt6): two runtime bugs
+fixed on the VM (sandbox proxy socket had to be re-bound after filesystem mounts; the git-skill
+sparse-checkout needed `/usr/share` in the sandbox read allowlist), after which skills mounted,
+specialists ran, the run paused at the approval gate, and `--auto allow` produced the branch +
+deviation record + PR. No Daytona key in this environment — local sandbox fallback used, which
+the competition permits (TrueForge is the mandatory harness; Daytona is optional).
+
+Then the video: ~470-word narration script (10 beats following Mulaydm10's dictated flow),
+OpenAI TTS voiceover (10 chunks, ~163 s), screen captured on the VM in 10 segments (home fleet
+animation, Overview problem/solution, How-it-works pipeline run, Incidents/Evidence, Decision
+room, Console with the live incident + map, TrueForge's own console session, the real signature
+— typed name, hold-to-sign, receipt RCPT-20260830-A4F407 written by the live local API — and
+Sources). Composited in Remotion (`~/demo-video-lab/coldcall-demo`): one `SEGMENTS` row per
+beat (clip + narration + caption + trim/rate), rendered to
+`out/coldcall-demo.mp4` — 1920×1080, 2:55, audio verified. Editable: change a row, re-render.
+
+Recording-only mitigations were applied to the *local working copy* (finite landing playback,
+reduced WebGL cost) because the VM's software renderer choked Chrome; deliberately NOT pushed —
+the deployed site keeps the committed looping animation. STATE.md updated to reflect all this.

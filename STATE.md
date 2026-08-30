@@ -5,7 +5,14 @@ someone updates it — never appended to. For history, see `worklog.md`. **Tie-b
 this file and `worklog.md` disagree about what is currently true, this file wins; the worklog
 explains how we got here.**
 
-Last updated: 2026-08-30 — **the build is finished and the project is in its demo phase.**
+Last updated: 2026-08-30 (later) — **build finished, demo video rendered, submission is what remains.**
+The frontend is deployed publicly at **https://coldcall-sepia.vercel.app** (static demo mode;
+live mode runs locally per `frontend/README.md`). A live TrueForge agent run was verified
+end-to-end on 2026-08-30 using the **local sandbox fallback** (no Daytona key in this
+environment): skills mounted, specialists ran, the run paused at the approval gate, and the
+allow path produced a branch + deviation record + PR. The ~3-minute demo video is rendered
+(Remotion, 10 narrated beats over real screen captures, 2:55) and lives on the recording VM at
+`~/demo-video-lab/coldcall-demo/out/coldcall-demo.mp4`; re-render via `README.md` there.
 The demo frontend now lives in `frontend/` (see `frontend/README.md`): eight routes over the
 real incident store via a stdlib-only local server (`uv run frontend/server.py`), with a
 graceful static fallback for hosted deploys (Vercel-ready, `frontend/vercel.json`).
@@ -52,7 +59,7 @@ Everything here needs a browser, an account, or a camera. **None of it has been 
 | # | What | Exact steps | What it blocks |
 |---|---|---|---|
 | 1 | ~~**Apply `proposals/VISION.md`**~~ **Done — PR #15 merged.** | — | — |
-| 2 | **Record the ~3-minute video** | `DEMO.md` → `DEMO-0001` has per-beat timings, the expected output at each step, and the three things to say out loud. **Read the two traps below first.** | Submission. |
+| 2 | ~~**Record the ~3-minute video**~~ **Done — rendered 2026-08-30** (see header note). Review it, request edits if any, then | submit the form with the repo link + video. | Submission. |
 | 3 | **Supabase connector** *(optional)* | TrueForge :8790 → Settings → Connectors → supabase → Connect. **OAuth (`dcr`) — a browser login, not a token.** Needs a project at supabase.com. | Nothing. The store runs on stdlib SQLite; this swaps the backend. |
 | 4 | **Stripe connector** *(optional)* | Same route, **test mode only**. Also OAuth. | Nothing — the exposure figure comes from `replay/seed.json`. |
 | 5 | **Slack webhook** *(optional)* | api.slack.com/messaging/webhooks → app → Incoming Webhooks → add to a channel; set `COLDCALL_NOTIFY_WEBHOOK` in `.env`. | Nothing — not part of `DEMO-0001`. |
@@ -86,8 +93,7 @@ has since been applied (PR #15), and this file reflects post-#15 reality.
 
 ## Next intended step
 
-1. Mulaydm10 records the video (item 2 above). 3–6 are optional and block nothing.
-2. Submit.
+1. Mulaydm10 reviews the rendered video and submits. 3–6 are optional and block nothing.
 
 **Do not re-run platform setup unprompted**, and do not re-verify the platform unprompted — it
 is configured and proven. The scripts are idempotent and exist for re-checking after a restart,
@@ -101,3 +107,4 @@ not as steps.
 | `README.md` corpus section (PR #14) | Devin | 2026-08-28 18:55 UTC | done — merged |
 | `VISION.md` apply (PR #15) | Devin (authorized by Mulaydm10) | 2026-08-28 19:30 UTC | done — merged |
 | Stale-docs audit fix (CLAUDE.md/README/STATE) | Devin | 2026-08-29 07:45 UTC | in review |
+| Demo video (script, VO, capture, Remotion render) | Devin | 2026-08-30 10:00 UTC | done — on VM |
