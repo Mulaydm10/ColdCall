@@ -847,3 +847,40 @@ false since PR #7 and directly contradicting the merged VISION.md. README's Qodo
 note still said in the present tense that `VISION.md` reads TODO, false since PR #15 merged.
 STATE.md still described #15 as the one open PR. All fixed in this entry's branch;
 documentation only, no code change.
+
+## 2026-08-30 — 10:40 UTC — Devin: demo frontend committed to the repo (`frontend/`)
+
+The frontend built over the last sessions moves from a VM-local working copy into the repo,
+under `frontend/`. Eight routes (Home, Overview, How it works, Console, Incidents, Evidence,
+Decision room, Sources) in a single-page site with the Modernist design system; a stdlib-only
+local server (`frontend/server.py`) serves it over the real `src/coldcall` SQLite store —
+bootstrap seeds from `replay/seed.json`, replays the recorded demo leg, and records the
+verdict computed by the same deterministic CLI the sandbox runs. Allow/Deny in the Decision
+room write real receipts and survive restarts. The site degrades gracefully with no API
+(recorded DEMO-0001 fixtures), so it can also be hosted statically — `frontend/vercel.json`
+included for a Vercel deploy. Runtime store files are gitignored. Verified both modes before
+commit: live (`/api/state` returns the persisted verdict, MKT 24.54 °C, gate open) and static
+(page renders, Decision room + Console + live map work, only the expected `/api` 404s).
+
+## 2026-08-30 14:05 UTC — Qodo review of PR #17: seven findings addressed
+
+Qodo's `/agentic_review` on PR #17 returned 5 bugs + 2 rule violations; all addressed on the
+branch. `frontend/server.py`: a decision is now final — any second `POST /api/decision` after
+an allow *or* a deny returns 409 (deny was previously re-decidable); `Content-Length` is
+validated (400/413) with a 4 KiB body cap, non-object JSON rejected, and 500s no longer leak
+exception text; signer/reason are normalized (length caps, the ` - ` audit delimiter is
+neutralized to an en dash) so reload hydration is lossless. `frontend/ColdCall.dc.html`: the
+decision client now distinguishes live from static — in live mode a non-OK/failed POST shows
+"the store did not record the decision" instead of faking success; static fallback unchanged.
+Fixture text aligned to the canonical run (MKT 24.54 °C, 64.35 % — was 24.51/64.3 from an older
+draft). `frontend/README.md` + `STATE.md`: launch documented as `uv run frontend/server.py`.
+Verified: ruff clean, full pytest green, live curl checks (400/413/409 paths, tricky ` - `
+names round-trip), fresh store boots gate-open.
+
+## 2026-08-30 14:40 UTC — Qodo follow-up review on PR #17: two Mediums fixed
+
+Follow-up review on a1e107f flagged two Mediums, both fixed: `by`/`reason` must now be JSON
+strings (arrays/numbers/objects → 400, no coerced audit attribution), and the decision
+handler's generic 500 now prints the traceback to stderr so store failures are diagnosable
+from server output. Verified live: 400 on non-string fields, allow → 200, second decision →
+409, ruff clean.

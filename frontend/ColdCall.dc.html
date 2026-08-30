@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-c05f995e-c5a1-46c7-b9c6-9baa7ded037a/styles.css">
+<script src="_ds/modernist-c05f995e-c5a1-46c7-b9c6-9baa7ded037a/_ds_bundle.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+<script type="module" src="vendor/fleet-trucks.js"></script>
+<script src="./leg-data.js"></script>
+<script>window.FLEET_COUNTS = {"release":13,"quarantine":23,"destroy":170};</script>
+<script>window.OM_SCENES = '[{"name":"Road","dur":4.5,"desc":"DEMO-0001 on the road"},{"name":"Windshield","dur":2.5,"desc":"Rolls to a stop in its lane"},{"name":"Lane","dur":3,"desc":"Its 47 dataset siblings appear"},{"name":"Fleet","dur":3.5,"desc":"All five lanes - the whole corpus"},{"name":"Sweep","dur":4,"desc":"Every truck moves toward one gate"},{"name":"Gate","dur":4,"desc":"The verdict is painted at the gate"},{"name":"Resolve","dur":4,"desc":"The blocks collapse into the verdict bar"},{"name":"Hold","dur":3.5,"desc":"The bar holds with its counts"}]';</script>
+<script>window.OM_PLAYBACK = '{"mode":"loop"}';</script>
+<style>
+  body{margin:0;background:var(--color-bg);font-family:var(--font-body);color:var(--color-text)}
+  a{color:var(--color-accent-700);text-decoration:none}
+  a:hover{color:var(--color-accent)}
+  ::selection{background:var(--color-accent-200)}
+  @keyframes ccPaint{from{opacity:0;transform:scaleX(.1)}to{opacity:1;transform:scaleX(1)}}
+  :focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}
+  .btn{cursor:pointer}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column">
+
+  <div style="position:sticky;top:0;z-index:40;background:var(--color-bg);border-bottom:2px solid var(--color-text);display:flex;align-items:center;justify-content:space-between;padding:0 26px;height:56px">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div style="display:flex;align-items:center;gap:11px;cursor:pointer" onClick="{{ goLanding }}">{{ mark }}<div style="font-weight:800;font-size:17px;letter-spacing:-.02em">ColdCall</div></div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Keeps medicine shipments honest</div>
+    </div>
+    <div style="display:flex;align-items:stretch;height:100%">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="7">
+        <div style="{{ n.style }}" style-hover="{{ n.styleHover }}" onClick="{{ n.go }}">{{ n.label }}<sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="{{ n.badgeStyle }}">1</span></sc-if></div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="{{ sLanding }}">
+  <div>
+    <div style="position:relative;border-bottom:2px solid var(--color-text);background:var(--color-bg);height:56.25vw;overflow:hidden">
+      <div style="position:absolute;inset:0">
+        <x-import component-from-global-scope="CompositionStage" from="./animations-v3.jsx?v=4 ./fleet-sweep.jsx?v=2" width="1920" height="1080" bg="#f3f2f2" chrome="none" scenes="{{ scenes }}" playback="{{ playback }}" style="width:100%;height:100%" hint-size="100%,100%">
+          <x-import component-from-global-scope="FleetSweep" hint-size="100%,100%"></x-import>
+        </x-import>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 420px;border-bottom:2px solid var(--color-text)">
+      <div style="padding:44px 40px;border-right:2px solid var(--color-text)">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:18px">An AI agent for medicine that got too warm</div>
+        <div style="font-size:60px;font-weight:800;line-height:1.04;letter-spacing:-.028em;max-width:20ch">Is this medicine still safe to release?</div>
+        <div style="margin-top:22px;font-size:17px;line-height:1.6;color:var(--color-neutral-800);max-width:62ch;text-wrap:pretty">Medicine travels in refrigerated trucks, and sometimes those trucks get too warm. When that happens, someone has to decide: is the shipment still good, does it need re-testing, or must it be destroyed? ColdCall is an AI agent that investigates each case — it reads the drug's official label, checks the route and the weather, runs the regulated temperature math, has a second, independent calculation verify every number — and then stops and waits for a human to sign the final decision.</div>
+        <div style="display:flex;gap:12px;margin-top:28px">
+          <div class="btn btn-primary" style="cursor:pointer" onClick="{{ goRoom }}">See a decision being made</div>
+          <div class="btn btn-secondary" style="cursor:pointer" onClick="{{ goProvenance }}">Where the data comes from</div>
+        </div>
+      </div>
+      <div style="background:var(--color-surface)">
+        <sc-for list="{{ heroStats }}" as="s" hint-placeholder-count="4">
+          <div style="{{ s.style }}">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-neutral-700)">{{ s.label }}</div>
+            <div style="display:flex;align-items:baseline;gap:9px;margin-top:6px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:34px;font-weight:600;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums">{{ s.value }}</div>
+              <div style="font-size:13px;color:var(--color-neutral-800)">{{ s.note }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="border-bottom:2px solid var(--color-text)">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-neutral-700);padding:20px 40px 12px">What the animation above shows</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr)">
+        <sc-for list="{{ explain }}" as="e" hint-placeholder-count="3">
+          <div style="{{ e.style }}">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--color-accent-700);letter-spacing:.1em;margin-bottom:8px">{{ e.n }}</div>
+            <div style="font-size:19px;font-weight:800;line-height:1.25;letter-spacing:-.012em">{{ e.title }}</div>
+            <div style="margin-top:9px;font-size:13.5px;line-height:1.6;color:var(--color-neutral-800)">{{ e.body }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--color-text)">
+      <div style="padding:32px 40px;border-right:2px solid var(--color-text)">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:14px">The three possible outcomes</div>
+        <sc-for list="{{ legend }}" as="l" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:14px;padding:9px 0;border-bottom:1px solid var(--color-neutral-300)">
+            <div style="{{ l.swatch }}"></div>
+            <div style="font-weight:800;font-size:14px;width:180px">{{ l.label }}</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--color-neutral-700);flex:1">{{ l.pattern }}</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:17px;font-variant-numeric:tabular-nums">{{ l.n }}</div>
+          </div>
+        </sc-for>
+        <div style="font-size:12.5px;line-height:1.55;color:var(--color-neutral-800);margin-top:12px">Every outcome has its own pattern as well as its own colour, so the meaning survives even in black-and-white print.</div>
+      </div>
+      <div style="padding:32px 40px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:14px">What we are honest about</div>
+        <div style="border-left:3px solid var(--color-accent);padding-left:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:14px;line-height:1.6;color:var(--color-neutral-800)">Every number is calculated twice, by two independent programs. Two programs agreeing is still not absolute proof — but it catches a coding mistake in either one, and we say so on every verdict.</div>
+          <div style="font-size:14px;line-height:1.6;color:var(--color-neutral-800)">We clearly separate what comes from <b>regulation</b> (the temperature math, the drug label's range) from what is <b>our own configurable policy</b> (how many hours of excursion we allow). The two are labelled everywhere they appear.</div>
+          <div style="font-size:14px;line-height:1.6;color:var(--color-neutral-800)">No verdict on this site is invented for display — each one is real computed output, and if the calculation fails the screen says so.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div style="{{ sOverview }}">
+  <div style="display:grid;grid-template-columns:268px 1fr;min-height:calc(100vh - 114px)">
+    <div style="border-right:2px solid var(--color-text);background:var(--color-surface);padding:24px 22px;display:flex;flex-direction:column;gap:20px">
+      <sc-for list="{{ rail }}" as="r" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">{{ r.label }}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-variant-numeric:tabular-nums">{{ r.value }}</div>
+          <div style="font-size:12.5px;color:var(--color-neutral-800);line-height:1.45">{{ r.note }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div>
+      <div style="display:flex;border-bottom:2px solid var(--color-text);background:var(--color-surface)">
+        <sc-for list="{{ ovTabs }}" as="t" hint-placeholder-count="3">
+          <div style="{{ t.style }}" style-hover="{{ t.hover }}" onClick="{{ t.go }}">{{ t.label }}</div>
+        </sc-for>
+      </div>
+
+      <div style="{{ sOv0 }}">
+        <div style="padding:34px 34px 26px;border-bottom:2px solid var(--color-text)">
+          <div style="font-size:40px;font-weight:800;line-height:1.08;letter-spacing:-.022em;max-width:24ch">Medicine that goes bad in transit is a $35 billion-a-year problem</div>
+          <div style="margin-top:14px;font-size:14.5px;line-height:1.6;color:var(--color-neutral-800);max-width:70ch;text-wrap:pretty">Vaccines, insulin, antibiotics — a huge share of modern medicine must stay inside a narrow temperature band from the factory to the pharmacy. That journey is called the cold chain. When a shipment warms up, someone has to decide: is it still safe to sell, does it need lab testing, or must it be destroyed? Today that decision is slow, manual, and expensive.</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);border-bottom:2px solid var(--color-text)">
+          <sc-for list="{{ ov0Stats }}" as="s" hint-placeholder-count="4">
+            <div style="{{ s.style }}">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1.1">{{ s.value }}</div>
+              <div style="font-size:13px;line-height:1.55;color:var(--color-neutral-800);margin-top:8px;max-width:48ch">{{ s.note }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-700);margin-top:10px">{{ s.src }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding:10px 34px 34px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding:14px 0 4px">Why one warm truck costs so much</div>
+          <sc-for list="{{ ov0Rows }}" as="r" hint-placeholder-count="3">
+            <div style="padding:16px 0;border-bottom:1px solid var(--color-neutral-300);display:grid;grid-template-columns:280px 1fr;gap:26px">
+              <div style="font-size:15px;font-weight:800;line-height:1.35">{{ r.title }}</div>
+              <div style="font-size:13.5px;line-height:1.6;color:var(--color-neutral-800);max-width:80ch">{{ r.body }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="{{ sOv1 }}">
+        <div style="padding:34px 34px 26px;border-bottom:2px solid var(--color-text)">
+          <div style="font-size:40px;font-weight:800;line-height:1.08;letter-spacing:-.022em;max-width:24ch">The 45-day investigation, done in minutes — with a human still in charge</div>
+          <div style="margin-top:14px;font-size:14.5px;line-height:1.6;color:var(--color-neutral-800);max-width:70ch;text-wrap:pretty">ColdCall watches the temperature recording, and the moment a shipment leaves its band it builds the whole case file automatically: where it warmed, the regulated math, the money at risk, the nearest certified cold store. A second, independent program recomputes every number. Then it stops — and a named person makes the one irreversible call.</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);border-bottom:2px solid var(--color-text)">
+          <sc-for list="{{ ov1Stats }}" as="s" hint-placeholder-count="4">
+            <div style="{{ s.style }}">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1.1">{{ s.value }}</div>
+              <div style="font-size:13px;line-height:1.55;color:var(--color-neutral-800);margin-top:8px;max-width:48ch">{{ s.note }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-700);margin-top:10px">{{ s.src }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding:10px 34px 34px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding:14px 0 4px">Where the money comes back</div>
+          <sc-for list="{{ ov1Rows }}" as="r" hint-placeholder-count="4">
+            <div style="padding:16px 0;border-bottom:1px solid var(--color-neutral-300);display:grid;grid-template-columns:280px 1fr;gap:26px">
+              <div style="font-size:15px;font-weight:800;line-height:1.35">{{ r.title }}</div>
+              <div style="font-size:13.5px;line-height:1.6;color:var(--color-neutral-800);max-width:80ch">{{ r.body }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="{{ sOv2 }}">
+      <div style="padding:34px 34px 26px;border-bottom:2px solid var(--color-text)">
+        <div style="font-size:40px;font-weight:800;line-height:1.08;letter-spacing:-.022em;max-width:22ch">Proved on 206 real shipments — nothing simulated</div>
+        <div style="margin-top:14px;font-size:14.5px;line-height:1.6;color:var(--color-neutral-800);max-width:68ch;text-wrap:pretty">Claims are cheap, so here is the evidence. We replayed 206 real shipment recordings from five public datasets through the exact same pipeline that handles the live incident — every verdict below comes from a real temperature logger, and every number was computed twice by two independent programs before it counted.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid var(--color-text)">
+        <sc-for list="{{ runState }}" as="r" hint-placeholder-count="3">
+          <div style="{{ r.style }}">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">{{ r.label }}</div>
+            <div style="font-size:13px;margin-top:5px">{{ r.value }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:24px 34px;border-bottom:2px solid var(--color-text)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">How the 206 shipments were decided</div>
+          <div style="font-size:12.5px;color:var(--color-neutral-700)">both calculations agreed on all 206</div>
+        </div>
+        <div style="display:flex;height:30px;border:1px solid var(--color-text)">
+          <sc-for list="{{ mix }}" as="m" hint-placeholder-count="3"><div style="{{ m.style }}"></div></sc-for>
+        </div>
+        <div style="display:flex;gap:34px;margin-top:12px">
+          <sc-for list="{{ legend }}" as="l" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="{{ l.swatch }}"></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:19px;font-variant-numeric:tabular-nums">{{ l.n }}</div>
+              <div style="font-size:13px;color:var(--color-neutral-800)">{{ l.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="padding:22px 34px 30px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:12px">Where the shipments come from</div>
+        <div style="display:grid;grid-template-columns:1fr 60px 170px 100px;gap:0 18px;font-size:13.5px">
+          <div style="{{ thStyle }}">Dataset</div>
+          <div style="{{ thStyleR }}">Trips</div>
+          <div style="{{ thStyle }}">Verdict mix</div>
+          <div style="{{ thStyleR }}">R · Q · D</div>
+          <sc-for list="{{ datasets }}" as="ds" hint-placeholder-count="5">
+            <div style="padding:11px 0;border-bottom:1px solid var(--color-neutral-300);line-height:1.4">{{ ds.name }}</div>
+            <div style="padding:11px 0;border-bottom:1px solid var(--color-neutral-300);text-align:right;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">{{ ds.legs }}</div>
+            <div style="padding:11px 0;border-bottom:1px solid var(--color-neutral-300);display:flex;align-items:center">
+              <div style="display:flex;height:9px;width:100%;border:1px solid var(--color-neutral-500)">
+                <sc-for list="{{ ds.segs }}" as="seg" hint-placeholder-count="2"><div style="{{ seg.style }}"></div></sc-for>
+              </div>
+            </div>
+            <div style="padding:11px 0;border-bottom:1px solid var(--color-neutral-300);text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-neutral-700)">{{ ds.counts }}</div>
+          </sc-for>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div style="{{ sRoom }}">
+  <div style="display:grid;grid-template-columns:268px 1fr;min-height:calc(100vh - 114px)">
+    <div style="border-right:2px solid var(--color-text);background:var(--color-surface)">
+      <div style="padding:20px;border-bottom:1px solid var(--color-neutral-400)">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">Incident target</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600">VCC-118</div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--color-text);padding:2px 6px">Advisory</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--color-text);padding:2px 6px">Temp excursion</div>
+        </div>
+      </div>
+      <div style="padding:18px 20px;border-bottom:1px solid var(--color-neutral-400);display:grid;grid-template-columns:max-content 1fr;gap:8px 14px;font-size:13px">
+        <div style="color:var(--color-neutral-700)">Lot</div><div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">A2231</div>
+        <div style="color:var(--color-neutral-700)">Units</div><div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">4,000</div>
+        <div style="color:var(--color-neutral-700)">Route</div><div style="line-height:1.4">Rotterdam DC → Lyon regional hub</div>
+        <div style="color:var(--color-neutral-700)">Opened</div><div style="font-family:'IBM Plex Mono',monospace;font-size:12px">2026-08-29 11:52:32</div>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:10px">Phase</div>
+        <sc-for list="{{ phases }}" as="p" hint-placeholder-count="6">
+          <div style="{{ p.style }}"><span style="{{ p.mark }}"></span>{{ p.label }}</div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div>
+      <div style="padding:26px 30px 22px;border-bottom:2px solid var(--color-text)">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">{{ roomStatus }}</div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="display:flex;align-items:stretch;border:2px solid var(--color-text)">
+            <div style="width:28px;background:repeating-linear-gradient(45deg,var(--color-text) 0 2px,transparent 2px 6px);border-right:2px solid var(--color-text)"></div>
+            <div style="padding:6px 12px;font-weight:800;font-size:14px;letter-spacing:.03em">QUARANTINE / RETEST</div>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--color-neutral-700)">verdict of record · VCC-118</div>
+        </div>
+      </div>
+
+      <div style="border-bottom:2px solid var(--color-text);background:var(--color-accent-100)">
+        <div style="{{ gateBandStyle }}">
+          <div style="width:12px;height:12px;background:var(--color-bg)"></div>
+          <div style="font-size:14.5px;font-weight:800">{{ gateBandTitle }}</div>
+          <div style="flex:1"></div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase">{{ gateBandChip }}</div>
+        </div>
+        <div style="padding:22px 30px 26px;display:grid;grid-template-columns:1fr 360px;gap:34px">
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">Proposed action</div>
+            <div style="font-size:21px;font-weight:800;line-height:1.25;letter-spacing:-.012em;max-width:42ch">Move the shipment to a certified cold store, hold it for lab testing, and file the incident report</div>
+            <div style="margin-top:18px;display:grid;grid-template-columns:max-content 1fr;gap:9px 16px;font-size:13.5px;line-height:1.5">
+              <div style="font-weight:800">If you allow</div><div>Executes now, a receipt is written, and the room closes under your name.</div>
+              <div style="font-weight:800">If you deny</div><div>Nothing is executed — the shipment stays safely held, and your reason goes on the record.</div>
+              <div style="font-weight:800">Either way</div><div>Appended to the feed; it cannot be edited or removed.</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;border-left:1px solid var(--color-neutral-400);padding-left:26px">
+            <sc-if value="{{ gateOpen }}" hint-placeholder-val="{{ true }}">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Signature</div>
+              <input placeholder="your name (goes on the record)" onInput="{{ setName }}" style="border:1px solid var(--color-text);background:var(--color-bg);padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--color-text);outline-offset:-2px">
+              <input placeholder="reason (recorded with a deny)" onInput="{{ setReason }}" style="border:1px solid var(--color-neutral-500);background:var(--color-bg);padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--color-text);outline-offset:-2px">
+              <div style="position:relative;display:flex;gap:8px">
+                <div style="{{ holdStyle }}" onPointerDown="{{ holdStart }}" onPointerUp="{{ holdEnd }}" onPointerLeave="{{ holdEnd }}">
+                  <div style="{{ holdFill }}"></div>
+                  <div style="position:relative;z-index:1">{{ holdLabel }}</div>
+                </div>
+                <div class="btn btn-secondary" style="cursor:pointer" onClick="{{ deny }}">Deny</div>
+              </div>
+              <div style="{{ holdHint }}">{{ holdHintText }}</div>
+            </sc-if>
+            <sc-if value="{{ signed }}" hint-placeholder-val="{{ false }}">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Receipt</div>
+              <div style="border:2px solid var(--color-text);background:var(--color-bg);padding:14px 16px">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600">{{ receiptId }}</div>
+                <div style="margin-top:10px;display:grid;grid-template-columns:max-content 1fr;gap:6px 12px;font-size:12.5px">
+                  <div style="color:var(--color-neutral-700)">Action</div><div>quarantine at a qualified store</div>
+                  <div style="color:var(--color-neutral-700)">Signed by</div><div style="font-weight:800">{{ signerName }}</div>
+                  <div style="color:var(--color-neutral-700)">At</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">{{ actionTime }}</div>
+                  <div style="color:var(--color-neutral-700)">Standing</div><div>executed · room closed</div>
+                </div>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;line-height:1.55;color:var(--color-neutral-700)">appended to the feed. it cannot be edited or removed.</div>
+            </sc-if>
+            <sc-if value="{{ denied }}" hint-placeholder-val="{{ false }}">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Conservative fallback</div>
+              <div style="border:2px solid var(--color-text);background:var(--color-bg);padding:14px 16px">
+                <div style="font-weight:800;font-size:14px">Nothing was executed.</div>
+                <div style="margin-top:10px;display:grid;grid-template-columns:max-content 1fr;gap:6px 12px;font-size:12.5px">
+                  <div style="color:var(--color-neutral-700)">Denied by</div><div style="font-weight:800">{{ signerName }}</div>
+                  <div style="color:var(--color-neutral-700)">At</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">{{ actionTime }}</div>
+                  <div style="color:var(--color-neutral-700)">Reason</div><div>{{ denyReasonShown }}</div>
+                  <div style="color:var(--color-neutral-700)">Fallback</div><div>shipment stays quarantined pending QA review</div>
+                </div>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;line-height:1.55;color:var(--color-neutral-700)">the denial and its reason are appended to the feed.</div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--color-text)">
+        <div style="padding:20px 30px;border-right:1px solid var(--color-neutral-400)">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:10px">Stability budget consumed</div>
+          <div style="display:flex;align-items:baseline;gap:12px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:42px;font-weight:600;letter-spacing:-.03em;line-height:1">64.35%</div>
+            <div style="font-size:13px;color:var(--color-neutral-800)">of the 6 h allowance<br><span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">$50,000</span> at risk</div>
+          </div>
+          <div style="margin-top:14px;height:18px;border:1px solid var(--color-text);display:flex">
+            <div style="width:64.35%;background:repeating-linear-gradient(45deg,var(--color-text) 0 2px,transparent 2px 6px)"></div>
+            <div style="flex:1;background:var(--color-surface)"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-top:6px">
+            <div>retest 50%</div><div>destroy 100%</div>
+          </div>
+          <div style="font-size:12.5px;color:var(--color-neutral-700);margin-top:8px">35.6 points remain before this becomes destroy.</div>
+        </div>
+        <div style="padding:20px 30px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:10px">Independent cross-check</div>
+          <div style="display:flex;align-items:baseline;gap:12px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:42px;font-weight:600;letter-spacing:-.03em;line-height:1">0.000<span style="font-size:19px">e+00</span></div>
+            <div style="font-size:13px;color:var(--color-neutral-800)">°C MKT difference<br>2 of 2 implementations</div>
+          </div>
+          <div style="margin-top:14px;display:grid;grid-template-columns:max-content 1fr;gap:7px 14px;font-size:13px">
+            <div style="color:var(--color-neutral-700)">Primary</div><div>quarantine / retest</div>
+            <div style="color:var(--color-neutral-700)">Independent</div><div>quarantine / retest</div>
+          </div>
+          <div style="font-size:12.5px;color:var(--color-neutral-700);margin-top:10px;line-height:1.5">Agreement is not proof of correctness — it catches a coding error in one path.</div>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;padding:18px 30px 12px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">The three possible outcomes · measured against the heat allowance</div>
+        </div>
+        <div style="display:grid;grid-template-columns:210px 110px 110px 1fr;font-size:13.5px">
+          <div style="{{ caTh }}">Action</div><div style="{{ caTh }}">Standing</div><div style="{{ caTh }}">Value Δ</div><div style="{{ caThLast }}">Basis</div>
+          <sc-for list="{{ courses }}" as="c" hint-placeholder-count="3">
+            <div style="{{ c.cell }}"><span style="{{ c.swatch }}"></span><span style="font-weight:800">{{ c.name }}</span></div>
+            <div style="{{ c.plain }}">{{ c.standing }}</div>
+            <div style="{{ c.mono }}">{{ c.delta }}</div>
+            <div style="{{ c.last }}">{{ c.basis }}</div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;border-top:2px solid var(--color-text)">
+        <div style="border-right:2px solid var(--color-text)">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding:18px 30px 8px">Room feed · append-only</div>
+          <sc-for list="{{ feed }}" as="f" hint-placeholder-count="5">
+            <div style="{{ f.rowStyle }}">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--color-neutral-700);font-variant-numeric:tabular-nums;padding-top:2px;white-space:nowrap">{{ f.t }}</div>
+              <div style="min-width:0">
+                <div style="font-size:12.5px;font-weight:800">{{ f.who }}</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.6;color:var(--color-neutral-800);margin-top:2px">{{ f.body }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding:18px 30px 8px">Who is waiting on this shipment · 3 named receivers</div>
+          <div style="padding:0 30px 6px">
+            <sc-for list="{{ parties }}" as="p" hint-placeholder-count="3">
+              <div style="display:flex;align-items:baseline;gap:12px;padding:9px 0;border-top:1px solid var(--color-neutral-300)">
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:800;font-size:13.5px">{{ p.name }}</div>
+                  <div style="font-size:12px;color:var(--color-neutral-700)">{{ p.kind }}</div>
+                </div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap">{{ p.units }}</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;width:70px;text-align:right">{{ p.value }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding:14px 30px 8px;border-top:1px solid var(--color-neutral-400)">Certified cold stores nearby · where it can be held</div>
+          <div style="padding:0 30px 18px">
+            <sc-for list="{{ stores }}" as="s" hint-placeholder-count="3">
+              <div style="display:flex;align-items:baseline;gap:12px;padding:7px 0;border-top:1px solid var(--color-neutral-300);font-size:13px">
+                <div style="flex:1">{{ s.name }}</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">{{ s.dist }}</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ s.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="border-top:2px solid var(--color-text)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 30px 10px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Audit dossier · the record as it stands</div>
+          <div style="display:flex;gap:10px">
+            <div class="btn btn-secondary" style="cursor:pointer;font-size:12.5px;padding:6px 12px" onClick="{{ goDemoLeg }}">Open the leg evidence →</div>
+            <div class="btn btn-secondary" style="cursor:pointer;font-size:12.5px;padding:6px 12px" onClick="{{ printDossier }}">Print dossier</div>
+          </div>
+        </div>
+        <div style="padding:0 30px 26px;display:grid;grid-template-columns:repeat(3,1fr);gap:0 34px">
+          <sc-for list="{{ dossier }}" as="d" hint-placeholder-count="12">
+            <div style="display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-top:1px solid var(--color-neutral-300);font-size:12.5px">
+              <div style="color:var(--color-neutral-700);white-space:nowrap">{{ d.k }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-align:right;overflow-wrap:anywhere">{{ d.v }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div style="{{ sPipeline }}">
+  <div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 30px;border-bottom:2px solid var(--color-text)">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">How the agents work · run</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600">DEMO-0001</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--color-text);padding:2px 7px">same input, same answer</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:18px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">
+        <div><span style="color:var(--color-neutral-700)">T+</span> 10.1s</div>
+        <div><span style="color:var(--color-neutral-700)">complete</span> 9/11</div>
+        <div style="color:var(--color-accent-700);font-weight:600">HALTED AT GATE</div>
+      </div>
+    </div>
+    <div style="border-bottom:2px solid var(--color-text)">
+      <div style="display:flex;align-items:baseline;gap:14px;padding:14px 30px 10px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">The architecture · watch a run</div>
+        <div style="font-size:12.5px;color:var(--color-neutral-800)">Evidence flows left to right; the four specialists work in parallel; the run pauses at the human gate.</div>
+      </div>
+      <iframe src="pipeline-arch.html" title="ColdCall agent architecture, animated run" style="width:100%;height:648px;border:0;border-top:1px solid var(--color-neutral-400);display:block;background:var(--color-bg)"></iframe>
+    </div>
+    <div style="display:grid;grid-template-columns:250px 1fr 320px;min-height:calc(100vh - 114px)">
+      <div style="border-right:2px solid var(--color-text)">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding:16px 20px 8px">The team · 10 agents, 1 human</div>
+        <sc-for list="{{ strands }}" as="a" hint-placeholder-count="11">
+          <div style="{{ a.rowStyle }}">
+            <div style="{{ a.markStyle }}"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;font-weight:600;line-height:1.3">{{ a.name }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--color-neutral-700)">{{ a.note }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="border-right:2px solid var(--color-text)">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding:16px 22px 8px">What happened, step by step · nothing can be edited out</div>
+        <sc-for list="{{ log }}" as="e" hint-placeholder-count="10">
+          <div style="{{ e.rowStyle }}">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--color-neutral-700);font-variant-numeric:tabular-nums;padding-top:2px">{{ e.t }}</div>
+            <div style="min-width:0">
+              <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+                <div style="font-size:12.5px;font-weight:800">{{ e.who }}</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--color-neutral-700)">{{ e.to }}</div>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.6;color:var(--color-neutral-800);margin-top:3px">{{ e.body }}</div>
+            </div>
+          </div>
+        </sc-for>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 22px;border-top:2px solid var(--color-text);background:var(--color-accent);color:var(--color-bg)">
+          <div style="width:12px;height:12px;background:var(--color-bg)"></div>
+          <div style="font-size:13.5px;font-weight:800">The agent stopped itself here. Nothing irreversible has happened yet.</div>
+          <div style="flex:1"></div>
+          <div style="background:var(--color-bg);color:var(--color-accent);font-size:12.5px;font-weight:800;padding:8px 12px;cursor:pointer" onClick="{{ goRoom }}">Open the gate →</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding:16px 20px 10px">The recommendation</div>
+        <div style="padding:0 20px 16px;border-bottom:1px solid var(--color-neutral-400)">
+          <div style="display:flex;align-items:stretch;border:2px solid var(--color-text);margin-bottom:12px">
+            <div style="width:26px;background:repeating-linear-gradient(45deg,var(--color-text) 0 2px,transparent 2px 6px);border-right:2px solid var(--color-text)"></div>
+            <div style="padding:6px 10px;font-weight:800;font-size:12.5px">QUARANTINE / RETEST</div>
+          </div>
+          <div style="display:grid;grid-template-columns:max-content 1fr;gap:7px 12px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums">
+            <div style="color:var(--color-neutral-700)">MKT</div><div>24.54 °C</div>
+            <div style="color:var(--color-neutral-700)">Label</div><div>20–25 °C</div>
+            <div style="color:var(--color-neutral-700)">Budget</div><div>64.35% of 6 h</div>
+            <div style="color:var(--color-neutral-700)">Out of range</div><div>232 / 1,233 min</div>
+            <div style="color:var(--color-neutral-700)">Cross-check</div><div>Δ 0.000e+00</div>
+          </div>
+        </div>
+        <div style="padding:16px 20px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">Known limitation, on the record</div>
+          <div style="border-left:3px solid var(--color-accent);padding-left:12px;font-size:12.5px;line-height:1.55;color:var(--color-neutral-800)">Two programs agreeing is strong evidence, not absolute proof — they could share the same misreading of the standard. We record this on every verdict.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div style="{{ sCorpus }}">
+  <div style="flex:1;padding:32px 40px 48px">
+    <div style="font-size:34px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px">Proof it works: 206 real shipments</div>
+    <div style="font-size:14.5px;color:var(--color-neutral-800);margin-bottom:26px;max-width:70ch">We replayed 206 real recorded shipments — vaccines, mangoes, strawberries, grapes, pharma parcels — from five public research datasets through the exact same pipeline. Nothing here is simulated: every row is a trip a real temperature logger once recorded.</div>
+    <div style="display:grid;grid-template-columns:1fr 90px 120px 190px 110px;gap:0 20px;font-size:13.5px">
+      <div style="{{ thStyle }}">Dataset</div>
+      <div style="{{ thStyleR }}">Trips</div>
+      <div style="{{ thStyle }}">Policy</div>
+      <div style="{{ thStyle }}">Verdict mix</div>
+      <div style="{{ thStyleR }}">R · Q · D</div>
+      <sc-for list="{{ corpus }}" as="ds" hint-placeholder-count="5">
+        <div style="padding:14px 0;border-bottom:1px solid var(--color-neutral-300)">
+          <div style="font-weight:600;line-height:1.4">{{ ds.name }}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--color-neutral-700);margin-top:4px">{{ ds.src }}</div>
+        </div>
+        <div style="padding:14px 0;border-bottom:1px solid var(--color-neutral-300);text-align:right;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">{{ ds.legs }}</div>
+        <div style="padding:14px 0;border-bottom:1px solid var(--color-neutral-300);font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--color-neutral-700)">{{ ds.policy }}</div>
+        <div style="padding:14px 0;border-bottom:1px solid var(--color-neutral-300);display:flex;align-items:center">
+          <div style="display:flex;height:10px;width:100%;border:1px solid var(--color-neutral-500)">
+            <sc-for list="{{ ds.segs }}" as="seg" hint-placeholder-count="2"><div style="{{ seg.style }}"></div></sc-for>
+          </div>
+        </div>
+        <div style="padding:14px 0;border-bottom:1px solid var(--color-neutral-300);text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--color-neutral-700)">{{ ds.counts }}</div>
+      </sc-for>
+    </div>
+
+    <div style="margin-top:38px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Shipment register · click any row to see its evidence</div>
+        <div style="font-size:12.5px;color:var(--color-neutral-700)">every number below was computed from that trip's real recording — none are typed in</div>
+      </div>
+      <div style="display:flex;border:2px solid var(--color-text);border-bottom:none">
+        <sc-for list="{{ dsTabs }}" as="t" hint-placeholder-count="5">
+          <div style="{{ t.style }}" style-hover="{{ t.hover }}" onClick="{{ t.go }}">{{ t.label }}</div>
+        </sc-for>
+      </div>
+      <div style="border:2px solid var(--color-text)">
+        <div style="display:grid;grid-template-columns:1fr 170px 90px 90px 110px 90px 70px;gap:0 16px;padding:0 20px;font-size:13px">
+          <div style="{{ lrTh }}">Leg</div>
+          <div style="{{ lrTh }}">Verdict</div>
+          <div style="{{ lrThR }}">MKT °C</div>
+          <div style="{{ lrThR }}">Budget</div>
+          <div style="{{ lrThR }}">Out of range</div>
+          <div style="{{ lrThR }}">Peak °C</div>
+          <div style="{{ lrThR }}">Trace</div>
+        </div>
+        <sc-for list="{{ legRows }}" as="l" hint-placeholder-count="10">
+          <div style="{{ l.rowStyle }}" style-hover="background:var(--color-accent-100)" onClick="{{ l.go }}">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ l.id }}</div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="{{ l.swatch }}"></span><span style="font-size:12.5px;font-weight:600">{{ l.verdict }}</span></div>
+            <div style="{{ l.num }}">{{ l.mkt }}</div>
+            <div style="{{ l.num }}">{{ l.budget }}</div>
+            <div style="{{ l.num }}">{{ l.exc }}</div>
+            <div style="{{ l.num }}">{{ l.max }}</div>
+            <div style="{{ l.trace }}">{{ l.traceLabel }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-size:12px;color:var(--color-neutral-700);margin-top:8px">Seven representative trips carry their full temperature chart in this build; every other row still shows the complete computed results for its recording.</div>
+    </div>
+  </div>
+  </div>
+
+  <div style="{{ sLeg }}">
+  <div style="flex:1">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 40px;border-bottom:2px solid var(--color-text)">
+      <div style="display:flex;align-items:center;gap:16px;min-width:0">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--color-accent-700);cursor:pointer;white-space:nowrap" onClick="{{ goCorpus }}">← corpus</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ legId }}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--color-neutral-700);white-space:nowrap">{{ legDsTitle }}</div>
+      </div>
+      <div style="display:flex;align-items:stretch;border:2px solid var(--color-text);flex:none">
+        <div style="{{ legVerdictSwatch }}"></div>
+        <div style="padding:5px 11px;font-weight:800;font-size:13px;letter-spacing:.03em">{{ legVerdict }}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 340px;min-height:calc(100vh - 170px)">
+      <div style="border-right:2px solid var(--color-text)">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding:20px 30px 6px">Temperature trace · recorded telemetry</div>
+        <sc-if value="{{ legHasSeries }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:6px 30px 4px">{{ legChart }}</div>
+          <div style="display:flex;justify-content:space-between;padding:0 30px 16px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--color-neutral-700)">
+            <div>{{ legWindow }}</div>
+            <div>{{ legChartNote }}</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ legNoSeries }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:10px 30px 16px;border:1px solid var(--color-neutral-400);padding:18px 20px;font-size:13px;line-height:1.6;color:var(--color-neutral-800)">The full temperature chart for this trip is not embedded in this build — the register at right shows everything computed from its {{ legN }} recorded readings. Seven representative trips carry their full chart; open one from the shipment register.</div>
+        </sc-if>
+        <div style="border-top:2px solid var(--color-text);padding:18px 30px 24px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">Rationale · budget-grounded</div>
+          <div style="font-size:15px;line-height:1.6;max-width:70ch">{{ legRationale }}</div>
+          <div style="margin-top:14px;border-left:3px solid var(--color-accent);padding-left:14px;font-size:12.5px;line-height:1.55;color:var(--color-neutral-800);max-width:70ch">Two implementations agreeing is not proof of correctness — it catches a coding error in one path. Recorded as a limitation on this verdict.</div>
+        </div>
+        <sc-if value="{{ legIsDemo }}" hint-placeholder-val="{{ false }}">
+          <div style="border-top:1px solid var(--color-neutral-400);padding:16px 30px 22px;display:flex;align-items:center;gap:18px">
+            <div style="font-size:13px;color:var(--color-neutral-800)">This recording is the open incident VCC-118 — lot A2231, 4,000 units, $50,000 at risk.</div>
+            <div class="btn btn-secondary" style="cursor:pointer;font-size:12.5px;padding:6px 12px" onClick="{{ goRoom }}">Open the response room →</div>
+          </div>
+        </sc-if>
+      </div>
+      <div style="background:var(--color-surface)">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding:20px 24px 6px">The register</div>
+        <div style="padding:0 24px 16px">
+          <sc-for list="{{ legMetrics }}" as="m" hint-placeholder-count="8">
+            <div style="display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px solid var(--color-neutral-300);font-size:13px">
+              <div style="color:var(--color-neutral-700)">{{ m.k }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right">{{ m.v }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding:14px 24px 10px;border-top:1px solid var(--color-neutral-400)">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">Stability budget</div>
+          <div style="height:16px;border:1px solid var(--color-text);display:flex">
+            <div style="{{ legBudgetFill }}"></div>
+            <div style="flex:1;background:var(--color-bg)"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-top:5px">
+            <div>retest 50%</div><div>destroy 100%</div>
+          </div>
+        </div>
+        <div style="padding:12px 24px 22px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:7px">Policy behind the numbers</div>
+          <div style="font-size:12.5px;line-height:1.55;color:var(--color-neutral-800)">{{ legPolicy }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div style="{{ sIncidents }}">
+  <div style="flex:1;padding:32px 40px 48px;max-width:900px">
+    <div style="font-size:34px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px">Incidents it caught</div>
+    <div style="font-size:14.5px;color:var(--color-neutral-800);margin-bottom:26px">{{ incSubtitle }}</div>
+    <div style="border:2px solid var(--color-text)">
+      <div style="display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--color-neutral-400);cursor:pointer;transition:background .12s" style-hover="background:var(--color-accent-100)" onClick="{{ goRoom }}">
+        <div style="display:flex;align-items:stretch;border:2px solid var(--color-text)">
+          <div style="width:22px;background:repeating-linear-gradient(45deg,var(--color-text) 0 2px,transparent 2px 6px);border-right:2px solid var(--color-text)"></div>
+          <div style="padding:4px 9px;font-weight:800;font-size:12px">HOLD</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:800;font-size:15px">VCC-118 — quarantine / retest</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--color-neutral-700);margin-top:3px">INC-20260829-6D09F2 · lot A2231 · 4,000 units · Rotterdam → Lyon</div>
+        </div>
+        <div style="{{ incStatusStyle }}">{{ incStatus }}</div>
+      </div>
+      <div style="padding:8px 20px 14px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding:8px 0 6px">Timeline · append-only</div>
+        <sc-for list="{{ incTimeline }}" as="e" hint-placeholder-count="6">
+          <div style="{{ e.rowStyle }}">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--color-neutral-700);font-variant-numeric:tabular-nums;white-space:nowrap;padding-top:2px">{{ e.t }}</div>
+            <div style="{{ e.markStyle }}"></div>
+            <div style="min-width:0">
+              <div style="font-size:12.5px;font-weight:800">{{ e.label }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.55;color:var(--color-neutral-800);margin-top:2px">{{ e.body }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid var(--color-neutral-400);font-size:13px;color:var(--color-neutral-700);font-family:'IBM Plex Mono',monospace">closed · INC-20260828-5E6958 · quarantine / retest · signed 2026-08-28 · receipt on file</div>
+    </div>
+
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:30px 0 10px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Caught in the recorded datasets · the worst case from each</div>
+      <div style="font-size:12.5px;color:var(--color-neutral-700)">{{ incCorpusNote }}</div>
+    </div>
+    <div style="border:2px solid var(--color-text)">
+      <sc-for list="{{ incCorpus }}" as="c" hint-placeholder-count="5">
+        <div style="{{ c.rowStyle }}" style-hover="background:var(--color-accent-100)" onClick="{{ c.go }}">
+          <div style="{{ c.swatch }}"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:800;font-size:13.5px">{{ c.title }}</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--color-neutral-700);margin-top:3px;line-height:1.5">{{ c.detail }}</div>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--color-neutral-800);white-space:nowrap;font-variant-numeric:tabular-nums">{{ c.nums }}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:var(--color-accent-700);white-space:nowrap">evidence →</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-size:12.5px;color:var(--color-neutral-700);margin-top:10px;max-width:76ch;line-height:1.55">Each row is a real temperature excursion found in the public recordings — the single worst trip from each dataset. Click through to see its full evidence: the temperature trace, the math, and the verdict. The complete register of all 206 trips is on the Evidence page.</div>
+  </div>
+  </div>
+
+  <div style="{{ sProvenance }}">
+  <div style="flex:1;padding:32px 40px 48px;max-width:1020px">
+    <div style="font-size:34px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px">Where the numbers come from</div>
+    <div style="font-size:14.5px;color:var(--color-neutral-800);margin-bottom:30px;max-width:70ch">Every figure on this site traces back to a public source. Below: the five datasets we replayed, the standards the math follows, the market figures on the Overview — each with a link — and an honest note on what is regulation, what is our own policy, and what we cannot claim.</div>
+
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">01 · The five datasets · 206 recorded trips, nothing simulated</div>
+    <div style="border:2px solid var(--color-text);margin-bottom:32px">
+      <div style="display:grid;grid-template-columns:1fr 190px 60px 250px;gap:0 18px;padding:10px 20px;border-bottom:2px solid var(--color-text);background:var(--color-surface);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-700)">
+        <div>Dataset</div><div>Publisher</div><div style="text-align:right">Trips</div><div>Link</div>
+      </div>
+      <sc-for list="{{ srcData }}" as="d" hint-placeholder-count="5">
+        <div style="{{ d.rowStyle }}">
+          <div style="font-size:13.5px;font-weight:600;line-height:1.45">{{ d.name }}</div>
+          <div style="font-size:12.5px;color:var(--color-neutral-800);align-self:center">{{ d.pub }}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;align-self:center">{{ d.trips }}</div>
+          <div style="align-self:center;min-width:0"><a href="{{ d.url }}" target="_blank" rel="noopener" style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--color-accent-700);text-decoration:underline;overflow-wrap:anywhere">{{ d.link }} ↗</a></div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">02 · The standards and services the math follows</div>
+    <div style="border:2px solid var(--color-text);margin-bottom:32px">
+      <sc-for list="{{ srcStd }}" as="d" hint-placeholder-count="3">
+        <div style="{{ d.rowStyle }}">
+          <div style="font-size:13.5px;font-weight:600;line-height:1.45">{{ d.name }}</div>
+          <div style="font-size:12.5px;color:var(--color-neutral-800);line-height:1.55;align-self:center">{{ d.pub }}</div>
+          <div style="align-self:center;min-width:0"><a href="{{ d.url }}" target="_blank" rel="noopener" style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--color-accent-700);text-decoration:underline;overflow-wrap:anywhere">{{ d.link }} ↗</a></div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">03 · The market figures quoted on the Overview</div>
+    <div style="border:2px solid var(--color-text);margin-bottom:32px">
+      <sc-for list="{{ srcFig }}" as="d" hint-placeholder-count="3">
+        <div style="{{ d.rowStyle }}">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;align-self:center;white-space:nowrap">{{ d.name }}</div>
+          <div style="font-size:12.5px;color:var(--color-neutral-800);line-height:1.55;align-self:center">{{ d.pub }}</div>
+          <div style="align-self:center;min-width:0"><a href="{{ d.url }}" target="_blank" rel="noopener" style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--color-accent-700);text-decoration:underline;overflow-wrap:anywhere">{{ d.link }} ↗</a></div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">04 · What is regulation, what is ours, and what we cannot claim</div>
+    <sc-for list="{{ provenance }}" as="p" hint-placeholder-count="3">
+      <div style="padding:16px 0;border-top:2px solid var(--color-text);display:grid;grid-template-columns:150px 1fr;gap:20px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);padding-top:4px">{{ p.kind }}</div>
+        <div>
+          <div style="font-size:16px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px">{{ p.title }}</div>
+          <div style="font-size:13.5px;line-height:1.6;color:var(--color-neutral-800);max-width:80ch">{{ p.body }}</div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  </div>
+
+  <div style="{{ sConsole }}">
+  <div>
+    <div style="display:flex;align-items:center;gap:0;padding:0 30px;height:52px;border-bottom:2px solid var(--color-text);background:var(--color-surface)">
+      <sc-for list="{{ phaseRail }}" as="p" hint-placeholder-count="6">
+        <div style="{{ p.wrap }}">
+          <div style="{{ p.mark }}"></div>
+          <div style="{{ p.label }}">{{ p.name }}</div>
+          <div style="{{ p.rule }}"></div>
+        </div>
+      </sc-for>
+      <div style="flex:1"></div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">phase · <span style="color:var(--color-accent-700);font-weight:600">{{ conPhase }}</span></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 420px;min-height:calc(100vh - 166px)">
+      <div style="border-right:2px solid var(--color-text)">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--color-text)">
+          <div style="padding:20px 26px;border-right:1px solid var(--color-neutral-400)">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+              <div style="background:var(--color-accent);color:var(--color-bg);font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:3px 7px">Excursion</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-neutral-700)">road leg · reefer</div>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Incident target</div>
+            <div style="font-size:30px;font-weight:800;letter-spacing:-.022em;line-height:1.1;margin-top:5px">VCC-118 · lot A2231</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--color-neutral-700);margin-top:8px;line-height:1.6">4,000 units · amoxicillin 500 mg<br>detected 2026-08-29 11:52:32</div>
+          </div>
+          <div style="padding:20px 26px;background:var(--color-accent-100)">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Stability budget consumed · of a 6 h allowance</div>
+            <div style="display:flex;align-items:baseline;gap:12px;margin-top:6px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:1;color:var(--color-accent-700)">64.35%</div>
+              <div style="font-size:13px;line-height:1.5;color:var(--color-neutral-800)"><span style="font-family:'IBM Plex Mono',monospace">$50,000</span> at risk<br>35.6 points to destroy</div>
+            </div>
+            <div style="margin-top:14px;height:14px;border:1px solid var(--color-text);display:flex">
+              <div style="width:64.35%;background:repeating-linear-gradient(45deg,var(--color-text) 0 2px,transparent 2px 6px)"></div>
+              <div style="flex:1;background:var(--color-bg)"></div>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--color-neutral-700);margin-top:9px">held {{ dwell }} since detection · budget is fixed, the clock is not</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--color-text)">
+        <div style="border-right:1px solid var(--color-neutral-400)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:16px 22px 12px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Where it warmed</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--color-neutral-700)">3 cold stores in range</div>
+          </div>
+          <div style="padding:0 22px 20px">
+            <iframe src="console-map.html" title="Recorded leg geography" style="width:100%;height:236px;border:1px solid var(--color-text);display:block;background:var(--color-bg)"></iframe>
+            <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--color-neutral-700);margin-top:6px">
+              <div>Rotterdam DC</div><div>road leg · 1,233 min</div><div>Lyon regional hub</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:16px 22px 12px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">When it warmed</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--color-neutral-700)">232 min out of range</div>
+          </div>
+          <div style="padding:0 22px 20px">
+            <div style="position:relative;height:236px;border:1px solid var(--color-text);background:var(--color-bg)">
+              <div style="position:absolute;left:0;right:0;top:26%;height:30%;background:var(--color-surface);border-top:1px dashed var(--color-neutral-600);border-bottom:1px dashed var(--color-neutral-600)"></div>
+              <div style="position:absolute;left:8px;top:calc(26% + 4px);font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-700)">labelled 20–25 °C</div>
+              <div style="position:absolute;left:32%;right:49.1%;top:0;bottom:0;background:repeating-linear-gradient(45deg,var(--color-accent-200) 0 3px,transparent 3px 8px);border-left:1px solid var(--color-accent);border-right:1px solid var(--color-accent)"></div>
+              <div style="position:absolute;left:32%;top:6px;padding-left:7px;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700);font-weight:600">excursion · peak 27.0 °C</div>
+              <sc-for list="{{ conTrace }}" as="p" hint-placeholder-count="40"><div style="{{ p.style }}"></div></sc-for>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--color-neutral-700);margin-top:6px">
+              <div>08:23</div><div>logger DD:33:04:13:34:CD</div><div>04:56 +1</div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;padding:16px 26px 12px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Courses of action · budget-grounded</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--color-accent-700);cursor:pointer" onClick="{{ goProvenance }}">threshold provenance ↗</div>
+          </div>
+          <div style="display:grid;grid-template-columns:200px 100px 110px 1fr;font-size:13.5px">
+            <div style="{{ caTh }}">Action</div><div style="{{ caTh }}">Standing</div><div style="{{ caTh }}">Value Δ</div><div style="{{ caThLast }}">Basis</div>
+            <sc-for list="{{ courses }}" as="c" hint-placeholder-count="3">
+              <div style="{{ c.cell }}"><span style="{{ c.swatch }}"></span><span style="font-weight:800">{{ c.name }}</span></div>
+              <div style="{{ c.plain }}">{{ c.standing }}</div>
+              <div style="{{ c.mono }}">{{ c.delta }}</div>
+              <div style="{{ c.last }}">{{ c.basis }}</div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--color-surface)">
+        <div style="padding:20px 24px;border-bottom:2px solid var(--color-text);background:var(--color-bg)">
+          <div style="display:flex;align-items:center;gap:11px;margin-bottom:12px">
+            <div style="{{ conGateMark }}"></div>
+            <div style="font-size:17px;font-weight:800;letter-spacing:-.012em">{{ conGateTitle }}</div>
+          </div>
+          <div style="font-size:13.5px;line-height:1.6;color:var(--color-neutral-800)">{{ conGateBody }}</div>
+          <div style="margin-top:14px;border:1px solid var(--color-neutral-400);background:var(--color-surface);padding:12px 14px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:6px">Human decision log</div>
+            <div style="{{ conLogStyle }}">{{ conLogBody }}</div>
+          </div>
+          <div style="display:flex;gap:9px;margin-top:14px">
+            <div class="btn btn-primary" style="cursor:pointer;flex:1" onClick="{{ goRoom }}">Open the gate</div>
+            <div class="btn btn-secondary" style="cursor:pointer" onClick="{{ goPipeline }}">Full transcript</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 24px 10px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-700)">Room feed · append-only</div>
+          <div style="display:flex;align-items:center;gap:7px;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-neutral-700)"><span style="width:6px;height:6px;background:var(--color-accent)"></span>live</div>
+        </div>
+        <sc-for list="{{ conFeed }}" as="f" hint-placeholder-count="7">
+          <div style="{{ f.row }}">
+            <div style="{{ f.badge }}">{{ f.initials }}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:800;line-height:1.35">{{ f.title }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--color-neutral-700);margin-top:2px;line-height:1.5">{{ f.note }}</div>
+            </div>
+            <div style="{{ f.tagStyle }}">{{ f.tag }}</div>
+          </div>
+        </sc-for>
+        <div style="padding:16px 24px;border-top:1px solid var(--color-neutral-400)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-700);font-weight:600">Room opened</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--color-neutral-700)">11:52:32</div>
+          </div>
+          <div style="font-size:13px;line-height:1.5;margin-top:5px">Incident room created for <b>VCC-118</b> on the Rotterdam → Lyon leg</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--color-neutral-700);margin-top:4px">INC-20260829-6D09F2</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div style="border-top:2px solid var(--color-text);padding:20px 30px;display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--color-neutral-700)">
+    <div>ColdCall · deterministic cold-chain disposition · offline demo</div>
+    <div>206 legs · 5 datasets · generated 2026-08-29</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+const DATA = [
+  ['figshare 14888121 — ultra-low-temperature COVID-19 vaccine container tests', 'figshare · ORNL/Carrier', '12 h allowance', 39, 0, 0, 39],
+  ['Recherche Data Gouv 10.57745/F9UJGQ — mango air cargo, Thailand to France', 'Recherche Data Gouv', '12 h allowance', 62, 0, 0, 62],
+  ['SOFIE EU H2020 — table-grape transport and warehouse telemetry', 'SOFIE · EU H2020', '2 h allowance', 3, 1, 0, 2],
+  ['Strawberry cold-chain truck transport — 6 shipments × 9 trailer probes', 'published dataset', '24 h allowance', 54, 2, 12, 40],
+  ['Zenodo 7907515 — pharma logistics logger telemetry (LL1)', 'Zenodo', '6 h allowance', 48, 10, 11, 27],
+];
+const HUE = { release: '#0f9d74', quarantine: '#e08a00', destroy: 'var(--color-accent)' };
+
+const STRANDS = [
+  ['Telemetry Watcher', 'reads the sensor recording', 'done'],
+  ['Incident Commander', 'opens the case file', 'done'],
+  ['Route Analyst', 'checks route + real weather', 'done'],
+  ['Logistics Scout', 'finds certified cold stores', 'done'],
+  ['Compliance Officer', 'checks the rulebook', 'done'],
+  ['Exposure Accountant', 'counts the money at risk', 'done'],
+  ['Deterministic Disposition', 'runs the regulated math', 'done'],
+  ['Independent Cross-check', 'recomputes it all, independently', 'done'],
+  ['Limitation Recorder', 'writes down the caveats', 'done'],
+  ['Record Keeper', 'keeps the permanent record', 'running'],
+  ['QA Owner · human', 'holds the only pen', 'waiting'],
+];
+const LOG = [
+  ['01.5s', 'Telemetry Watcher', '→ incident commander', '27.0 °C peak against a 20–25 °C label · excursion flagged', 0],
+  ['03.4s', 'Incident Commander', '→ four strands, in parallel', 'incident opened · sop resolved · the record is persisted first', 0],
+  ['04.7s', 'Route Analyst', '', 'warmed on the road leg · 232 of 1,233 min out of band', 0],
+  ['05.1s', 'Logistics Scout', '', '3 qualified cold stores in range · lyon sud 14.2 km', 0],
+  ['05.6s', 'Compliance Officer', '', 'assay required before release once the budget reaches 50%', 0],
+  ['06.2s', 'Exposure Accountant', '', '$50,000 at risk · 4,000 units · 3 named consignees', 0],
+  ['08.0s', 'Deterministic Disposition', '→ cross-check', 'mkt 24.54 °C · budget 64.35% of 6 h → quarantine / retest', 0],
+  ['09.3s', 'Independent Cross-check', 'agrees', 're-derived by direct summation · Δ 0.000e+00 °C', 0],
+  ['09.8s', 'Limitation Recorder', 'dissent, recorded', 'agreement is not proof of correctness', 1],
+  ['10.1s', 'Gate', 'awaiting a human signature', 'proposed: quarantine at a qualified store', 0],
+];
+// [route key, header label] — abbreviated in the bar so eight items fit a laptop header
+const NAV = [
+  ['Landing', 'Home'], ['Overview', 'Overview'], ['Pipeline', 'How it works'],
+  ['Live console', 'Console'], ['Incidents', 'Incidents'], ['Corpus', 'Evidence'],
+  ['Response room', 'Decision room'], ['Provenance', 'Sources'],
+];
+const DS_SLUGS = ['covid-ult', 'mango-aircargo', 'sofie-foodchain', 'strawberry', 'zenodo-ll1'];
+const DS_SHORT = { 'covid-ult': 'covid-ult', 'mango-aircargo': 'mango', 'sofie-foodchain': 'sofie', 'strawberry': 'strawberry', 'zenodo-ll1': 'zenodo-ll1' };
+const VERDICT = { r: 'release', q: 'quarantine / retest', d: 'destroy' };
+const VKIND = { r: 'release', q: 'quarantine', d: 'destroy' };
+const DEMO_LEG = '1334CD-20211109-0823-demo-input';
+
+class Component extends DCLogic {
+  state = {
+    route: 'Landing', ovPage: 0, hold: 0, signed: false, denied: false,
+    sigName: '', denyReason: '', nudge: false,
+    corpusDs: 'zenodo-ll1', legDs: 'zenodo-ll1', legId: DEMO_LEG,
+    actionTime: '', now: Date.now(), receipt: '', liveOpened: 0, live: false, apiError: false,
+  };
+
+  componentDidMount() {
+    // the dwell clock is arithmetic on a fixed timestamp, not invented output
+    this._tick = setInterval(() => this.setState({ now: Date.now() }), 1000);
+    // hydrate from the live store: persisted decision + receipt survive a reload
+    fetch('/api/state').then(r => r.json()).then(d => {
+      const ev = (d.incident && d.incident.events) || [];
+      const done = ev.filter(e => e.kind === 'disposition_executed' || e.kind === 'deny_fallback');
+      const upd = { liveOpened: Date.parse(d.incident && d.incident.opened_at) || 0, live: true };
+      if (done.length) {
+        const last = done[done.length - 1];
+        upd.receipt = last.receipt || '';
+        upd.actionTime = (last.ts || '').slice(0, 19).replace('T', ' ');
+        const m = /(?:signed )?by (.*?) - /.exec(last.detail || '');
+        if (m) upd.sigName = m[1];
+        const rz = / reason: (.*?) - conservative fallback/.exec(last.detail || '');
+        if (rz && rz[1] !== 'unspecified') upd.denyReason = rz[1];
+        if (last.kind === 'disposition_executed') upd.signed = true; else upd.denied = true;
+      }
+      this.setState(upd);
+    }).catch(() => {});
+  }
+
+  _decide = kind => {
+    const apply = receipt => this.setState(kind === 'allow'
+      ? { signed: true, hold: 1, actionTime: this.now(), receipt: receipt || this.state.receipt }
+      : { denied: true, actionTime: this.now(), receipt: receipt || this.state.receipt });
+    fetch('/api/decision', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision: kind, by: this.state.sigName.trim(), reason: this.state.denyReason.trim() }),
+    }).then(r => (r.ok ? r.json() : Promise.reject(r)))
+      .then(d => apply(d.receipt || ''))
+      .catch(() => {
+        if (this.state.live) this.setState({ apiError: true, hold: 0 });
+        else apply('');
+      });
+  };
+
+  // The mark is the verdict encoding itself: three registers stacked in a
+  // square — open, 45° hatch, solid. Same alphabet the product uses, so the
+  // logo teaches the legend. Built once as a stable element so navigating
+  // between routes never restarts its paint-in.
+  mark = (() => {
+    const R = React.createElement;
+    const band = (y, kind, delay) => {
+      const common = { x: 1.5, y, width: 17, height: 4.6, key: kind };
+      const style = {
+        animation: 'ccPaint .5s cubic-bezier(.2,.7,.3,1) both',
+        animationDelay: delay + 'ms', transformOrigin: '1.5px center',
+      };
+      if (kind === 'open') {
+        return R('rect', Object.assign({}, common, {
+          fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, style,
+        }));
+      }
+      if (kind === 'hatch') {
+        return R('rect', Object.assign({}, common, {
+          fill: 'url(#ccHatch)', stroke: 'currentColor', strokeWidth: 1.4, style,
+        }));
+      }
+      return R('rect', Object.assign({}, common, { fill: 'currentColor', style }));
+    };
+    return R('svg', {
+      width: 20, height: 20, viewBox: '0 0 20 20', 'aria-label': 'ColdCall',
+      style: { display: 'block', flex: 'none', overflow: 'visible' },
+    },
+      R('defs', { key: 'd' },
+        R('pattern', { id: 'ccHatch', width: 3, height: 3, patternTransform: 'rotate(45)', patternUnits: 'userSpaceOnUse' },
+          R('line', { x1: 0, y1: 0, x2: 0, y2: 3, stroke: 'currentColor', strokeWidth: 1.5 }))),
+      band(1.4, 'open', 0),
+      band(7.7, 'hatch', 110),
+      band(14, 'solid', 220));
+  })();
+
+  componentWillUnmount() { clearInterval(this._tick); this._stop(); }
+  _stop() { if (this._raf) cancelAnimationFrame(this._raf); this._raf = null; }
+
+  now() {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+      + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+
+  setName = e => this.setState({ sigName: e.target.value, nudge: false, apiError: false });
+  setReason = e => this.setState({ denyReason: e.target.value });
+
+  holdStart = () => {
+    if (this.state.signed || this.state.denied) return;
+    if (!this.state.sigName.trim()) { this.setState({ nudge: true }); return; }
+    const t0 = performance.now();
+    const step = () => {
+      const p = Math.min(1, (performance.now() - t0) / 1200);
+      this.setState({ hold: p });
+      if (p >= 1) { this._stop(); this._decide('allow'); return; }
+      this._raf = requestAnimationFrame(step);
+    };
+    this._raf = requestAnimationFrame(step);
+  };
+  holdEnd = () => {
+    this._stop();
+    if (!this.state.signed) this.setState({ hold: 0 });
+  };
+  deny = () => {
+    if (this.state.signed || this.state.denied) return;
+    if (!this.state.sigName.trim()) { this.setState({ nudge: true }); return; }
+    this._decide('deny');
+  };
+  printDossier = () => { window.print(); };
+
+  legChart(row, meta, series) {
+    const R = React.createElement;
+    const [lo, hi] = meta.band;
+    const pts = series.pts;
+    const W = 860, H = 300, padL = 52, padR = 16, padT = 20, padB = 32;
+    const xmax = pts[pts.length - 1][0] || 1;
+    const vals = pts.map(p => p[1]);
+    let ymin = Math.min(lo, Math.min.apply(null, vals));
+    let ymax = Math.max(hi, Math.max.apply(null, vals));
+    const yr = (ymax - ymin) || 1; ymin -= yr * 0.08; ymax += yr * 0.08;
+    const X = t => padL + (t / xmax) * (W - padL - padR);
+    const Y = v => padT + (1 - (v - ymin) / (ymax - ymin)) * (H - padT - padB);
+    const line = pts.map(p => X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ');
+    const mono = "'IBM Plex Mono',monospace";
+    const kids = [];
+    // labelled band
+    kids.push(R('rect', { key: 'band', x: padL, y: Y(hi), width: W - padL - padR, height: Y(lo) - Y(hi), fill: 'var(--color-surface)' }));
+    // out-of-band hatch (above and below the band)
+    kids.push(R('defs', { key: 'defs' },
+      R('pattern', { id: 'ccLegHatch', width: 5, height: 5, patternTransform: 'rotate(45)', patternUnits: 'userSpaceOnUse' },
+        R('line', { x1: 0, y1: 0, x2: 0, y2: 5, stroke: 'currentColor', strokeWidth: 1, opacity: 0.22 })),
+      R('clipPath', { id: 'ccClipAbove' }, R('rect', { x: padL, y: padT - 6, width: W - padL - padR, height: Math.max(0, Y(hi) - padT + 6) })),
+      R('clipPath', { id: 'ccClipBelow' }, R('rect', { x: padL, y: Y(lo), width: W - padL - padR, height: Math.max(0, H - padB - Y(lo) + 6) }))));
+    if (Y(hi) > padT) kids.push(R('rect', { key: 'hatchTop', x: padL, y: padT, width: W - padL - padR, height: Y(hi) - padT, fill: 'url(#ccLegHatch)' }));
+    if (H - padB > Y(lo)) kids.push(R('rect', { key: 'hatchBot', x: padL, y: Y(lo), width: W - padL - padR, height: H - padB - Y(lo), fill: 'url(#ccLegHatch)' }));
+    // band edge lines + labels
+    [[hi, 'label ' + hi + ' °C'], [lo, 'label ' + lo + ' °C']].forEach(([v, txt], i) => {
+      kids.push(R('line', { key: 'bl' + i, x1: padL, x2: W - padR, y1: Y(v), y2: Y(v), stroke: 'currentColor', strokeWidth: 1, strokeDasharray: '4 3', opacity: 0.6 }));
+      kids.push(R('text', { key: 'bt' + i, x: W - padR - 4, y: Y(v) + (i === 0 ? -5 : 12), textAnchor: 'end', fontFamily: mono, fontSize: 10, fill: 'var(--color-neutral-700)' }, txt));
+    });
+    // axes
+    kids.push(R('line', { key: 'ax', x1: padL, x2: W - padR, y1: H - padB, y2: H - padB, stroke: 'currentColor', strokeWidth: 1.2 }));
+    kids.push(R('line', { key: 'ay', x1: padL, x2: padL, y1: padT, y2: H - padB, stroke: 'currentColor', strokeWidth: 1.2 }));
+    // x ticks (hours)
+    for (let i = 0; i <= 5; i++) {
+      const t = xmax * i / 5;
+      const label = xmax >= 3000 ? Math.round(t / 60) + ' h' : (t / 60).toFixed(1) + ' h';
+      kids.push(R('line', { key: 'xt' + i, x1: X(t), x2: X(t), y1: H - padB, y2: H - padB + 4, stroke: 'currentColor', strokeWidth: 1 }));
+      kids.push(R('text', { key: 'xl' + i, x: X(t), y: H - padB + 16, textAnchor: 'middle', fontFamily: mono, fontSize: 10, fill: 'var(--color-neutral-700)' }, label));
+    }
+    // y ticks
+    for (let i = 0; i <= 4; i++) {
+      const v = ymin + (ymax - ymin) * i / 4;
+      kids.push(R('line', { key: 'yt' + i, x1: padL - 4, x2: padL, y1: Y(v), y2: Y(v), stroke: 'currentColor', strokeWidth: 1 }));
+      kids.push(R('text', { key: 'yl' + i, x: padL - 8, y: Y(v) + 3.5, textAnchor: 'end', fontFamily: mono, fontSize: 10, fill: 'var(--color-neutral-700)' }, v.toFixed(Math.abs(ymax - ymin) > 20 ? 0 : 1)));
+    }
+    // the trace — in-band in ink, out-of-band re-stroked in the accent
+    kids.push(R('polyline', { key: 'trace', points: line, fill: 'none', stroke: 'currentColor', strokeWidth: 1.6 }));
+    kids.push(R('polyline', { key: 'traceHi', points: line, fill: 'none', stroke: 'var(--color-accent)', strokeWidth: 1.8, clipPath: 'url(#ccClipAbove)' }));
+    kids.push(R('polyline', { key: 'traceLo', points: line, fill: 'none', stroke: 'var(--color-accent)', strokeWidth: 1.8, clipPath: 'url(#ccClipBelow)' }));
+    // peak marker
+    let pk = pts[0];
+    pts.forEach(p => { if (p[1] > pk[1]) pk = p; });
+    kids.push(R('circle', { key: 'pk', cx: X(pk[0]), cy: Y(pk[1]), r: 3.2, fill: 'var(--color-accent)' }));
+    kids.push(R('text', { key: 'pkt', x: Math.min(X(pk[0]) + 8, W - padR - 60), y: Math.max(Y(pk[1]) - 8, padT + 10), fontFamily: mono, fontSize: 10.5, fontWeight: 600, fill: 'var(--color-accent-700)' }, 'peak ' + pk[1].toFixed(1) + ' °C'));
+    return R('svg', { viewBox: '0 0 ' + W + ' ' + H, style: { width: '100%', height: 'auto', display: 'block' }, 'aria-label': 'temperature trace' }, kids);
+  }
+
+  legRationale(row, meta) {
+    const [id, v, mkt, budget, exc] = row;
+    const b = budget.toFixed(1) + '%';
+    if (v === 'r') return 'Budget ' + b + ' of the ' + meta.allow_h + ' h allowance stays below the 50% retest threshold. The labelled condition holds over the full recording and the leg releases.';
+    if (v === 'q') return 'Budget ' + b + ' of the ' + meta.allow_h + ' h allowance has passed the 50% retest threshold and remains below 100% — hold at a qualified store and assay before release.';
+    return 'Budget ' + b + ' has consumed the entire ' + meta.allow_h + ' h allowance (destroy at 100%). ' + exc.toLocaleString('en-US') + ' minutes out of the labelled band cannot be released.';
+  }
+
+  swatch(kind) {
+    const base = 'width:34px;height:15px;flex:none;border:1.5px solid var(--color-text);';
+    if (kind === 'release') return base + 'background:var(--color-bg)';
+    if (kind === 'quarantine') return base + 'background:repeating-linear-gradient(45deg,var(--color-text) 0 2px,transparent 2px 6px)';
+    return base + 'background:var(--color-accent)';
+  }
+  segs(legs, r, q, d) {
+    return [['release', r], ['quarantine', q], ['destroy', d]]
+      .filter(p => p[1] > 0)
+      .map(([k, n]) => ({
+        style: 'width:' + (n / legs * 100).toFixed(1) + '%;height:100%;'
+          + (k === 'release' ? 'background:' + HUE.release
+            : k === 'quarantine' ? 'background:repeating-linear-gradient(45deg,var(--color-text) 0 2px,transparent 2px 5px),' + HUE.quarantine
+            : 'background:' + HUE.destroy),
+      }));
+  }
+
+  renderVals() {
+    const route = this.state.route;
+    const go = r => () => this.setState({ route: r });
+    const th = 'font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-700);padding-bottom:8px;border-bottom:2px solid var(--color-text)';
+    const row = 'display:flex;align-items:flex-start;gap:11px;padding:9px 20px;border-top:1px solid var(--color-neutral-300)';
+    const mark = 'width:11px;height:11px;flex:none;margin-top:3px;';
+    const caCell = 'padding:14px 20px;border-bottom:1px solid var(--color-neutral-300);display:flex;align-items:center;gap:10px';
+    const hold = this.state.hold, signed = this.state.signed, denied = this.state.denied;
+    const gateOpen = !signed && !denied;
+    const hasName = !!this.state.sigName.trim();
+    const CC = window.CC_DATA || { meta: {}, legs: {}, series: {} };
+    const legRow = (CC.legs[this.state.legDs] || []).find(r => r[0] === this.state.legId) || [this.state.legId, 'q', 0, 0, 0, 0, 0, 0, 1];
+    const legMeta = CC.meta[this.state.legDs] || { band: [0, 0], allow_h: 0, title: '', policy: '', unit: '' };
+    const legSeries = CC.series[this.state.legId];
+    const legSeriesDemo = CC.series[DEMO_LEG];
+    const goLeg = (ds, id) => () => this.setState({ route: 'Leg', legDs: ds, legId: id });
+    const rcpt = this.state.receipt || 'RCPT-20260829-84C1D2';
+
+    return {
+      scenes: window.OM_SCENES, playback: window.OM_PLAYBACK,
+      sLanding: route === 'Landing' ? 'display:block' : 'display:none',
+      sOverview: route === 'Overview' ? 'display:block;flex:1' : 'display:none',
+      sRoom: route === 'Response room' ? 'display:block;flex:1' : 'display:none',
+      sPipeline: route === 'Pipeline' ? 'display:block;flex:1' : 'display:none',
+      sCorpus: route === 'Corpus' ? 'display:block;flex:1' : 'display:none',
+      sLeg: route === 'Leg' ? 'display:block;flex:1' : 'display:none',
+      sIncidents: route === 'Incidents' ? 'display:block;flex:1' : 'display:none',
+      sProvenance: route === 'Provenance' ? 'display:block;flex:1' : 'display:none',
+      sConsole: route === 'Live console' ? 'display:block;flex:1' : 'display:none',
+      goRoom: go('Response room'), goProvenance: go('Provenance'),
+      goPipeline: go('Pipeline'),
+      goLanding: go('Landing'), goCorpus: go('Corpus'), mark: this.mark,
+      goDemoLeg: goLeg('zenodo-ll1', DEMO_LEG),
+      thStyle: th, thStyleR: th + ';text-align:right',
+      caTh: th + ';padding-left:20px', caThLast: th + ';padding-right:20px',
+
+      nav: NAV.map(([key, label]) => {
+        const active = route === key || (route === 'Leg' && key === 'Corpus');
+        return {
+          label, go: go(key), badge: key === 'Incidents' && gateOpen,
+          badgeStyle: 'background:var(--color-accent);color:var(--color-bg);font-family:\"IBM Plex Mono\",monospace;font-size:10px;padding:1px 5px;margin-left:8px',
+          styleHover: active ? '' : 'background:var(--color-accent-100)',
+          style: 'display:flex;align-items:center;white-space:nowrap;padding:0 11px;font-size:13px;font-weight:600;cursor:pointer;transition:background .12s;'
+            + 'border-left:1px solid var(--color-neutral-400);'
+            + (active ? 'background:var(--color-text);color:var(--color-bg)' : ''),
+        };
+      }),
+
+      conPhase: gateOpen ? 'approval gate' : 'closed',
+      phaseRail: ['Detection', 'Disposition', 'Cross-check', 'Options', 'Approval gate', 'Closed']
+        .map((name, i) => {
+          const done = gateOpen ? i < 4 : i < 5;
+          const activeP = gateOpen ? i === 4 : i === 5;
+          return {
+            name,
+            wrap: 'display:flex;align-items:center;gap:9px;flex:none',
+            mark: 'width:12px;height:12px;flex:none;'
+              + (done ? 'background:var(--color-text)'
+                : activeP ? 'background:var(--color-accent)'
+                : 'border:1px solid var(--color-neutral-500)'),
+            label: 'font-size:13px;white-space:nowrap;'
+              + (activeP ? 'font-weight:800;color:var(--color-accent-700)'
+                : done ? 'font-weight:600' : 'color:var(--color-neutral-600)'),
+            rule: i === 5 ? 'width:0' : 'width:38px;height:2px;margin:0 6px;background:'
+              + (done ? 'var(--color-text)' : 'var(--color-neutral-400)'),
+          };
+        }),
+
+      // the recorded demo-leg trace, drawn from the same fixture the Leg page uses
+      conTrace: (legSeriesDemo ? legSeriesDemo.pts : []).map(([t, c]) => ({
+        style: 'position:absolute;left:' + (t / 1233 * 100).toFixed(2)
+          + '%;top:' + ((1 - (c - 18) / 12) * 100).toFixed(1) + '%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;'
+          + 'background:' + (c > 25 ? 'var(--color-accent)' : 'var(--color-text)'),
+      })),
+
+      dwell: (() => {
+        const fixed = Date.UTC(2026, 7, 29, 11, 52, 32);
+        if (!this._opened) this._opened = fixed < Date.now() ? fixed : Date.now() - 45 * 60000;
+        const ms = Math.max(0, this.state.now - (this.state.liveOpened || this._opened));
+        const h = Math.floor(ms / 3.6e6), m = Math.floor(ms % 3.6e6 / 6e4);
+        return h > 48 ? Math.floor(h / 24) + ' d ' + (h % 24) + ' h' : h + ' h ' + m + ' m';
+      })(),
+
+      conGateMark: 'width:14px;height:14px;'
+        + (gateOpen ? 'background:var(--color-accent)' : 'background:var(--color-text)'),
+      conGateTitle: gateOpen ? 'Awaiting a human signature'
+        : signed ? 'Signed — action executed' : 'Denied — conservative fallback',
+      conGateBody: gateOpen
+        ? 'The agent has produced a verdict and stopped. Nothing irreversible has happened, and nothing will until a named person signs.'
+        : signed
+          ? 'Quarantine at a qualified store executed. Receipt ' + rcpt + ' is on the record.'
+          : 'Nothing was executed. The shipment stays quarantined pending QA review.',
+      conLogStyle: 'font-size:13px;line-height:1.55;color:var(--color-neutral-800)'
+        + (gateOpen ? ';font-style:italic' : ''),
+      conLogBody: gateOpen
+        ? 'No entry yet. The signature, the name and the reason are written here the moment the gate is answered.'
+        : (signed ? 'ALLOW' : 'DENY') + ' — ' + this.state.sigName.trim() + ' · ' + this.state.actionTime
+          + (denied && this.state.denyReason.trim() ? ' · reason: ' + this.state.denyReason.trim() : ''),
+
+      conFeed: [
+        ['TW', 'Telemetry Watcher joined', '1,233 min replayed from the logger recording', 'JOINED'],
+        ['DD', 'Deterministic Disposition joined', 'sandboxed python · MKT under USP <1079>', 'JOINED'],
+        ['XC', 'Independent Cross-check joined', 'second implementation · direct summation', 'AGREED'],
+        ['LR', 'Limitation Recorder joined', 'writes the dissent onto the verdict', 'JOINED'],
+        ['RK', 'Record Keeper joined', 'append-only store · sqlite', 'WRITING'],
+        gateOpen
+          ? ['QA', 'QA Owner · human', 'outside the pipeline · holds the pen', 'WAITING']
+          : signed
+            ? ['QA', 'QA Owner signed — allow', this.state.sigName.trim() + ' · receipt ' + rcpt, 'SIGNED']
+            : ['QA', 'QA Owner denied', this.state.sigName.trim() + ' · conservative fallback recorded', 'DENIED'],
+      ].map(([initials, title, note, tag]) => ({
+        initials, title, note, tag,
+        row: 'display:flex;align-items:center;gap:12px;padding:12px 24px;border-top:1px solid var(--color-neutral-300)',
+        badge: 'width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;'
+          + 'font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;'
+          + (tag === 'WAITING'
+            ? 'border:1px solid var(--color-accent);color:var(--color-accent-700)'
+            : 'background:var(--color-text);color:var(--color-bg)'),
+        tagStyle: 'font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.1em;'
+          + 'padding:3px 6px;flex:none;'
+          + (tag === 'WAITING' || tag === 'SIGNED' || tag === 'DENIED'
+            ? 'background:var(--color-accent);color:var(--color-bg);font-weight:600'
+            : 'border:1px solid var(--color-neutral-500);color:var(--color-neutral-700)'),
+      })),
+
+      heroStats: [
+        ['Real shipments analysed', '206', 'five public datasets'],
+        ['Every number verified twice', '206/206', '0 disagreements'],
+        ['Cases sent to a human', '23', 'quarantine / retest'],
+        ['At stake in the open case', '$50,000', '4,000 units'],
+      ].map(([label, value, note], i) => ({
+        label, value, note,
+        style: 'padding:22px 26px' + (i < 3 ? ';border-bottom:1px solid var(--color-neutral-400)' : ''),
+      })),
+
+      explain: [
+        ['01', 'One leg, then all of them', 'It opens on DEMO-0001 driving the Rotterdam–Lyon leg, then pulls back until all 206 legs of the corpus are on screen at once — five lanes, one per dataset.'],
+        ['02', 'The verdict is painted at the gate', 'No truck is coloured until it crosses. The colour is the decision happening, and each truck takes it at its own crossing.'],
+        ['03', 'It ends as the chart', 'The three outcome blocks collapse into the verdict bar you see on the Overview. Every segment is one real shipment leg.'],
+      ].map(([n, title, body], i) => ({
+        n, title, body,
+        style: 'padding:22px 30px 30px' + (i < 2 ? ';border-right:1px solid var(--color-neutral-400)' : ''),
+      })),
+
+      legend: [
+        { label: 'release', pattern: 'open cell', n: 13, swatch: this.swatch('release') },
+        { label: 'quarantine / retest', pattern: '45° hatch', n: 23, swatch: this.swatch('quarantine') },
+        { label: 'destroy', pattern: 'solid field', n: 170, swatch: this.swatch('destroy') },
+      ],
+      mix: this.segs(206, 13, 23, 170),
+
+      sOv0: this.state.ovPage === 0 ? 'display:block' : 'display:none',
+      sOv1: this.state.ovPage === 1 ? 'display:block' : 'display:none',
+      sOv2: this.state.ovPage === 2 ? 'display:block' : 'display:none',
+      ovTabs: ['01 · The problem', '02 · What ColdCall changes', '03 · Proof on real data'].map((label, i) => ({
+        label, go: () => this.setState({ ovPage: i }),
+        hover: this.state.ovPage === i ? '' : 'background:var(--color-accent-100)',
+        style: 'padding:11px 20px;font-family:\'IBM Plex Mono\',monospace;font-size:11.5px;letter-spacing:.06em;cursor:pointer;transition:background .12s;border-right:1px solid var(--color-neutral-400);'
+          + (this.state.ovPage === i ? 'background:var(--color-text);color:var(--color-bg);font-weight:600' : ''),
+      })),
+
+      ov0Stats: [
+        ['$35 billion / yr', 'what biopharma loses every year to failed temperature-controlled logistics — spoiled product, clinical-trial losses, replacement and investigation costs.', 'IQVIA Institute · Biopharma Cold Chain Logistics Survey'],
+        ['$23.6B → $48B', 'what the industry spends just moving medicine cold — in 2025, and projected by 2034 at 8.2% growth a year. The problem is getting bigger, not smaller.', 'Growth Market Reports · 2025'],
+        ['~$100,000', 'the all-in average cost of a single deviation — the investigation, the batch holds, the release delays, the re-testing — before any product is even lost.', 'C. Briggs, Costs of Deviations · 2023'],
+        ['up to 45 days', 'how long a manual excursion investigation takes: hundreds of staff hours across quality, logistics and medical teams, per event.', 'industry benchmark · deviation RCA studies'],
+      ].map(([value, note, src], i) => ({
+        value, note, src,
+        style: 'padding:24px 30px' + (i % 2 === 0 ? ';border-right:1px solid var(--color-neutral-400)' : '') + (i < 2 ? ';border-bottom:1px solid var(--color-neutral-400)' : ''),
+      })),
+      ov0Rows: [
+        ['Every warm truck triggers a mandatory investigation', 'Regulators require a documented root-cause investigation for every excursion. The labor alone averaged $14,000 per investigation by 2023 (up from $10,000 in 2018 — Climet survey of pharma quality managers). PwC puts the average deviation at €22,000–€48,000, and up to €880,000 when product is lost.'],
+        ['Without evidence, the default answer is “destroy it”', 'When nobody can prove the medicine is still good, quality teams destroy it to be safe. A lost batch runs $250,000–$500,000, and scrapped batches can top $1 million — much of it product that was actually still within its stability limits.'],
+        ['Patients pay the rest', 'Weak cold chains delay and waste medicine where it is needed most: WHO field reviews found only 14% of health facilities in surveyed lower-income countries had cold-chain equipment meeting its standard. A wrong “release” is worse — degraded medicine reaching a patient.'],
+      ].map(([title, body]) => ({ title, body })),
+
+      ov1Stats: [
+        ['minutes, not weeks', 'the full case file — route, weather, money at risk, regulated math, nearest certified cold store — is assembled and on the record before a human even opens the case.', 'this site · the live incident on the Console'],
+        ['206 / 206 verified', 'every verdict is recomputed by a second, independent program before it counts. Across all 206 real shipments, zero disagreements.', 'our corpus run · five public datasets'],
+        ['23 of 206', 'only the calls that genuinely need human judgment reach a person — the quarantine/retest cases. The clear-cut ones are decided by the regulated math and documented automatically.', 'our corpus run'],
+        ['13 shipments saved', 'legs our math proved safe to release — stock a blanket “destroy anything that warmed” policy would have burned. On the open incident alone, $50,000 rides on one decision.', 'our corpus run'],
+      ].map(([value, note, src], i) => ({
+        value, note, src,
+        style: 'padding:24px 30px' + (i % 2 === 0 ? ';border-right:1px solid var(--color-neutral-400)' : '') + (i < 2 ? ';border-bottom:1px solid var(--color-neutral-400)' : ''),
+      })),
+      ov1Rows: [
+        ['Investigation labor collapses to review-and-sign', 'The ~$14,000 of per-event admin exists because someone has to gather records from five systems and write the report. Here the deviation report, the telemetry, the math and the independent cross-check are already assembled and append-only — the human reads, decides, signs.'],
+        ['Good stock stops being destroyed', 'On our 206-leg corpus, 13 legs were provably safe to release and 23 more warranted a lab retest instead of the bin. Every wrong destroy is the full pallet value — $50,000 on the demo shipment.'],
+        ['Every decision is defensible', 'Each verdict carries its evidence, its known limitation, and a signed receipt in a permanent record that survives restarts and cannot be edited. Audit-ready without reconstruction — which is where deviation costs quietly explode.'],
+        ['Even a 1% dent is $350 million', 'Recovering just 1% of the industry\'s $35B annual loss is $350M a year. ColdCall attacks the two biggest lines directly: investigation labor and unnecessary destruction.'],
+      ].map(([title, body]) => ({ title, body })),
+
+      rail: [
+        { label: 'Evidence', value: '206 trips · 5 datasets', note: 'every trip scored on its real sensor recording' },
+        { label: 'Generated', value: '2026-08-29', note: 'the same input always gives the same verdict' },
+        { label: 'Verified twice', value: '206 / 206', note: 'two independent programs, 0 disagreements' },
+        gateOpen
+          ? { label: 'Open incidents', value: '1', note: 'VCC-118 awaiting a signature' }
+          : { label: 'Open incidents', value: '0', note: signed ? 'VCC-118 closed — receipt on file' : 'VCC-118 denied — fallback recorded' },
+      ],
+      runState: [
+        ['Doing now', 'Idle — no computation running'],
+        ['Waiting on', 'Nothing blocked'],
+        ['Last thing it did', 'INC-20260828-5E6958 — quarantine / retest'],
+      ].map(([label, value], i) => ({
+        label, value,
+        style: 'padding:15px 22px' + (i < 2 ? ';border-right:1px solid var(--color-neutral-400)' : ''),
+      })),
+
+      datasets: DATA.map(([name, src, policy, legs, r, q, d]) => ({
+        name, legs, counts: r + ' · ' + q + ' · ' + d, segs: this.segs(legs, r, q, d),
+      })),
+      corpus: DATA.map(([name, src, policy, legs, r, q, d]) => ({
+        name, src, policy, legs, counts: r + ' · ' + q + ' · ' + d, segs: this.segs(legs, r, q, d),
+      })),
+
+      phases: ['Detection', 'Disposition', 'Cross-check', 'Options', 'Approval gate', 'Closed']
+        .map((label, i) => {
+          const doneCount = gateOpen ? 4 : 6;
+          const activeIdx = gateOpen ? 4 : -1;
+          return {
+            label,
+            style: 'display:flex;align-items:center;gap:10px;font-size:13px;padding:6px 0'
+              + (i === activeIdx ? ';font-weight:800;color:var(--color-accent-700)'
+                : i >= doneCount ? ';color:var(--color-neutral-600)'
+                : !gateOpen && i === 5 ? ';font-weight:800' : ''),
+            mark: 'width:10px;height:10px;flex:none;'
+              + (i < doneCount ? 'background:var(--color-text)'
+                : i === activeIdx ? 'background:var(--color-accent)'
+                : 'border:1px solid var(--color-neutral-600)'),
+          };
+        }),
+
+      gateOpen, signed, denied,
+      roomStatus: gateOpen ? 'Decision room · waiting for your signature'
+        : signed ? 'Decision room · closed · receipt on file'
+        : 'Decision room · denied · safe fallback recorded',
+      gateBandStyle: 'display:flex;align-items:center;gap:12px;padding:12px 30px;color:var(--color-bg);background:'
+        + (gateOpen ? 'var(--color-accent)' : signed ? 'var(--color-text)' : 'var(--color-neutral-800)'),
+      gateBandTitle: gateOpen ? 'The agent has stopped. This step is irreversible.'
+        : signed ? 'Action executed under ' + this.state.sigName.trim() + '. The receipt is on file.'
+        : 'Denied. Nothing was executed — the conservative fallback is recorded.',
+      gateBandChip: gateOpen ? 'Run paused' : signed ? 'Room closed' : 'Fallback recorded',
+      receiptId: rcpt,
+      signerName: this.state.sigName.trim() || '—',
+      actionTime: this.state.actionTime,
+      denyReasonShown: this.state.denyReason.trim() || 'not given — recorded as unspecified',
+      setName: this.setName, setReason: this.setReason, deny: this.deny,
+      printDossier: this.printDossier,
+
+      holdLabel: hold > 0 ? 'Hold…' : hasName ? 'Allow — hold to sign' : 'Enter your name to sign',
+      holdStart: this.holdStart, holdEnd: this.holdEnd,
+      holdStyle: 'position:relative;flex:1;overflow:hidden;user-select:none;'
+        + 'display:flex;align-items:center;padding:12px 14px;font-weight:800;font-size:13.5px;'
+        + (hasName ? 'background:var(--color-accent);color:var(--color-bg);cursor:pointer'
+          : 'background:var(--color-neutral-500);color:var(--color-bg);cursor:not-allowed'),
+      holdFill: 'position:absolute;left:0;top:0;bottom:0;width:' + (hold * 100).toFixed(1)
+        + '%;background:var(--color-accent-700)',
+      holdHint: 'font-family:\'IBM Plex Mono\',monospace;font-size:10.5px;line-height:1.55;'
+        + (this.state.nudge || this.state.apiError ? 'color:var(--color-accent-700);font-weight:600' : 'color:var(--color-neutral-700)'),
+      holdHintText: this.state.apiError
+        ? 'the store did not record the decision — check the local server is running, then try again.'
+        : this.state.nudge
+          ? 'a name is required — it goes on the record for both allow and deny.'
+          : 'hold for 1.2 s — the bar fills, then it fires. an irreversible act should take deliberate effort.',
+
+      feed: [
+        ['11:52:32', 'Incident Commander', 'incident opened · VCC-118 · the record is persisted first', 0],
+        ['11:52:33', 'Telemetry Watcher', '27.0 °C peak against a 20–25 °C label · excursion flagged', 0],
+        ['11:52:40', 'Deterministic Disposition', 'mkt 24.54 °C · budget 64.35% of 6 h → quarantine / retest', 0],
+        ['11:52:41', 'Independent Cross-check', 'agrees · re-derived by direct summation · Δ 0.000e+00 °C', 0],
+        ['11:52:42', 'Gate', 'raised · awaiting a human signature', 0],
+      ].concat(signed ? [[this.state.actionTime.slice(11), this.state.sigName.trim() + ' · human', 'ALLOW signed · quarantine executed at a qualified store · receipt ' + rcpt + ' · room closed', 1]]
+        : denied ? [[this.state.actionTime.slice(11), this.state.sigName.trim() + ' · human', 'DENY recorded · reason: ' + (this.state.denyReason.trim() || 'unspecified') + ' · fallback: shipment stays quarantined pending QA review · nothing executed', 1]] : [])
+        .map(([t, who, body, hi]) => ({
+          t, who, body,
+          rowStyle: 'display:grid;grid-template-columns:64px 1fr;gap:12px;padding:9px 30px;border-top:1px solid var(--color-neutral-300);'
+            + (hi ? 'border-left:3px solid var(--color-accent);background:var(--color-accent-100)' : ''),
+        })),
+
+      parties: [
+        ['CHU Lyon Sud — hospital pharmacy', 'receiver · largest order', '1,800 units', '$22,500'],
+        ['Pharmacie Centrale du Rhône', 'receiver · wholesale', '1,400 units', '$17,500'],
+        ['Clinique Ambérieu — dispensary', 'receiver', '800 units', '$10,000'],
+      ].map(([name, kind, units, value]) => ({ name, kind, units, value })),
+      stores: [
+        ['Lyon Sud qualified cold store', '14.2 km', 'gdp · 15–25 °C room'],
+        ['Vénissieux bonded store', '21.7 km', 'gdp · bonded'],
+        ['Saint-Priest logistics hub', '26.9 km', 'gdp'],
+      ].map(([name, dist, note]) => ({ name, dist, note })),
+
+      dossier: [
+        ['Incident', 'INC-20260829-6D09F2'],
+        ['Target', 'VCC-118 · lot A2231'],
+        ['Product', 'amoxicillin 500 mg capsules'],
+        ['Units · value', '4,000 · $50,000'],
+        ['Route', 'Rotterdam DC → Lyon hub'],
+        ['Leg', '1334CD-20211109-0823'],
+        ['Readings', '64 · recorded logger'],
+        ['MKT', '24.54 °C · label 20–25 °C'],
+        ['Budget', '64.35% of 6 h allowance'],
+        ['Out of range', '232 / 1,233 min · peak 27.0 °C'],
+        ['Cross-check', 'agrees · Δ 0.000e+00 °C'],
+        ['Human action', gateOpen ? 'pending · awaiting signature'
+          : signed ? 'allowed · ' + this.state.sigName.trim() + ' · ' + this.state.actionTime
+          : 'denied · ' + this.state.sigName.trim() + ' · ' + this.state.actionTime],
+      ].map(([k, v]) => ({ k, v })),
+
+      lrTh: th + ';padding-top:12px', lrThR: th + ';padding-top:12px;text-align:right',
+      dsTabs: DS_SLUGS.map(slug => ({
+        label: DS_SHORT[slug] + ' · ' + (CC.legs[slug] || []).length,
+        go: () => this.setState({ corpusDs: slug }),
+        hover: this.state.corpusDs === slug ? '' : 'background:var(--color-accent-100)',
+        style: 'padding:9px 16px;font-family:\'IBM Plex Mono\',monospace;font-size:11.5px;cursor:pointer;transition:background .12s;border-right:1px solid var(--color-neutral-400);'
+          + (this.state.corpusDs === slug ? 'background:var(--color-text);color:var(--color-bg);font-weight:600' : ''),
+      })),
+      legRows: (CC.legs[this.state.corpusDs] || []).map(r => {
+        const [id, v, mkt, budget, exc, mx, mn, n] = r;
+        return {
+          id, verdict: VERDICT[v], swatch: this.swatch(VKIND[v]),
+          mkt: mkt.toFixed(2), budget: budget.toFixed(1) + '%',
+          exc: exc.toLocaleString('en-US') + ' min', max: mx.toFixed(1),
+          num: 'font-family:\'IBM Plex Mono\',monospace;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;align-self:center',
+          trace: 'font-family:\'IBM Plex Mono\',monospace;font-size:11px;text-align:right;align-self:center;'
+            + (CC.series[id] ? 'color:var(--color-accent-700);font-weight:600' : 'color:var(--color-neutral-600)'),
+          traceLabel: CC.series[id] ? '● full' : '—',
+          go: goLeg(this.state.corpusDs, id),
+          rowStyle: 'display:grid;grid-template-columns:1fr 170px 90px 90px 110px 90px 70px;gap:0 16px;padding:9px 20px;border-top:1px solid var(--color-neutral-300);cursor:pointer;transition:background .12s;align-items:center',
+        };
+      }),
+
+      legId: legRow[0],
+      legDsTitle: (legMeta.title || this.state.legDs) + ' · ' + legMeta.band[0] + '–' + legMeta.band[1] + ' °C · ' + legMeta.allow_h + ' h allowance',
+      legVerdict: VERDICT[legRow[1]],
+      legVerdictSwatch: 'width:26px;border-right:2px solid var(--color-text);'
+        + (legRow[1] === 'r' ? 'background:var(--color-bg)'
+          : legRow[1] === 'q' ? 'background:repeating-linear-gradient(45deg,var(--color-text) 0 2px,transparent 2px 6px)'
+          : 'background:var(--color-accent)'),
+      legHasSeries: !!legSeries, legNoSeries: !legSeries,
+      legChart: legSeries ? this.legChart(legRow, legMeta, legSeries) : null,
+      legWindow: legSeries ? legSeries.start + ' → ' + legSeries.end : '',
+      legChartNote: legSeries ? (legSeries.pts.length >= legSeries.n_raw ? 'all ' + legSeries.n_raw + ' recorded readings' : legSeries.pts.length + ' of ' + legSeries.n_raw.toLocaleString('en-US') + ' readings shown · min/max preserved') : '',
+      legN: (legRow[7] || 0).toLocaleString('en-US'),
+      legRationale: this.legRationale(legRow, legMeta),
+      legIsDemo: legRow[0] === DEMO_LEG,
+      legPolicy: legMeta.policy,
+      legMetrics: [
+        ['Verdict', VERDICT[legRow[1]]],
+        ['MKT (USP <1079>)', legRow[2].toFixed(2) + ' °C'],
+        ['Label band', legMeta.band[0] + ' to ' + legMeta.band[1] + ' °C'],
+        ['Stability budget', legRow[3].toFixed(1) + '% of ' + legMeta.allow_h + ' h'],
+        ['Out of range', legRow[4].toLocaleString('en-US') + ' min'],
+        ['Peak', legRow[5].toFixed(1) + ' °C'],
+        ['Minimum', legRow[6].toFixed(1) + ' °C'],
+        ['Readings', (legRow[7] || 0).toLocaleString('en-US')],
+        ['Cross-check', legRow[8] ? 'agrees · re-derived' : 'DISAGREES'],
+        ['Dataset', DS_SHORT[this.state.legDs]],
+      ].map(([k, v]) => ({ k, v })),
+      legBudgetFill: 'width:' + Math.min(100, legRow[3]).toFixed(1) + '%;flex:none;'
+        + (legRow[1] === 'r' ? 'background:var(--color-text)'
+          : legRow[1] === 'q' ? 'background:repeating-linear-gradient(45deg,var(--color-text) 0 2px,var(--color-bg) 2px 5px)'
+          : 'background:var(--color-accent)'),
+
+      incCorpusNote: (() => {
+        let f = 0, tot = 0;
+        DS_SLUGS.forEach(s => (CC.legs[s] || []).forEach(r => { tot++; if (r[1] !== 'r') f++; }));
+        return f + ' of ' + tot + ' recorded trips were flagged';
+      })(),
+      incCorpus: DS_SLUGS.map(slug => {
+        const legs = CC.legs[slug] || [];
+        const flagged = legs.filter(r => r[1] !== 'r');
+        const worst = flagged.slice().sort((a, b) => b[3] - a[3])[0] || legs[0];
+        if (!worst) return null;
+        const meta = CC.meta[slug] || { band: [0, 0], allow_h: 0, title: slug };
+        return {
+          title: worst[0] + ' — ' + VERDICT[worst[1]],
+          detail: (meta.title || slug) + ' · label ' + meta.band[0] + ' to ' + meta.band[1] + ' °C · ' + flagged.length + ' of ' + legs.length + ' trips flagged',
+          nums: 'MKT ' + worst[2].toFixed(2) + ' °C · budget ' + Math.round(worst[3]).toLocaleString('en-US') + '% · ' + worst[4].toLocaleString('en-US') + ' min out',
+          swatch: this.swatch(VKIND[worst[1]]).replace('width:34px;height:15px', 'width:26px;height:26px'),
+          go: goLeg(slug, worst[0]),
+          rowStyle: 'display:flex;align-items:center;gap:14px;padding:13px 20px;cursor:pointer;transition:background .12s;border-top:1px solid var(--color-neutral-300)',
+        };
+      }).filter(Boolean).map((c, i) => (i === 0 ? Object.assign(c, { rowStyle: c.rowStyle.replace(';border-top:1px solid var(--color-neutral-300)', '') }) : c)),
+
+      incSubtitle: gateOpen ? 'Real temperature excursions the system caught in the recorded shipments. One is open and waiting for a human decision right now.'
+        : signed ? 'Real temperature excursions the system caught in the recorded shipments. None open — VCC-118 was closed with a signed receipt.'
+        : 'Real temperature excursions the system caught in the recorded shipments. None open — VCC-118 was denied and the safe fallback holds.',
+      incStatus: gateOpen ? 'AWAITING SIGNATURE →' : signed ? 'CLOSED · RECEIPT ON FILE' : 'DENIED · FALLBACK RECORDED',
+      incStatusStyle: 'font-family:\'IBM Plex Mono\',monospace;font-size:11px;font-weight:600;'
+        + (gateOpen ? 'color:var(--color-accent-700)' : 'color:var(--color-neutral-700)'),
+      incTimeline: [
+        ['11:52:32', 'Incident opened', 'VCC-118 raised on recorded telemetry · the record is persisted before anything else runs', 'done'],
+        ['11:52:33', 'Telemetry evaluated', '64 readings · peak 27.0 °C against a 20–25 °C label · 232 min out of range', 'done'],
+        ['11:52:40', 'Verdict computed', 'MKT 24.54 °C · budget 64.35% of 6 h → quarantine / retest · deterministic CLI', 'done'],
+        ['11:52:41', 'Cross-check completed', 'independent implementation agrees · Δ 0.000e+00 °C', 'done'],
+        ['11:52:42', 'Approval gate raised', 'the run halts · a human holds the only pen', gateOpen ? 'active' : 'done'],
+      ].concat(
+        signed ? [
+          [this.state.actionTime.slice(11), 'Allowed — signed by ' + this.state.sigName.trim(), 'quarantine at a qualified store executed · receipt ' + rcpt, 'action'],
+          [this.state.actionTime.slice(11), 'Receipt written · incident closed', 'append-only · the record cannot be edited or removed', 'done'],
+        ] : denied ? [
+          [this.state.actionTime.slice(11), 'Denied by ' + this.state.sigName.trim(), 'reason: ' + (this.state.denyReason.trim() || 'unspecified') + ' · nothing was executed', 'action'],
+          [this.state.actionTime.slice(11), 'Conservative fallback recorded', 'shipment stays quarantined pending QA review · append-only', 'done'],
+        ] : []
+      ).map(([t, label, body, st]) => ({
+        t, label, body,
+        rowStyle: 'display:grid;grid-template-columns:64px 12px 1fr;gap:12px;padding:8px 0;border-top:1px solid var(--color-neutral-300);align-items:start;'
+          + (st === 'action' ? 'border-left:3px solid var(--color-accent);padding-left:10px;background:var(--color-accent-100)' : ''),
+        markStyle: 'width:10px;height:10px;margin-top:3px;flex:none;'
+          + (st === 'active' ? 'background:var(--color-accent)' : st === 'action' ? 'background:var(--color-accent)' : 'background:var(--color-text)'),
+      })),
+
+      courses: [
+        ['RELEASE', 'release', 'Blocked', '$0', 'The shipment has used 64.35% of its heat allowance — past the 50% line where a lab test becomes mandatory. Selling it without one is off the table.', 0],
+        ['QUARANTINE & RETEST', 'quarantine', 'Recommended', 'not priced', 'Hold it at a certified cold store and lab-test a sample before anything is sold. 35.6 points of allowance remain before destruction would be required.', 1],
+        ['DESTROY', 'destroy', 'Not required', '−$50,000', 'Destruction only becomes mandatory at 100% of the allowance. This shipment is at 64.35%, so nothing forces it.', 0],
+      ].map(([name, kind, standing, delta, basis, hi]) => {
+        const bg = hi ? ';background:var(--color-surface)' : '';
+        return {
+          name, standing, delta, basis, swatch: this.swatch(kind),
+          cell: caCell + bg,
+          plain: 'padding:14px 0;border-bottom:1px solid var(--color-neutral-300)' + bg + (hi ? ';font-weight:800' : ';color:var(--color-neutral-700)'),
+          mono: 'padding:14px 0;border-bottom:1px solid var(--color-neutral-300);font-family:"IBM Plex Mono",monospace;font-size:12.5px' + bg,
+          last: 'padding:14px 20px 14px 0;border-bottom:1px solid var(--color-neutral-300);line-height:1.45;color:var(--color-neutral-800)' + bg,
+        };
+      }),
+
+      strands: STRANDS.map(([name, note, st]) => ({
+        name, note, rowStyle: row,
+        markStyle: mark + (st === 'done' ? 'background:var(--color-text)'
+          : st === 'running' ? 'background:repeating-linear-gradient(45deg,var(--color-text) 0 2px,transparent 2px 6px);border:1px solid var(--color-text)'
+          : 'border:1px solid var(--color-neutral-500)'),
+      })),
+      log: LOG.map(([t, who, to, body, dissent]) => ({
+        t, who, to, body,
+        rowStyle: 'display:grid;grid-template-columns:52px 1fr;gap:12px;padding:11px 22px;border-top:1px solid var(--color-neutral-300);'
+          + (dissent ? 'border-left:3px solid var(--color-accent);background:var(--color-accent-100)' : ''),
+      })),
+
+      srcData: [
+        ['Ultra-low-temperature COVID-19 vaccine container tests', 'figshare · ORNL / Carrier', 39, 'https://doi.org/10.6084/m9.figshare.14888121', 'doi:10.6084/m9.figshare.14888121'],
+        ['Mango air cargo, Thailand → France', 'Recherche Data Gouv', 62, 'https://doi.org/10.57745/F9UJGQ', 'doi:10.57745/F9UJGQ'],
+        ['Table-grape transport & warehouse telemetry', 'SOFIE · EU H2020', 3, 'https://www.sofie-iot.eu/', 'sofie-iot.eu'],
+        ['Strawberry cold-chain truck transport · 6 shipments × 9 trailer probes', 'published study', 54, 'https://github.com/Mulaydm10/ColdCall', 'full citation in the repo'],
+        ['Pharma logistics logger telemetry (LL1) — incl. the demo truck', 'Zenodo', 48, 'https://doi.org/10.5281/zenodo.7907515', 'doi:10.5281/zenodo.7907515'],
+      ].map(([name, pub, trips, url, link], i) => ({
+        name, pub, trips, url, link,
+        rowStyle: 'display:grid;grid-template-columns:1fr 190px 60px 250px;gap:0 18px;padding:12px 20px' + (i > 0 ? ';border-top:1px solid var(--color-neutral-300)' : ''),
+      })),
+      srcStd: [
+        ['USP <1079> — mean kinetic temperature', 'The US Pharmacopeia standard that defines the temperature math. We compute it from the real recording, then a second, independent program recomputes it before it counts.', 'https://www.usp.org/', 'usp.org'],
+        ['ERA5 — historical weather', 'The Copernicus climate reanalysis used to explain why a leg warmed — was it the weather outside, or the equipment?', 'https://cds.climate.copernicus.eu/', 'cds.climate.copernicus.eu'],
+        ['openFDA — product labels', 'The public FDA database the labelled storage range for the demo product is drawn from.', 'https://open.fda.gov/', 'open.fda.gov'],
+      ].map(([name, pub, url, link], i) => ({
+        name, pub, url, link,
+        rowStyle: 'display:grid;grid-template-columns:300px 1fr 230px;gap:0 20px;padding:12px 20px' + (i > 0 ? ';border-top:1px solid var(--color-neutral-300)' : ''),
+      })),
+      srcFig: [
+        ['$35B / yr', 'IQVIA Institute estimate of annual biopharma losses to failures in temperature-controlled logistics — lost product, clinical-trial losses, replacement and investigation costs.', 'https://cdn2.hubspot.net/hubfs/4107558/general%20content/PEL1046_SurveyReport_v4a.pdf', '2019 Biopharma Cold Chain Survey (PDF)'],
+        ['$23.6B → $48B', 'Pharmaceutical cold-chain logistics market in 2025, projected to 2034 at 8.2% CAGR.', 'https://growthmarketreports.com/report/cold-chain-logistics-for-pharmaceuticals-market', 'Growth Market Reports'],
+        ['$14k · ~$100k', 'Labor cost of a single failure investigation by 2023 (Climet QA-manager survey), and the estimated all-in average per deviation; PwC\'s published range is €22k–€48k, topping €880k with product loss.', 'https://clinplex.com/resources/deviation-investigation-cost-capa-closure-benchmarks', 'benchmark collection + sources'],
+      ].map(([name, pub, url, link], i) => ({
+        name, pub, url, link,
+        rowStyle: 'display:grid;grid-template-columns:150px 1fr 260px;gap:0 20px;padding:12px 20px' + (i > 0 ? ';border-top:1px solid var(--color-neutral-300)' : ''),
+      })),
+      provenance: [
+        ['Regulation', 'The temperature math is the official one', 'The key number — mean kinetic temperature — is defined by the US Pharmacopeia standard USP <1079>. It is not our invention; we implement the published formula and show our work.'],
+        ['Policy', 'Some limits are ours, and we say so', 'How many hours of excursion a product is allowed is our configurable policy, set per dataset — not a law. It is labelled as policy everywhere it appears, so nobody mistakes our setting for a regulation.'],
+        ['Limitation', 'Two programs agreeing is not absolute proof', 'They could share the same misreading of the standard. What the double-check reliably catches is a coding mistake in either one — and this caveat is written onto every single verdict.'],
+      ].map(([kind, title, body]) => ({ kind, title, body })),
+    };
+  }
+}
+</script>
+</body>
+</html>

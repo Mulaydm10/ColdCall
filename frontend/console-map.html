@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ColdCall — leg geography</title>
+<link rel="stylesheet" href="_ds/modernist-c05f995e-c5a1-46c7-b9c6-9baa7ded037a/styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+<style>
+  html,body{margin:0;height:100%;background:var(--color-neutral-200);font-family:Archivo,system-ui,sans-serif;color:var(--color-text);overflow:hidden}
+  #map{width:100%;height:100%}
+  /* monochrome register: the basemap recedes, the leg carries the ink */
+  #map .leaflet-tile-pane{filter:grayscale(1) contrast(.82) brightness(1.08)}
+  #map{background:var(--color-neutral-200)}
+  .leaflet-container{font-family:'IBM Plex Mono',monospace}
+  .leaflet-control-zoom a{border-radius:0!important;border:1px solid var(--color-text)!important;color:var(--color-text)!important;font-family:'IBM Plex Mono',monospace}
+  .leaflet-control-attribution{font-family:'IBM Plex Mono',monospace;font-size:8.5px!important;background:rgba(255,255,255,.85)!important;color:var(--color-neutral-600)!important}
+  .leaflet-control-attribution a{color:var(--color-neutral-700)!important}
+  .cc-pt{background:var(--color-text)}
+  .cc-end{background:var(--color-text)}
+  .cc-store{background:var(--color-bg);border:1.5px solid var(--color-text)}
+  .cc-lbl{font-family:'IBM Plex Mono',monospace;white-space:nowrap;color:var(--color-text);text-shadow:0 0 3px var(--color-bg),0 0 3px var(--color-bg),0 0 3px var(--color-bg)}
+  .cc-callout{background:var(--color-accent);color:var(--color-bg);font-family:'IBM Plex Mono',monospace;padding:5px 9px;width:max-content}
+  .cc-callout .t{font-size:9px;letter-spacing:1.4px}
+  .cc-callout .v{font-size:11px;font-weight:600;margin-top:2px}
+  .cc-cap{position:absolute;left:0;bottom:0;z-index:1000;background:rgba(255,255,255,.9);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.2px;color:var(--color-neutral-600);padding:4px 8px;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="cc-cap">LIVE MAP · OPENSTREETMAP · ROUTE FROM THE RECORDED LEG</div>
+<script>
+// The recorded leg: Rotterdam DC to Lyon regional hub, over the road corridor
+// the shipment actually ran. Waypoints are real places on that corridor; the
+// excursion segment is the stretch the logger was out of band.
+const LEG = [
+  { name: 'Rotterdam DC',  lon: 4.4777, lat: 51.9244, kind: 'origin' },
+  { name: 'Antwerp',       lon: 4.4025, lat: 51.2194 },
+  { name: 'Brussels',      lon: 4.3517, lat: 50.8503 },
+  { name: 'Charleroi',     lon: 4.4444, lat: 50.4108 },
+  { name: 'Reims',         lon: 4.0317, lat: 49.2583, excursionStart: true },
+  { name: 'Dijon',         lon: 5.0415, lat: 47.3220, excursionEnd: true },
+  { name: 'Lyon hub',      lon: 4.8357, lat: 45.7640, kind: 'destination' },
+];
+// the three qualified cold stores the Logistics Scout returned
+const STORES = [
+  { name: 'Lyon Sud',        lon: 4.8290, lat: 45.6420, km: 14.2 },
+  { name: 'Villefranche',    lon: 4.7190, lat: 45.9890, km: 31.6 },
+  { name: 'Bourg-en-Bresse', lon: 5.2260, lat: 46.2050, km: 58.4 },
+];
+
+const map = L.map('map', { zoomControl: true, attributionControl: true, zoomSnap: 0.25 });
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+}).addTo(map);
+
+const pts = LEG.map(p => [p.lat, p.lon]);
+const bounds = L.latLngBounds(pts);
+const fit = () => map.fitBounds(bounds, { padding: [22, 22] });
+fit();
+// the frame may be sized (or shown) after load — refit whenever it changes
+new ResizeObserver(() => { map.invalidateSize(); fit(); }).observe(document.body);
+
+const iStart = LEG.findIndex(p => p.excursionStart);
+const iEnd = LEG.findIndex(p => p.excursionEnd);
+
+// the whole leg in ink, then the out-of-band stretch over it in the accent
+L.polyline(pts, { color: '#201e1d', weight: 2.5, opacity: 1 }).addTo(map);
+L.polyline(pts.slice(iStart, iEnd + 1), { color: '#ec3013', weight: 5, dashArray: '7 4', opacity: 1 }).addTo(map);
+
+function sq(cls, size) {
+  return L.divIcon({ className: '', html: '<div class="' + cls + '" style="width:' + size + 'px;height:' + size + 'px"></div>', iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
+}
+function lbl(text, big) {
+  return L.divIcon({ className: '', html: '<div class="cc-lbl" style="font-size:' + (big ? 11.5 : 10.5) + 'px;font-weight:' + (big ? 600 : 400) + '">' + text + '</div>', iconSize: null, iconAnchor: [-9, 8] });
+}
+
+// detail labels only once zoomed in — at the overview zoom they collide
+const detail = L.layerGroup();
+
+// cold stores: hollow squares, they are options rather than facts of the leg
+STORES.forEach((s, i) => {
+  L.marker([s.lat, s.lon], { icon: sq('cc-store', 8), interactive: false }).addTo(map);
+  if (i === 0) L.marker([s.lat, s.lon], { icon: lbl(s.name + ' ' + s.km.toFixed(1) + ' km', false), interactive: false }).addTo(detail);
+});
+
+LEG.forEach((p, i) => {
+  const end = p.kind === 'origin' || p.kind === 'destination';
+  L.marker([p.lat, p.lon], { icon: sq('cc-pt', end ? 10 : 6), interactive: false }).addTo(map);
+  if (end) {
+    L.marker([p.lat, p.lon], { icon: lbl(p.name, true), interactive: false }).addTo(map);
+  } else if (i === iStart || i === iEnd) {
+    L.marker([p.lat, p.lon], { icon: lbl(p.name, false), interactive: false }).addTo(detail);
+  }
+});
+
+function syncDetail() {
+  if (map.getZoom() >= 7) { if (!map.hasLayer(detail)) detail.addTo(map); }
+  else if (map.hasLayer(detail)) map.removeLayer(detail);
+}
+map.on('zoomend', syncDetail);
+syncDetail();
+
+// the one figure the map is here to carry
+const mid = LEG[Math.floor((iStart + iEnd) / 2)];
+L.marker([mid.lat, mid.lon], {
+  icon: L.divIcon({
+    className: '',
+    html: '<div class="cc-callout"><div class="t">OUT OF BAND HERE</div><div class="v">232 of 1,233 min</div></div>',
+    iconSize: null, iconAnchor: [-14, 42],
+  }),
+  interactive: false,
+}).addTo(map);
+</script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ColdCall — the architecture, run</title>
+<link rel="stylesheet" href="_ds/modernist-c05f995e-c5a1-46c7-b9c6-9baa7ded037a/styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%;background:var(--color-bg);color:var(--color-text);font-family:Archivo,system-ui,sans-serif;overflow:hidden}
+  .wrap{display:flex;flex-direction:column;height:100%}
+
+  /* controls bar */
+  .bar{display:flex;align-items:center;gap:14px;padding:8px 14px;border-bottom:1px solid var(--color-neutral-400);flex:none}
+  .btn{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--color-text);background:var(--color-text);color:var(--color-bg);padding:4px 12px;cursor:pointer}
+  .btn.ghost{background:var(--color-bg);color:var(--color-text)}
+  .pill{font-family:'IBM Plex Mono',monospace;font-size:10px;border:1px solid var(--color-neutral-400);background:var(--color-bg);color:var(--color-neutral-700);padding:3px 8px;cursor:pointer}
+  .pill.on{border-color:var(--color-text);color:var(--color-text);font-weight:600}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:min(200px,26vw);height:2px;background:var(--color-neutral-400);outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--color-bg);border:1.5px solid var(--color-text);border-radius:0}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;background:var(--color-bg);border:1.5px solid var(--color-text);border-radius:0}
+  .readout{margin-left:auto;display:flex;gap:16px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--color-neutral-700)}
+  .readout b{color:var(--color-text);font-weight:600}
+
+  .stage{flex:1;min-height:0;overflow:auto;padding:10px 14px 4px}
+  svg#map{width:100%;min-width:1080px;height:auto;display:block}
+
+  /* ticker */
+  .tick{flex:none;display:grid;grid-template-columns:52px max-content 1fr;gap:10px;align-items:baseline;padding:7px 14px;border-top:1px solid var(--color-neutral-400);font-family:'IBM Plex Mono',monospace}
+  .tick .t{font-size:10px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums}
+  .tick .who{font-size:11px;font-weight:600}
+  .tick .msg{font-size:10.5px;color:var(--color-neutral-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tick.human .who{color:var(--color-accent-700)}
+
+  /* groups */
+  .grp{fill:none;stroke:var(--color-neutral-500);stroke-width:1;stroke-dasharray:4 4}
+  .grp-label{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;fill:var(--color-neutral-700)}
+
+  /* edges */
+  .edge{fill:none;stroke:var(--color-neutral-400);stroke-width:1.2}
+  .edge-flow{fill:none;stroke:var(--color-accent);stroke-width:1.8;stroke-dasharray:7 9;opacity:0;transition:opacity .3s ease}
+  .edge-flow.on{opacity:1;animation:march .6s linear infinite}
+  @keyframes march{to{stroke-dashoffset:-16}}
+  .edge-human{fill:none;stroke:var(--color-accent);stroke-width:1.2;stroke-dasharray:2 5;opacity:.25;transition:opacity .3s ease}
+  .edge-human.on{opacity:1;animation:march 1.1s linear infinite}
+
+  /* nodes — state reads from border weight, glyph and progress fill, never hue alone */
+  .node .box{fill:var(--color-bg);stroke:var(--color-neutral-500);stroke-width:1.2;transition:fill .35s ease,stroke .35s ease,stroke-width .35s ease,opacity .4s ease}
+  .node .n-name{font-size:12.5px;font-weight:600;fill:var(--color-neutral-700);transition:fill .35s ease}
+  .node .n-sub,.node .n-state{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;fill:var(--color-neutral-700);opacity:.9;transition:opacity .4s ease,fill .35s ease}
+  .node .n-state{font-variant-numeric:tabular-nums}
+  .node .prog{fill:var(--color-accent)}
+  .node.queued .box{stroke-dasharray:4 4}
+  .node.running .box{stroke:var(--color-accent);stroke-width:2.2;fill:var(--color-accent-100)}
+  .node.running .n-name{fill:var(--color-text);font-weight:800}
+  .node.running .n-state{fill:var(--color-accent-700)}
+  .node.done .box{stroke:var(--color-text);fill:var(--color-neutral-100)}
+  .node.done .n-name{fill:var(--color-text)}
+  .node.done .prog{fill:var(--color-text)}
+
+  .node.check .box{stroke:var(--color-accent);stroke-width:1.6}
+  .node.check.running .box,.node.check.waiting .box{stroke:var(--color-accent);stroke-width:3;fill:var(--color-accent)}
+  .node.check.running .n-name,.node.check.waiting .n-name,
+  .node.check.running .n-sub,.node.check.waiting .n-sub,
+  .node.check.running .n-state,.node.check.waiting .n-state{fill:var(--color-bg)}
+  .node.check .prog{fill:var(--color-accent-700)}
+  .node.check.done .box{stroke:var(--color-accent);fill:var(--color-accent-100)}
+  .node.check.done .n-state{fill:var(--color-accent-700)}
+
+  .node.human .box{fill:var(--color-bg);stroke:var(--color-accent);stroke-width:1.4;transition:fill .35s ease,stroke-width .35s ease}
+  .node.human .n-name{fill:var(--color-accent-700);font-size:12px}
+  .node.human.active .box{fill:var(--color-accent);stroke-width:3}
+  .node.human.active .n-name,.node.human.active .n-sub{fill:var(--color-bg)}
+
+  /* while the gate holds, everything else quiets */
+  #map.gate-hold .node.done .box,#map.gate-hold .node.done .n-name,
+  #map.gate-hold .node.done .n-sub,#map.gate-hold .node.done .n-state,
+  #map.gate-hold .node.done .prog{opacity:.45}
+  #map.gate-hold .edge{opacity:.35}
+  #map.gate-hold .grp{opacity:.5}
+
+  @media (prefers-reduced-motion:reduce){
+    .edge-flow.on,.edge-human.on{animation:none}
+    .node .box,.node .n-name{transition:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <button id="run" class="btn">Run</button>
+    <button id="restart" class="btn ghost">Restart</button>
+    <button class="pill" data-speed="0.5">0.5×</button>
+    <button class="pill on" data-speed="1">1×</button>
+    <button class="pill" data-speed="2">2×</button>
+    <input type="range" id="scrub" min="0" max="100" value="0" aria-label="scrub the run">
+    <span class="readout"><span>t <b id="clock">00.0s</b></span><span>complete <b id="done">0/11</b></span></span>
+  </div>
+  <div class="stage">
+    <svg id="map" viewBox="0 0 1560 540" role="img" aria-label="ColdCall architecture: telemetry watcher to incident commander, four parallel specialists, deterministic disposition in a sandbox, an independent cross-check, the human approval gate, then the executed action and the persistent record."></svg>
+  </div>
+  <div class="tick" id="tick"><span class="t" id="tick-t"></span><span class="who" id="tick-who"></span><span class="msg" id="tick-msg">The run replays the real DEMO-0001 incident — press Run or scroll it into view.</span></div>
+</div>
+<script>
+(() => {
+  'use strict';
+  const NS = 'http://www.w3.org/2000/svg';
+
+  const N = {
+    TW:  { x:  16, y: 238, w: 172, h: 64, n: 'Telemetry Watcher',  s: 'reads the sensor recording', t: 'agent' },
+    IC:  { x: 228, y: 238, w: 172, h: 64, n: 'Incident Commander', s: 'opens the case file', t: 'agent' },
+
+    RA:  { x: 452, y:  48, w: 182, h: 64, n: 'Route Analyst',       s: 'route + real weather', t: 'agent' },
+    LS:  { x: 452, y: 168, w: 182, h: 64, n: 'Logistics Scout',     s: 'certified cold stores', t: 'agent' },
+    CO:  { x: 452, y: 288, w: 182, h: 64, n: 'Compliance Officer',  s: 'checks the rulebook', t: 'agent' },
+    EA:  { x: 452, y: 408, w: 182, h: 64, n: 'Exposure Accountant', s: 'money at risk', t: 'agent' },
+
+    DD:  { x: 692, y: 238, w: 196, h: 64, n: 'Disposition Math',    s: 'regulated math · sandboxed', t: 'agent' },
+    XC:  { x: 928, y: 238, w: 196, h: 64, n: 'Independent Cross-check', s: 'recomputed · must agree', t: 'agent' },
+
+    GATE:{ x: 1164, y: 238, w: 180, h: 64, n: 'Human Approval Gate', s: 'the run pauses here', t: 'check' },
+
+    AX:  { x: 1384, y: 128, w: 162, h: 64, n: 'Action Executor',   s: 'quarantine · receipt', t: 'agent' },
+    REC: { x: 1384, y: 348, w: 162, h: 64, n: 'Permanent Record',  s: 'survives a restart', t: 'agent' }
+  };
+
+  const HUMAN = { x: 1254, y: 96, r: 46 };
+
+  const GROUPS = [
+    { x: 436, y: 22, w: 214, h: 496, label: 'Specialists · parallel' }
+  ];
+
+  const EDGES = [
+    ['TW','IC'],
+    ['IC','RA'],['IC','LS'],['IC','CO'],['IC','EA'],
+    ['RA','DD'],['LS','DD'],['CO','DD'],['EA','DD'],
+    ['DD','XC'],['XC','GATE'],['GATE','AX'],['AX','REC']
+  ];
+
+  // `at` is seconds into the run; the four specialists share a start time —
+  // that is the point of them. Every log line is a real DEMO-0001 number.
+  const SCRIPT = [
+    { at: 0.0,  id: 'TW',   dur: 1.5, log: '27.0 °C peak against a 20–25 °C label · excursion flagged on the logger' },
+    { at: 1.7,  id: 'IC',   dur: 1.7, log: 'incident opened · rulebook resolved · the record is saved before anything else runs' },
+    { at: 3.6,  id: 'RA',   dur: 2.3, log: '15 real GPS fixes + ERA5 weather · the warm window sits on the road leg, not the depot' },
+    { at: 3.6,  id: 'LS',   dur: 1.8, log: 'Lyon Sud bonded cold store qualified · nearest to last known position' },
+    { at: 3.6,  id: 'CO',   dur: 2.7, log: 'rulebook: quarantine + QA sign-off before release or destroy · no autonomous disposition' },
+    { at: 3.6,  id: 'EA',   dur: 1.6, log: '4,000 units × $12.50 — $50,000 at risk on this pallet' },
+    { at: 6.6,  id: 'DD',   dur: 2.1, log: 'MKT 24.54 °C · 64.3% of stability budget consumed · 232 of 1,233 min out of range' },
+    { at: 8.9,  id: 'XC',   dur: 1.7, log: 'a second program re-derived every number · agreement to the digit (Δ 0.000e+00)' },
+    { at: 10.9, id: 'GATE', dur: 2.6, gate: true, log: 'verdict quarantine & retest · full evidence presented, run paused' },
+    { at: 13.8, id: 'AX',   dur: 1.9, log: 'quarantine executed at Lyon Sud · record committed with a real receipt' },
+    { at: 15.9, id: 'REC',  dur: 1.3, log: 'append-only audit trail closed · kill the server and restart — the record survives' }
+  ];
+  const END = 17.5;
+
+  const NAME = id => id === 'human' ? 'QA Owner' : (N[id] || {}).n || id;
+  const GLYPH = { queued: '○', running: '●', done: '✓', waiting: '‖', signed: '✓' };
+
+  const svg = document.getElementById('map');
+  const clock = document.getElementById('clock');
+  const doneEl = document.getElementById('done');
+  const playBtn = document.getElementById('run');
+  const tick = document.getElementById('tick');
+  const tickT = document.getElementById('tick-t');
+  const tickWho = document.getElementById('tick-who');
+  const tickMsg = document.getElementById('tick-msg');
+
+  const el = (t, a = {}) => {
+    const e = document.createElementNS(NS, t);
+    for (const k in a) e.setAttribute(k, a[k]);
+    return e;
+  };
+
+  // orthogonal routing, left-to-right: out of the source's right edge,
+  // across, into the target's left edge (down-column for the last pair)
+  function route(aId, bId) {
+    const a = N[aId], b = N[bId];
+    if (aId === 'AX' && bId === 'REC') {
+      const x = a.x + a.w / 2;
+      return `M${x},${a.y + a.h} L${x},${b.y}`;
+    }
+    const ax = a.x + a.w, ay = a.y + a.h / 2;
+    const bx = b.x, by = b.y + b.h / 2;
+    if (Math.abs(ay - by) < 1) return `M${ax},${ay} L${bx},${by}`;
+    const mx = ax + (bx - ax) / 2;
+    return `M${ax},${ay} L${mx},${ay} L${mx},${by} L${bx},${by}`;
+  }
+
+  const gGroup = el('g'), gEdge = el('g'), gNode = el('g');
+  svg.append(gGroup, gEdge, gNode);
+
+  GROUPS.forEach(g => {
+    gGroup.append(el('rect', { x: g.x, y: g.y, width: g.w, height: g.h, class: 'grp' }));
+    const t = el('text', { x: g.x, y: g.y - 8, class: 'grp-label' });
+    t.textContent = g.label;
+    gGroup.append(t);
+  });
+
+  const edgeEls = {};
+  EDGES.forEach(([a, b]) => {
+    const d = route(a, b);
+    gEdge.append(el('path', { d, class: 'edge' }));
+    const flow = el('path', { d, class: 'edge-flow' });
+    gEdge.append(flow);
+    edgeEls[a + '>' + b] = flow;
+  });
+
+  // the human sits outside the pipeline and only touches the gate
+  const humanEdges = [
+    el('path', { d: `M${N.GATE.x + N.GATE.w / 2},${N.GATE.y} L${HUMAN.x},${HUMAN.y + HUMAN.r}`, class: 'edge-human' })
+  ];
+  humanEdges.forEach(p => gEdge.append(p));
+
+  const nodeEls = {};
+  for (const id in N) {
+    const n = N[id];
+    const g = el('g', { class: 'node ' + n.t, 'data-id': id });
+    g.append(el('rect', { x: n.x, y: n.y, width: n.w, height: n.h, class: 'box' }));
+    g.append(el('rect', { x: n.x, y: n.y + n.h - 3, width: 0, height: 3, class: 'prog' }));
+    const t1 = el('text', { x: n.x + 12, y: n.y + 24, class: 'n-name' });
+    t1.textContent = n.n;
+    g.append(t1);
+    const t2 = el('text', { x: n.x + 12, y: n.y + 41, class: 'n-sub' });
+    t2.textContent = n.s;
+    g.append(t2);
+    const st = el('text', { x: n.x + n.w - 10, y: n.y + n.h - 10, class: 'n-state', 'text-anchor': 'end' });
+    g.append(st);
+    gNode.append(g);
+    nodeEls[id] = { g, prog: g.querySelector('.prog'), state: st, sub: t2, w: n.w, baseSub: n.s };
+  }
+
+  const hg = el('g', { class: 'node human' });
+  hg.append(el('circle', { cx: HUMAN.x, cy: HUMAN.y, r: HUMAN.r, class: 'box' }));
+  const h1 = el('text', { x: HUMAN.x, y: HUMAN.y - 2, class: 'n-name', 'text-anchor': 'middle' });
+  h1.textContent = 'QA Owner';
+  const h2 = el('text', { x: HUMAN.x, y: HUMAN.y + 14, class: 'n-sub', 'text-anchor': 'middle' });
+  h2.textContent = 'holds the only pen';
+  hg.append(h1, h2);
+  gNode.append(hg);
+
+  let t = 0, playing = false, speed = 1, last = 0, lastSaid = '';
+
+  function say(time, id, msg) {
+    const key = id + msg;
+    if (lastSaid === key) return;
+    lastSaid = key;
+    tickT.textContent = time.toFixed(1) + 's';
+    tickWho.textContent = NAME(id);
+    tickMsg.textContent = msg;
+    tick.classList.toggle('human', id === 'human');
+  }
+
+  function reset() {
+    t = 0; lastSaid = '';
+    for (const id in nodeEls) {
+      nodeEls[id].g.setAttribute('class', 'node ' + N[id].t);
+      nodeEls[id].prog.setAttribute('width', 0);
+      nodeEls[id].state.textContent = '';
+      nodeEls[id].sub.textContent = nodeEls[id].baseSub;
+    }
+    Object.values(edgeEls).forEach(e => e.classList.remove('on'));
+    humanEdges.forEach(e => e.classList.remove('on'));
+    hg.setAttribute('class', 'node human');
+    svg.classList.remove('gate-hold');
+    tickT.textContent = ''; tickWho.textContent = '';
+    tickMsg.textContent = 'The run replays the real DEMO-0001 incident — press Run or scroll it into view.';
+    paint();
+  }
+
+  function paint() {
+    let complete = 0;
+    // walk the script in time order so the ticker shows the newest event
+    SCRIPT.forEach(s => {
+      const node = nodeEls[s.id];
+      const kind = N[s.id].t;
+      let cls = 'node ' + kind, p = 0, label = '';
+
+      if (t < s.at) {
+        const isQueued = t > s.at - 1.2;
+        cls += isQueued ? ' queued' : '';
+        label = isQueued ? GLYPH.queued + ' queued' : '';
+        if (s.gate) node.sub.textContent = node.baseSub;
+      } else if (t < s.at + s.dur) {
+        p = (t - s.at) / s.dur;
+        cls += ' running';
+        label = s.gate ? GLYPH.waiting + ' waiting' : GLYPH.running + ' ' + Math.round(p * 100) + '%';
+        if (s.gate) {
+          say(s.at, s.id, s.log);
+          node.sub.textContent = 'awaiting signature';
+        }
+        EDGES.forEach(([a, b]) => { if (b === s.id) edgeEls[a + '>' + b].classList.add('on'); });
+      } else {
+        cls += ' done';
+        label = s.gate ? GLYPH.signed + ' signed' : GLYPH.done + ' done';
+        p = 1;
+        complete++;
+        say(s.at + s.dur, s.id, s.log);
+        if (s.gate) node.sub.textContent = 'signed by the QA owner';
+        EDGES.forEach(([a, b]) => { if (b === s.id) edgeEls[a + '>' + b].classList.remove('on'); });
+      }
+
+      if (s.gate) {
+        const near = t > s.at - 0.5 && t < s.at + s.dur + 0.3;
+        if (near) {
+          cls += ' waiting';
+          hg.classList.add('active');
+          humanEdges.forEach(e => e.classList.add('on'));
+          if (t >= s.at + s.dur * 0.6) {
+            say(s.at + s.dur * 0.6, 'human', 'approved · quarantine at Lyon Sud — the only pen that signs');
+          }
+        }
+      }
+
+      node.g.setAttribute('class', cls);
+      node.prog.setAttribute('width', (node.w * p).toFixed(1));
+      node.state.textContent = label;
+    });
+
+    const anyWaiting = SCRIPT.some(s => s.gate && t > s.at - 0.5 && t < s.at + s.dur + 0.3);
+    svg.classList.toggle('gate-hold', anyWaiting);
+    if (!anyWaiting) {
+      hg.classList.remove('active');
+      humanEdges.forEach(e => e.classList.remove('on'));
+    }
+
+    clock.textContent = t.toFixed(1).padStart(4, '0') + 's';
+    doneEl.textContent = complete + '/' + SCRIPT.length;
+    document.getElementById('scrub').value = Math.min(100, t / END * 100);
+  }
+
+  function loop(now) {
+    requestAnimationFrame(loop);
+    if (!playing || document.hidden) { last = now; return; }
+    const dt = Math.min(0.1, (now - last) / 1000) * speed;
+    last = now;
+    t += dt;
+    if (t >= END) { t = END; playing = false; playBtn.textContent = 'Replay'; }
+    paint();
+  }
+
+  playBtn.onclick = () => {
+    if (t >= END) reset();
+    playing = !playing;
+    playBtn.textContent = playing ? 'Pause' : (t > 0 ? 'Resume' : 'Run');
+  };
+  document.getElementById('restart').onclick = () => {
+    reset(); playing = true; playBtn.textContent = 'Pause';
+  };
+  document.querySelectorAll('[data-speed]').forEach(b => {
+    b.onclick = () => {
+      speed = parseFloat(b.dataset.speed);
+      document.querySelectorAll('[data-speed]').forEach(x => x.classList.toggle('on', x === b));
+    };
+  });
+  document.getElementById('scrub').oninput = e => {
+    t = parseFloat(e.target.value) / 100 * END;
+    lastSaid = '';
+    paint();
+  };
+
+  reset();
+  requestAnimationFrame(loop);
+
+  // autoplay once the graph is actually on screen
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting && t === 0 && !playing) {
+        playing = true; playBtn.textContent = 'Pause'; io.disconnect();
+      }
+    }), { threshold: 0.25 });
+    io.observe(svg);
+  }
+})();
+</script>
+</body>
+</html>
