@@ -35,6 +35,14 @@ lock = threading.Lock()
 verdict_cache: dict = {}
 
 
+MAX_BODY = 4096
+
+
+def _field(value: object, limit: int) -> str:
+    text = " ".join(str(value or "").split())[:limit]
+    return text.replace(" - ", " \u2013 ")
+
+
 def _rcpt() -> str:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
     return f"RCPT-{stamp}-{secrets.token_hex(3).upper()}"
@@ -107,17 +115,38 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({"error": "not found"}, 404)
             return
         try:
-            n = int(self.headers.get("Content-Length", 0))
-            req = json.loads(self.rfile.read(n) or b"{}")
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            self._json({"error": "bad Content-Length"}, 400)
+            return
+        if n <= 0 or n > MAX_BODY:
+            self._json({"error": "JSON body required"}, 413 if n > MAX_BODY else 400)
+            return
+        try:
+            req = json.loads(self.rfile.read(n))
+            if not isinstance(req, dict):
+                raise ValueError
+        except (ValueError, UnicodeDecodeError):
+            self._json({"error": "invalid JSON body"}, 400)
+            return
+        try:
             decision = req.get("decision")
-            by = (req.get("by") or "").strip()
+            by = _field(req.get("by"), 80)
             if decision not in ("allow", "deny") or not by:
                 self._json({"error": "decision (allow|deny) and by are required"}, 400)
                 return
             with lock:
                 inc = store.incident(INC)
-                if inc and inc.get("closed_at"):
-                    self._json({"error": "incident already closed", "incident": inc}, 409)
+                decided = inc and (
+                    inc.get("closed_at")
+                    or any(
+                        e.get("kind") in ("disposition_executed", "deny_fallback")
+                        for e in inc.get("events") or ()
+                    )
+                )
+                if decided:
+                    err = {"error": "a decision is already on the record", "incident": inc}
+                    self._json(err, 409)
                     return
                 receipt = _rcpt()
                 if decision == "allow":
@@ -129,7 +158,7 @@ class Handler(SimpleHTTPRequestHandler):
                     )
                     store.close_incident(INC, by)
                 else:
-                    reason = (req.get("reason") or "").strip() or "unspecified"
+                    reason = _field(req.get("reason"), 200) or "unspecified"
                     store.record_action(
                         INC, "deny_fallback",
                         f"DENY by {by} - reason: {reason} - conservative fallback: "
@@ -137,8 +166,8 @@ class Handler(SimpleHTTPRequestHandler):
                         receipt,
                     )
                 self._json({"receipt": receipt, "incident": store.incident(INC)})
-        except Exception as exc:  # keep the demo server alive on bad input
-            self._json({"error": str(exc)}, 500)
+        except Exception:  # keep the demo server alive on bad input
+            self._json({"error": "internal error"}, 500)
 
     def log_message(self, fmt, *args):
         sys.stderr.write(f"{self.address_string()} - {fmt % args}\n")

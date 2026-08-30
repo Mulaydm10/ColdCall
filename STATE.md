@@ -7,7 +7,7 @@ explains how we got here.**
 
 Last updated: 2026-08-30 — **the build is finished and the project is in its demo phase.**
 The demo frontend now lives in `frontend/` (see `frontend/README.md`): eight routes over the
-real incident store via a stdlib-only local server (`python3 frontend/server.py`), with a
+real incident store via a stdlib-only local server (`uv run frontend/server.py`), with a
 graceful static fallback for hosted deploys (Vercel-ready, `frontend/vercel.json`).
 PRs #1–#16 all merged — `main` carries the corpus, the README results section, and the
 applied thesis in `VISION.md` (PR #15, authorized by Mulaydm10, logged in `GOVERNANCE.md`).

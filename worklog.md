@@ -861,3 +861,18 @@ room write real receipts and survive restarts. The site degrades gracefully with
 included for a Vercel deploy. Runtime store files are gitignored. Verified both modes before
 commit: live (`/api/state` returns the persisted verdict, MKT 24.54 °C, gate open) and static
 (page renders, Decision room + Console + live map work, only the expected `/api` 404s).
+
+## 2026-08-30 14:05 UTC — Qodo review of PR #17: seven findings addressed
+
+Qodo's `/agentic_review` on PR #17 returned 5 bugs + 2 rule violations; all addressed on the
+branch. `frontend/server.py`: a decision is now final — any second `POST /api/decision` after
+an allow *or* a deny returns 409 (deny was previously re-decidable); `Content-Length` is
+validated (400/413) with a 4 KiB body cap, non-object JSON rejected, and 500s no longer leak
+exception text; signer/reason are normalized (length caps, the ` - ` audit delimiter is
+neutralized to an en dash) so reload hydration is lossless. `frontend/ColdCall.dc.html`: the
+decision client now distinguishes live from static — in live mode a non-OK/failed POST shows
+"the store did not record the decision" instead of faking success; static fallback unchanged.
+Fixture text aligned to the canonical run (MKT 24.54 °C, 64.35 % — was 24.51/64.3 from an older
+draft). `frontend/README.md` + `STATE.md`: launch documented as `uv run frontend/server.py`.
+Verified: ruff clean, full pytest green, live curl checks (400/413/409 paths, tricky ` - `
+names round-trip), fresh store boots gate-open.

@@ -6,10 +6,11 @@ Decision room, Sources) over the real ColdCall incident store.
 ## Run locally (live mode)
 
 ```sh
-python3 frontend/server.py          # → http://127.0.0.1:5757/ColdCall.dc.html
+uv venv --python 3.12 .venv         # once, if not already synced (see CLAUDE.md)
+uv run frontend/server.py           # → http://127.0.0.1:5757/ColdCall.dc.html
 ```
 
-Stdlib only — no new dependencies. On startup the server seeds the SQLite store from
+Stdlib only — no new dependencies (`uv run` just pins the project's Python 3.12). On startup the server seeds the SQLite store from
 `replay/seed.json`, replays the recorded demo leg (`data/selected_leg.json`) into telemetry,
 opens incident `INC-20260829-6D09F2`, and records the verdict computed by the same
 deterministic CLI the sandbox runs (`coldcall.cli`, cross-check included). Allow/Deny in the
